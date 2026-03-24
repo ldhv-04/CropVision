@@ -1,0 +1,10 @@
+#Node & Expo
+node_modules/
+.expo/
+
+# Build outputs
+dist/
+release/
+
+# Tooling caches
+.cache/

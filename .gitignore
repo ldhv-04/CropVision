@@ -1,0 +1,30 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Node / Expo
+node_modules/
+.expo/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Build artifacts
+dist/
+release/
+App/dist/
+App/release/
+App/node_modules/
+backend/uploads/
+
+# Tool caches
+.cache/

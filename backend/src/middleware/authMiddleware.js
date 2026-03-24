@@ -1,0 +1,35 @@
+const jwt = require('jsonwebtoken');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'khoa_luan_cropvision_secret_key_2026';
+
+// Doc va xac thuc JWT tu header Authorization de gan user vao request.
+const authenticateToken = (req, res, next) => {
+  const authorizationHeader = req.headers.authorization || '';
+  const [scheme, token] = authorizationHeader.split(' ');
+
+  if (scheme !== 'Bearer' || !token) {
+    return res.status(401).json({ success: false, message: 'Thiếu token xác thực.' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ success: false, message: 'Token không hợp lệ hoặc đã hết hạn.' });
+  }
+};
+
+// Chan cac request khong co role admin.
+const requireAdmin = (req, res, next) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'Bạn không có quyền truy cập chức năng admin.' });
+  }
+
+  next();
+};
+
+module.exports = {
+  authenticateToken,
+  requireAdmin,
+};
