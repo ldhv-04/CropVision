@@ -10,6 +10,20 @@ import { buildApiUrl } from '../../config/api';
 
 const DISEASE_COLOR_PALETTE = ['#facc15', '#f97316', '#fb7185', '#38bdf8', '#a3e635', '#c084fc'];
 
+const inferMimeType = (fileName = '') => {
+  const normalizedName = fileName.toLowerCase();
+
+  if (normalizedName.endsWith('.png')) {
+    return 'image/png';
+  }
+
+  if (normalizedName.endsWith('.webp')) {
+    return 'image/webp';
+  }
+
+  return 'image/jpeg';
+};
+
 export default function MainDashboard({ onLogout, currentUser, authToken }) {
   const { width } = useWindowDimensions();
   const [imageUri, setImageUri] = useState(null);
@@ -67,12 +81,14 @@ export default function MainDashboard({ onLogout, currentUser, authToken }) {
     setIsAnalyzing(true);
     try {
       const uriParts = imageUri.split('/');
-      const realFileName = uriParts[uriParts.length - 1];
-
-      const response = await fetch(imageUri);
-      const blob = await response.blob();
+      const rawFileName = uriParts[uriParts.length - 1] || `sample-${Date.now()}.jpg`;
+      const realFileName = rawFileName.includes('.') ? rawFileName : `${rawFileName}.jpg`;
       const formData = new FormData();
-      formData.append('image', blob, realFileName);
+      formData.append('image', {
+        uri: imageUri,
+        name: realFileName,
+        type: inferMimeType(realFileName),
+      });
 
       const apiResponse = await fetch(buildApiUrl('/api/analyze'), {
         method: 'POST',
