@@ -61,11 +61,23 @@ export const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     overflow: 'hidden' 
   },
+  containerCompact: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
   sidebar: { 
     width: 250, 
     backgroundColor: COLORS.surface, 
     padding: 20, 
     justifyContent: 'space-between' 
+  },
+  mobileTopbar: {
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
   title: { 
     color: COLORS.primary, 
@@ -73,11 +85,35 @@ export const styles = StyleSheet.create({
     fontWeight: 'bold', 
     marginBottom: 40 
   },
+  mobileTitle: {
+    marginBottom: 10,
+  },
+  mobileRoleLabel: {
+    marginBottom: 14,
+  },
   menuList: { flex: 1 },
+  mobileMenuList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 12,
+  },
   menuItem: { 
     paddingVertical: 15, 
     borderBottomWidth: 1, 
     borderColor: COLORS.border 
+  },
+  mobileMenuItem: {
+    borderBottomWidth: 0,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  activeMenuText: {
+    color: COLORS.primary,
+    fontWeight: 'bold',
   },
   menuText: { color: '#e2e8f0', fontSize: 16 },
   logoutBtn: { 
@@ -92,10 +128,22 @@ export const styles = StyleSheet.create({
     fontWeight: 'bold', 
     textAlign: 'center' 
   },
+  mobileLogoutBtn: {
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 10,
+  },
+  compactContent: {
+    flex: 1,
+  },
   mainViewer: { 
     flex: 1, 
     backgroundColor: COLORS.background, 
     padding: 20 
+  },
+  mainViewerCompact: {
+    padding: 16,
   },
   adminViewer: {
     flex: 1,
@@ -108,6 +156,10 @@ export const styles = StyleSheet.create({
     marginBottom: 20, 
     alignItems: 'center' 
   },
+  headerCompact: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
   sampleName: { 
     color: COLORS.textPrimary, 
     fontSize: 20, 
@@ -119,6 +171,11 @@ export const styles = StyleSheet.create({
     paddingVertical: 8, 
     borderRadius: 6 
   },
+  actionBtnWide: {
+    width: '100%',
+    marginTop: 12,
+    alignItems: 'center',
+  },
   actionText: { color: COLORS.placeholder },
   imageContainer: { 
     flex: 1, 
@@ -128,6 +185,12 @@ export const styles = StyleSheet.create({
     alignItems: 'center', 
     overflow: 'hidden',
     position: 'relative'
+  },
+  imageContainerCompact: {
+    minHeight: 360,
+  },
+  imageContainerPhone: {
+    minHeight: 280,
   },
   imageLegend: {
     position: 'absolute',
@@ -198,6 +261,10 @@ export const styles = StyleSheet.create({
     padding: 12,
     alignSelf: 'flex-start',
   },
+  focusPreviewCardPhone: {
+    width: '100%',
+    alignSelf: 'stretch',
+  },
   focusPreviewTitle: {
     color: COLORS.textPrimary,
     fontSize: 13,
@@ -224,11 +291,21 @@ export const styles = StyleSheet.create({
     borderLeftWidth: 1, 
     borderColor: COLORS.border 
   },
+  aiPanelCompact: {
+    width: '100%',
+    borderLeftWidth: 0,
+    borderTopWidth: 1,
+    padding: 16,
+  },
   tabContainer: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     marginBottom: 20, 
     alignItems: 'center' 
+  },
+  tabContainerCompact: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
   },
   tab: { 
     paddingBottom: 5, 
@@ -246,6 +323,15 @@ export const styles = StyleSheet.create({
   },
   btnText: { color: COLORS.white, fontWeight: 'bold' },
   panelContent: { flex: 1 },
+  panelContentCompact: {
+    paddingBottom: 12,
+  },
+  mobileScrollContainer: {
+    flex: 1,
+  },
+  mobileScrollContent: {
+    paddingBottom: 28,
+  },
   detailPanel: {
     backgroundColor: '#172033',
     borderWidth: 1,
@@ -307,6 +393,10 @@ export const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     fontSize: 12,
     fontWeight: '600',
+  },
+  mobileBlockButton: {
+    marginRight: 0,
+    marginBottom: 8,
   },
   filterChip: {
     flexDirection: 'row',

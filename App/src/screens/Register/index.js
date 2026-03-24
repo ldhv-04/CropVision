@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, ActivityIndicator, Alert } from 'react-native';
 import styles from './styles';
 import { COLORS } from '../../constants/theme';
+import { buildApiUrl } from '../../config/api';
 
 export default function RegisterScreen({ onNavigate }) {
   const [fullName, setFullName] = useState('');
@@ -23,7 +24,7 @@ export default function RegisterScreen({ onNavigate }) {
 
     setIsLoading(true);
     try {
-      const response = await fetch('http://127.0.0.1:3000/api/auth/register', {
+      const response = await fetch(buildApiUrl('/api/auth/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fullName, email, password })

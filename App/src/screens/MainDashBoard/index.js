@@ -1,15 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, Image, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, Pressable, Image, ActivityIndicator, ScrollView, Platform, useWindowDimensions } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import styles from './styles';
 
 import { COLORS } from '../../constants/theme';
 import SampleList from '../SampleList';
 import AdminPanel from '../../components/AdminPanel';
+import { buildApiUrl } from '../../config/api';
 
-const DISEASE_COLOR_PALETTE = ['#f59e0b', '#ec4899', '#38bdf8', '#fb7185', '#a3e635', '#f97316'];
+const DISEASE_COLOR_PALETTE = ['#facc15', '#f97316', '#fb7185', '#38bdf8', '#a3e635', '#c084fc'];
 
 export default function MainDashboard({ onLogout, currentUser, authToken }) {
+  const { width } = useWindowDimensions();
   const [imageUri, setImageUri] = useState(null);
   const [inferenceResults, setInferenceResults] = useState(null);
   const [resultImageBase64, setResultImageBase64] = useState(null);
@@ -22,11 +24,14 @@ export default function MainDashboard({ onLogout, currentUser, authToken }) {
   const [focusMode, setFocusMode] = useState('all');
   const [previewFrame, setPreviewFrame] = useState({ width: 0, height: 0 });
   const [imageMetadata, setImageMetadata] = useState({ width: 0, height: 0 });
-  const detectionScrollRef = useRef(null);
+  const detailScrollRef = useRef(null);
   const detectionItemLayouts = useRef({});
 
   const isAdmin = currentUser?.role === 'admin';
   const currentUserLabel = currentUser?.fullName || currentUser?.email || 'Nguoi dung';
+  const isCompactLayout = width < 1180;
+  const isPhoneLayout = width < 768;
+  const allowsHover = Platform.OS === 'web';
 
   useEffect(() => {
     if (!isAdmin && activeMenu === 'admin') {
@@ -35,7 +40,7 @@ export default function MainDashboard({ onLogout, currentUser, authToken }) {
   }, [isAdmin, activeMenu]);
 
   const handlePickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
+    const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: false,
       quality: 1,
@@ -49,6 +54,7 @@ export default function MainDashboard({ onLogout, currentUser, authToken }) {
       setSelectedDetectionIndex(null);
       setActiveDiseaseFilter('all');
       setFocusMode('all');
+      detectionItemLayouts.current = {};
     }
   };
 
@@ -66,10 +72,9 @@ export default function MainDashboard({ onLogout, currentUser, authToken }) {
       const response = await fetch(imageUri);
       const blob = await response.blob();
       const formData = new FormData();
-
       formData.append('image', blob, realFileName);
 
-      const apiResponse = await fetch('http://localhost:3000/api/analyze', {
+      const apiResponse = await fetch(buildApiUrl('/api/analyze'), {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${authToken}`,
@@ -90,12 +95,13 @@ export default function MainDashboard({ onLogout, currentUser, authToken }) {
         setSelectedDetectionIndex(null);
         setActiveDiseaseFilter('all');
         setFocusMode('all');
+        detectionItemLayouts.current = {};
       } else {
-        alert('Loi tu may chu: ' + data.message);
+        alert(`Loi tu may chu: ${data.message}`);
       }
     } catch (error) {
       console.error('Loi gui anh:', error);
-      alert('Khong the ket noi den may chu. Hay chac chan Node.js va Python dang chay.');
+      alert('Khong the ket noi den may chu. Hay chac chan backend va AI Core dang chay, hoac dat EXPO_PUBLIC_API_HOST theo IP may dev.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -132,6 +138,7 @@ export default function MainDashboard({ onLogout, currentUser, authToken }) {
 
   const focusedDetectionIndex = selectedDetectionIndex ?? hoveredDetectionIndex;
   const selectedDetection = selectedDetectionIndex !== null ? inferenceResults?.[selectedDetectionIndex] : null;
+
   const diseaseSummary = useMemo(() => {
     if (!inferenceResults?.length) {
       return [];
@@ -147,7 +154,7 @@ export default function MainDashboard({ onLogout, currentUser, authToken }) {
       .map(([diseaseName, count]) => ({
         diseaseName,
         count,
-        color: diseaseColorMap[diseaseName] || '#f59e0b',
+        color: diseaseColorMap[diseaseName] || '#facc15',
       }))
       .sort((left, right) => right.count - left.count || left.diseaseName.localeCompare(right.diseaseName));
   }, [diseaseColorMap, inferenceResults]);
@@ -170,8 +177,8 @@ export default function MainDashboard({ onLogout, currentUser, authToken }) {
       return null;
     }
 
-    const previewWidth = 260;
-    const previewHeight = 180;
+    const previewWidth = isPhoneLayout ? 220 : 260;
+    const previewHeight = isPhoneLayout ? 150 : 180;
     const boxWidth = Math.max(selectedDetection.x2 - selectedDetection.x1, 1);
     const boxHeight = Math.max(selectedDetection.y2 - selectedDetection.y1, 1);
     const boxCenterX = selectedDetection.x1 + boxWidth / 2;
@@ -191,7 +198,7 @@ export default function MainDashboard({ onLogout, currentUser, authToken }) {
       translateX,
       translateY,
     };
-  }, [imageMetadata.height, imageMetadata.width, selectedDetection]);
+  }, [imageMetadata.height, imageMetadata.width, isPhoneLayout, selectedDetection]);
 
   useEffect(() => {
     if (focusedDetectionIndex === null) {
@@ -199,8 +206,8 @@ export default function MainDashboard({ onLogout, currentUser, authToken }) {
     }
 
     const targetY = detectionItemLayouts.current[focusedDetectionIndex];
-    if (typeof targetY === 'number' && detectionScrollRef.current?.scrollTo) {
-      detectionScrollRef.current.scrollTo({
+    if (typeof targetY === 'number' && detailScrollRef.current?.scrollTo) {
+      detailScrollRef.current.scrollTo({
         y: Math.max(targetY - 16, 0),
         animated: true,
       });
@@ -208,15 +215,17 @@ export default function MainDashboard({ onLogout, currentUser, authToken }) {
   }, [focusedDetectionIndex]);
 
   const handleDetectionHoverIn = (index) => {
-    if (selectedDetectionIndex === null) {
-      setHoveredDetectionIndex(index);
+    if (!allowsHover || selectedDetectionIndex !== null) {
+      return;
     }
+    setHoveredDetectionIndex(index);
   };
 
   const handleDetectionHoverOut = () => {
-    if (selectedDetectionIndex === null) {
-      setHoveredDetectionIndex(null);
+    if (!allowsHover || selectedDetectionIndex !== null) {
+      return;
     }
+    setHoveredDetectionIndex(null);
   };
 
   const handleDetectionPress = (index) => {
@@ -231,73 +240,237 @@ export default function MainDashboard({ onLogout, currentUser, authToken }) {
     });
   };
 
-  const renderInferenceView = () => (
+  const renderOverlayLayer = () => {
+    if (!resultImageBase64) {
+      return null;
+    }
+
+    return (
+      <>
+        <Image
+          key={`res-${resultImageBase64.substring(0, 20)}`}
+          source={{ uri: `data:image/jpeg;base64,${resultImageBase64}` }}
+          style={styles.previewImage}
+        />
+
+        {overlayBoxes.map((box) => {
+          const diseaseName = inferenceResults?.[box.index]?.class_name || 'Khong ro';
+          const diseaseColor = diseaseColorMap[diseaseName] || '#facc15';
+          const isVisible = focusMode === 'selected'
+            ? focusedDetectionIndex === box.index
+            : activeDiseaseFilter === 'all' || diseaseName === activeDiseaseFilter;
+          const isActive = focusedDetectionIndex === box.index;
+
+          return (
+            <Pressable
+              key={`overlay-${box.index}`}
+              style={[
+                styles.overlayHotspot,
+                {
+                  left: box.left,
+                  top: box.top,
+                  width: box.width,
+                  height: box.height,
+                  borderColor: isActive ? '#ffffff' : diseaseColor,
+                  backgroundColor: isActive ? 'rgba(255,255,255,0.08)' : `${diseaseColor}18`,
+                  opacity: isVisible ? 1 : 0.14,
+                },
+                isActive && styles.overlayHotspotActive,
+              ]}
+              onPress={() => handleDetectionPress(box.index)}
+              {...(allowsHover ? {
+                onHoverIn: () => handleDetectionHoverIn(box.index),
+                onHoverOut: handleDetectionHoverOut,
+              } : {})}
+            />
+          );
+        })}
+
+        {diseaseSummary.length > 0 && (
+          <View style={styles.imageLegend}>
+            {diseaseSummary.map((item) => (
+              <View key={`legend-${item.diseaseName}`} style={styles.imageLegendRow}>
+                <View style={[styles.imageLegendDot, { backgroundColor: item.color }]} />
+                <Text style={styles.imageLegendText}>{item.diseaseName}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </>
+    );
+  };
+
+  const renderDetailPanel = () => (
+    <View style={styles.detailPanel}>
+      <View style={styles.detailHeader}>
+        <Text style={styles.detailTitle}>Panel chi tiet</Text>
+        {selectedDetection ? (
+          <Pressable
+            onPress={() => {
+              setSelectedDetectionIndex(null);
+              setHoveredDetectionIndex(null);
+            }}
+            style={styles.detailClearBtn}
+          >
+            <Text style={styles.detailClearText}>Bo khoa chon</Text>
+          </Pressable>
+        ) : (
+          <View style={styles.detailStatePill}>
+            <Text style={styles.detailStateText}>{focusedDetectionIndex !== null ? 'Dang preview' : 'Tong quan anh'}</Text>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.summaryHero}>
+        <Text style={styles.summaryHeroLabel}>So benh da phat hien duoc</Text>
+        <Text style={styles.summaryHeroValue}>{inferenceResults?.length || 0}</Text>
+      </View>
+
+      <View style={[styles.focusModeRow, isPhoneLayout && { flexDirection: 'column' }]}>
+        <Pressable
+          onPress={() => setFocusMode('all')}
+          style={[
+            styles.focusModeBtn,
+            focusMode === 'all' && styles.focusModeBtnActive,
+            isPhoneLayout && styles.mobileBlockButton,
+          ]}
+        >
+          <Text style={styles.focusModeText}>Hien theo bo loc</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setFocusMode('selected')}
+          style={[
+            styles.focusModeBtn,
+            focusMode === 'selected' && styles.focusModeBtnActive,
+            selectedDetectionIndex === null && styles.focusModeBtnDisabled,
+            isPhoneLayout && styles.mobileBlockButton,
+          ]}
+          disabled={selectedDetectionIndex === null}
+        >
+          <Text style={styles.focusModeText}>Chi dom dang chon</Text>
+        </Pressable>
+      </View>
+
+      {diseaseSummary.length > 0 && (
+        <View style={styles.filterBar}>
+          <Pressable
+            onPress={() => setActiveDiseaseFilter('all')}
+            style={[
+              styles.filterChip,
+              activeDiseaseFilter === 'all' && styles.filterChipActive,
+            ]}
+          >
+            <Text style={styles.filterChipText}>Tat ca</Text>
+          </Pressable>
+          {diseaseSummary.map((item) => (
+            <Pressable
+              key={`filter-${item.diseaseName}`}
+              onPress={() => setActiveDiseaseFilter(item.diseaseName)}
+              style={[
+                styles.filterChip,
+                { borderColor: item.color },
+                activeDiseaseFilter === item.diseaseName && { backgroundColor: `${item.color}22` },
+              ]}
+            >
+              <View style={[styles.filterSwatch, { backgroundColor: item.color }]} />
+              <Text style={styles.filterChipText}>{item.diseaseName}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
+      {diseaseSummary.length > 0 ? (
+        <View style={styles.summaryChipRow}>
+          {diseaseSummary.map((item) => (
+            <View key={item.diseaseName} style={[styles.summaryChip, { borderColor: item.color }]}>
+              <View style={[styles.summaryChipDot, { backgroundColor: item.color }]} />
+              <Text style={styles.summaryChipText}>{item.diseaseName}: {item.count}</Text>
+            </View>
+          ))}
+        </View>
+      ) : (
+        <Text style={styles.detailHintText}>Chua co dom benh nao de thong ke.</Text>
+      )}
+
+      {selectedDetection ? (
+        <View style={styles.selectedDetailBlock}>
+          <Text style={styles.selectedDetailTitle}>Dom benh dang chon #{selectedDetectionIndex + 1}</Text>
+          <Text style={styles.detailDisease}>{selectedDetection.class_name}</Text>
+          <Text style={styles.detailText}>Do tin cay: {(selectedDetection.confidence * 100).toFixed(1)}%</Text>
+          <Text style={styles.detailText}>Dom benh dang duoc lam sang tren anh de ban nhan biet vi tri truc quan.</Text>
+        </View>
+      ) : (
+        <View style={styles.detailPanelMuted}>
+          <Text style={styles.detailHintTitle}>Thong tin theo tung dom benh</Text>
+          <Text style={styles.detailHintText}>Cham vao mot dong trong bang Ket qua YOLO hoac mot vung benh tren anh de lam sang dung vi tri cua dom benh do.</Text>
+        </View>
+      )}
+    </View>
+  );
+
+  const renderDetectionList = () => (
     <>
-      <View style={styles.mainViewer}>
-        <View style={styles.header}>
+      <Text style={styles.sectionTitle}>{activeTab}</Text>
+
+      {!inferenceResults && !isAnalyzing && (
+        <Text style={styles.detailHintText}>Chua co du lieu phan tich.</Text>
+      )}
+
+      {visibleDetectionIndexes.length === 0 && !!inferenceResults?.length && (
+        <Text style={styles.emptyFilterText}>Khong co dom benh nao khop voi bo loc hien tai.</Text>
+      )}
+
+      {visibleDetectionIndexes.map((index) => {
+        const box = inferenceResults[index];
+        const diseaseColor = diseaseColorMap[box.class_name] || '#facc15';
+
+        return (
+          <Pressable
+            key={index}
+            onLayout={(event) => {
+              detectionItemLayouts.current[index] = event.nativeEvent.layout.y;
+            }}
+            style={[
+              styles.boxItem,
+              { borderLeftColor: diseaseColor, borderLeftWidth: 4 },
+              focusedDetectionIndex === index && styles.boxItemActive,
+            ]}
+            onPress={() => handleDetectionPress(index)}
+          >
+            <Text style={styles.diseaseName}>{box.class_name}</Text>
+            <Text style={styles.boxText}>
+              Lien ket dom benh: #{index + 1}
+              {selectedDetectionIndex === index ? ' | Dang khoa chon' : focusedDetectionIndex === index ? ' | Dang duoc nhan' : ''}
+            </Text>
+            <Text style={styles.boxText}>Do tin cay: {(box.confidence * 100).toFixed(1)}%</Text>
+          </Pressable>
+        );
+      })}
+    </>
+  );
+
+  const renderInferenceView = () => {
+    const viewer = (
+      <View style={[styles.mainViewer, isCompactLayout && styles.mainViewerCompact]}>
+        <View style={[styles.header, isPhoneLayout && styles.headerCompact]}>
           <Text style={styles.sampleName}>{isAdmin ? 'Khong gian phan tich cho admin' : 'Mau phan tich hien tai'}</Text>
-          <Pressable style={styles.actionBtn} onPress={handlePickImage}>
+          <Pressable style={[styles.actionBtn, isPhoneLayout && styles.actionBtnWide]} onPress={handlePickImage}>
             <Text style={styles.actionText}>Tai anh moi</Text>
           </Pressable>
         </View>
 
         <View
-          style={styles.imageContainer}
+          style={[
+            styles.imageContainer,
+            isCompactLayout && styles.imageContainerCompact,
+            isPhoneLayout && styles.imageContainerPhone,
+          ]}
           onLayout={(event) => {
-            const { width, height } = event.nativeEvent.layout;
-            setPreviewFrame({ width, height });
+            const { width: frameWidth, height: frameHeight } = event.nativeEvent.layout;
+            setPreviewFrame({ width: frameWidth, height: frameHeight });
           }}
         >
-          {resultImageBase64 ? (
-            <>
-              <Image
-                key={`res-${resultImageBase64.substring(0, 20)}`}
-                source={{ uri: `data:image/jpeg;base64,${resultImageBase64}` }}
-                style={styles.previewImage}
-              />
-
-              {overlayBoxes.map((box) => {
-                const diseaseName = inferenceResults?.[box.index]?.class_name || 'Khong ro';
-                const diseaseColor = diseaseColorMap[diseaseName] || '#f59e0b';
-                const isVisible = focusMode === 'selected'
-                  ? focusedDetectionIndex === box.index
-                  : activeDiseaseFilter === 'all' || diseaseName === activeDiseaseFilter;
-                const isActive = focusedDetectionIndex === box.index;
-                return (
-                  <Pressable
-                    key={`overlay-${box.index}`}
-                    style={[
-                      styles.overlayHotspot,
-                      {
-                        left: box.left,
-                        top: box.top,
-                        width: box.width,
-                        height: box.height,
-                        borderColor: isActive ? '#ffffff' : diseaseColor,
-                        backgroundColor: isActive ? 'rgba(255,255,255,0.08)' : `${diseaseColor}18`,
-                        opacity: isVisible ? 1 : 0.14,
-                      },
-                      isActive && styles.overlayHotspotActive,
-                    ]}
-                    onHoverIn={() => handleDetectionHoverIn(box.index)}
-                    onHoverOut={handleDetectionHoverOut}
-                    onPress={() => handleDetectionPress(box.index)}
-                  />
-                );
-              })}
-
-              {diseaseSummary.length > 0 && (
-                <View style={styles.imageLegend}>
-                  {diseaseSummary.map((item) => (
-                    <View key={`legend-${item.diseaseName}`} style={styles.imageLegendRow}>
-                      <View style={[styles.imageLegendDot, { backgroundColor: item.color }]} />
-                      <Text style={styles.imageLegendText}>{item.diseaseName}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </>
-          ) : imageUri ? (
+          {resultImageBase64 ? renderOverlayLayer() : imageUri ? (
             <Image
               key={`src-${imageUri}`}
               source={{ uri: imageUri }}
@@ -311,7 +484,7 @@ export default function MainDashboard({ onLogout, currentUser, authToken }) {
         </View>
 
         {focusPreviewTransform && resultImageBase64 && (
-          <View style={styles.focusPreviewCard}>
+          <View style={[styles.focusPreviewCard, isPhoneLayout && styles.focusPreviewCardPhone]}>
             <Text style={styles.focusPreviewTitle}>Phong to dom dang chon</Text>
             <View
               style={[
@@ -340,14 +513,16 @@ export default function MainDashboard({ onLogout, currentUser, authToken }) {
           </View>
         )}
       </View>
+    );
 
-      <View style={styles.aiPanel}>
-        <View style={styles.tabContainer}>
+    const panel = (
+      <View style={[styles.aiPanel, isCompactLayout && styles.aiPanelCompact]}>
+        <View style={[styles.tabContainer, isPhoneLayout && styles.tabContainerCompact]}>
           <Pressable onPress={() => setActiveTab('Ket qua YOLO')} style={styles.tab}>
             <Text style={styles.tabText}>{activeTab}</Text>
           </Pressable>
           <Pressable
-            style={[styles.btnAction, !imageUri && { opacity: 0.5 }]}
+            style={[styles.btnAction, (!imageUri || isAnalyzing) && { opacity: 0.5 }, isPhoneLayout && styles.actionBtnWide]}
             onPress={handleRunInference}
             disabled={!imageUri || isAnalyzing}
           >
@@ -359,151 +534,36 @@ export default function MainDashboard({ onLogout, currentUser, authToken }) {
           </Pressable>
         </View>
 
-        <View style={styles.detailPanel}>
-          <View style={styles.detailHeader}>
-            <Text style={styles.detailTitle}>Panel chi tiet</Text>
-            {selectedDetection ? (
-              <Pressable
-                onPress={() => {
-                  setSelectedDetectionIndex(null);
-                  setHoveredDetectionIndex(null);
-                }}
-                style={styles.detailClearBtn}
-              >
-                <Text style={styles.detailClearText}>Bo khoa chon</Text>
-              </Pressable>
-            ) : (
-              <View style={styles.detailStatePill}>
-                <Text style={styles.detailStateText}>{focusedDetectionIndex !== null ? 'Dang preview' : 'Tong quan anh'}</Text>
-              </View>
-            )}
+        {renderDetailPanel()}
+
+        {isCompactLayout ? (
+          <View style={styles.panelContentCompact}>
+            {renderDetectionList()}
           </View>
-
-          <View style={styles.summaryHero}>
-            <Text style={styles.summaryHeroLabel}>So benh da phat hien duoc</Text>
-            <Text style={styles.summaryHeroValue}>{inferenceResults?.length || 0}</Text>
-          </View>
-
-          <View style={styles.focusModeRow}>
-            <Pressable
-              onPress={() => setFocusMode('all')}
-              style={[
-                styles.focusModeBtn,
-                focusMode === 'all' && styles.focusModeBtnActive,
-              ]}
-            >
-              <Text style={styles.focusModeText}>Hien theo bo loc</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => setFocusMode('selected')}
-              style={[
-                styles.focusModeBtn,
-                focusMode === 'selected' && styles.focusModeBtnActive,
-                selectedDetectionIndex === null && styles.focusModeBtnDisabled,
-              ]}
-              disabled={selectedDetectionIndex === null}
-            >
-              <Text style={styles.focusModeText}>Chi dom dang chon</Text>
-            </Pressable>
-          </View>
-
-          {diseaseSummary.length > 0 && (
-            <View style={styles.filterBar}>
-              <Pressable
-                onPress={() => setActiveDiseaseFilter('all')}
-                style={[
-                  styles.filterChip,
-                  activeDiseaseFilter === 'all' && styles.filterChipActive,
-                ]}
-              >
-                <Text style={styles.filterChipText}>Tat ca</Text>
-              </Pressable>
-              {diseaseSummary.map((item) => (
-                <Pressable
-                  key={`filter-${item.diseaseName}`}
-                  onPress={() => setActiveDiseaseFilter(item.diseaseName)}
-                  style={[
-                    styles.filterChip,
-                    { borderColor: item.color },
-                    activeDiseaseFilter === item.diseaseName && { backgroundColor: `${item.color}22` },
-                  ]}
-                >
-                  <View style={[styles.filterSwatch, { backgroundColor: item.color }]} />
-                  <Text style={styles.filterChipText}>{item.diseaseName}</Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
-
-          {diseaseSummary.length > 0 ? (
-            <View style={styles.summaryChipRow}>
-              {diseaseSummary.map((item) => (
-                <View key={item.diseaseName} style={[styles.summaryChip, { borderColor: item.color }]}>
-                  <View style={[styles.summaryChipDot, { backgroundColor: item.color }]} />
-                  <Text style={styles.summaryChipText}>{item.diseaseName}: {item.count}</Text>
-                </View>
-              ))}
-            </View>
-          ) : (
-            <Text style={styles.detailHintText}>Chua co dom benh nao de thong ke.</Text>
-          )}
-
-          {selectedDetection ? (
-            <View style={styles.selectedDetailBlock}>
-              <Text style={styles.selectedDetailTitle}>Dom benh dang chon #{selectedDetectionIndex + 1}</Text>
-              <Text style={styles.detailDisease}>{selectedDetection.class_name}</Text>
-              <Text style={styles.detailText}>Do tin cay: {(selectedDetection.confidence * 100).toFixed(1)}%</Text>
-              <Text style={styles.detailText}>Dom benh dang duoc lam sang tren anh de ban nhan biet vi tri truc quan.</Text>
-            </View>
-          ) : (
-            <View style={styles.detailPanelMuted}>
-              <Text style={styles.detailHintTitle}>Thong tin theo tung dom benh</Text>
-              <Text style={styles.detailHintText}>Click vao mot dong trong bang Ket qua YOLO hoac mot vung benh tren anh de lam sang dung vi tri cua dom benh do.</Text>
-            </View>
-          )}
-        </View>
-
-        <ScrollView ref={detectionScrollRef} style={styles.panelContent}>
-          <Text style={styles.sectionTitle}>Chi tiet phat hien</Text>
-
-          {!inferenceResults && !isAnalyzing && (
-            <Text style={{ color: COLORS.textSecondary, fontStyle: 'italic' }}>Chua co du lieu phan tich.</Text>
-          )}
-
-          {visibleDetectionIndexes.length === 0 && !!inferenceResults?.length && (
-            <Text style={styles.emptyFilterText}>Khong co dom benh nao khop voi bo loc hien tai.</Text>
-          )}
-
-          {visibleDetectionIndexes.map((index) => {
-            const box = inferenceResults[index];
-            const diseaseColor = diseaseColorMap[box.class_name] || '#f59e0b';
-
-            return (
-            <Pressable
-              key={index}
-              onLayout={(event) => {
-                detectionItemLayouts.current[index] = event.nativeEvent.layout.y;
-              }}
-              style={[
-                styles.boxItem,
-                { borderLeftColor: diseaseColor, borderLeftWidth: 4 },
-                focusedDetectionIndex === index && styles.boxItemActive,
-              ]}
-              onPress={() => handleDetectionPress(index)}
-            >
-              <Text style={styles.diseaseName}>{box.class_name}</Text>
-              <Text style={styles.boxText}>
-                Lien ket dom benh: #{index + 1}
-                {selectedDetectionIndex === index ? ' | Dang khoa chon' : focusedDetectionIndex === index ? ' | Dang duoc nhan' : ''}
-              </Text>
-              <Text style={styles.boxText}>Do tin cay: {(box.confidence * 100).toFixed(1)}%</Text>
-            </Pressable>
-            );
-          })}
-        </ScrollView>
+        ) : (
+          <ScrollView ref={detailScrollRef} style={styles.panelContent}>
+            {renderDetectionList()}
+          </ScrollView>
+        )}
       </View>
-    </>
-  );
+    );
+
+    if (isCompactLayout) {
+      return (
+        <ScrollView ref={detailScrollRef} style={styles.mobileScrollContainer} contentContainerStyle={styles.mobileScrollContent}>
+          {viewer}
+          {panel}
+        </ScrollView>
+      );
+    }
+
+    return (
+      <>
+        {viewer}
+        {panel}
+      </>
+    );
+  };
 
   const renderContent = () => {
     if (activeMenu === 'history') {
@@ -521,6 +581,52 @@ export default function MainDashboard({ onLogout, currentUser, authToken }) {
     return renderInferenceView();
   };
 
+  const renderMenuButtons = (compact = false) => (
+    <>
+      <Pressable style={[styles.menuItem, compact && styles.mobileMenuItem]} onPress={() => setActiveMenu('inference')}>
+        <Text style={[styles.menuText, activeMenu === 'inference' && styles.activeMenuText]}>
+          Phan tich anh
+        </Text>
+      </Pressable>
+
+      <Pressable style={[styles.menuItem, compact && styles.mobileMenuItem]} onPress={() => setActiveMenu('history')}>
+        <Text style={[styles.menuText, activeMenu === 'history' && styles.activeMenuText]}>
+          Lich su mau vat
+        </Text>
+      </Pressable>
+
+      {isAdmin && (
+        <Pressable style={[styles.menuItem, compact && styles.mobileMenuItem]} onPress={() => setActiveMenu('admin')}>
+          <Text style={[styles.menuText, activeMenu === 'admin' && styles.activeMenuText]}>
+            Quan tri he thong
+          </Text>
+        </Pressable>
+      )}
+    </>
+  );
+
+  if (isCompactLayout) {
+    return (
+      <View style={styles.containerCompact}>
+        <View style={styles.mobileTopbar}>
+          <Text style={[styles.title, styles.mobileTitle]}>CropVision AI</Text>
+          <Text style={[styles.menuText, styles.mobileRoleLabel]}>
+            {isAdmin ? `Admin: ${currentUserLabel}` : `Nguoi dung: ${currentUserLabel}`}
+          </Text>
+          <View style={styles.mobileMenuList}>
+            {renderMenuButtons(true)}
+          </View>
+          <Pressable style={styles.mobileLogoutBtn} onPress={onLogout}>
+            <Text style={styles.logoutText}>Dang xuat</Text>
+          </Pressable>
+        </View>
+        <View style={styles.compactContent}>
+          {renderContent()}
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.sidebar}>
@@ -531,25 +637,7 @@ export default function MainDashboard({ onLogout, currentUser, authToken }) {
           </Text>
 
           <View style={styles.menuList}>
-            <Pressable style={styles.menuItem} onPress={() => setActiveMenu('inference')}>
-              <Text style={[styles.menuText, activeMenu === 'inference' && { color: COLORS.primary, fontWeight: 'bold' }]}>
-                Phan tich anh
-              </Text>
-            </Pressable>
-
-            <Pressable style={styles.menuItem} onPress={() => setActiveMenu('history')}>
-              <Text style={[styles.menuText, activeMenu === 'history' && { color: COLORS.primary, fontWeight: 'bold' }]}>
-                Lich su mau vat
-              </Text>
-            </Pressable>
-
-            {isAdmin && (
-              <Pressable style={styles.menuItem} onPress={() => setActiveMenu('admin')}>
-                <Text style={[styles.menuText, activeMenu === 'admin' && { color: COLORS.primary, fontWeight: 'bold' }]}>
-                  Quan tri he thong
-                </Text>
-              </Pressable>
-            )}
+            {renderMenuButtons()}
           </View>
         </View>
 

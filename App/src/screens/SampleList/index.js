@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, ActivityIndicator, Image, Pressable } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, Image, Pressable, useWindowDimensions } from 'react-native';
 import { COLORS } from '../../constants/theme';
 import styles from './styles';
 import SampleDetailModal from '../../components/SampleDetailModal';
+import { buildApiUrl, resolveAssetUrl } from '../../config/api';
 
 export default function SampleList({ authToken, currentUser }) {
+  const { width } = useWindowDimensions();
   const [samples, setSamples] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedSample, setSelectedSample] = useState(null);
@@ -14,11 +16,14 @@ export default function SampleList({ authToken, currentUser }) {
     fetchHistory();
   }, [authToken, currentUser?.role]);
 
+  const numColumns = width < 720 ? 1 : width < 1120 ? 2 : 3;
+  const cardMaxWidth = numColumns === 1 ? '100%' : numColumns === 2 ? '48%' : '31%';
+
   const fetchHistory = async () => {
     if (!authToken) return;
 
     try {
-      const response = await fetch('http://localhost:3000/api/samples', {
+      const response = await fetch(buildApiUrl('/api/samples'), {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
@@ -57,12 +62,13 @@ export default function SampleList({ authToken, currentUser }) {
       <Pressable
         style={({ pressed }) => [
           styles.card,
+          { maxWidth: cardMaxWidth },
           pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] },
         ]}
         onPress={() => handleCardPress(item)}
       >
         <Image
-          source={{ uri: `http://127.0.0.1:3000${item.image_url}` }}
+          source={{ uri: resolveAssetUrl(item.image_url) }}
           style={styles.thumbnailImage}
           resizeMode="cover"
         />
@@ -121,12 +127,14 @@ export default function SampleList({ authToken, currentUser }) {
         </View>
       ) : (
         <FlatList
+          key={`sample-grid-${numColumns}`}
           data={samples}
           keyExtractor={(item) => item.id.toString()}
           renderItem={renderItem}
-          numColumns={3}
+          numColumns={numColumns}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
+          columnWrapperStyle={numColumns > 1 ? { justifyContent: 'space-between' } : null}
         />
       )}
 

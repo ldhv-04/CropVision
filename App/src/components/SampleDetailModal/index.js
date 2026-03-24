@@ -1,8 +1,7 @@
 import React from 'react';
 import { Modal, View, Text, Image, Pressable } from 'react-native';
 import styles from './styles';
-
-const API_BASE_URL = 'http://127.0.0.1:3000';
+import { resolveAssetUrl } from '../../config/api';
 
 const parseDetections = (detections) => {
   if (!detections) return [];
@@ -25,11 +24,7 @@ const parseDetections = (detections) => {
 
 const normalizeImageUrl = (imageUrl) => {
   if (!imageUrl) return null;
-  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('data:')) {
-    return imageUrl;
-  }
-
-  return `${API_BASE_URL}${imageUrl}`;
+  return resolveAssetUrl(imageUrl);
 };
 
 export default function SampleDetailModal({ visible, sample, onClose }) {

@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert, Platform } from 'react-native';
+import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert, Platform, useWindowDimensions } from 'react-native';
 import { COLORS } from '../../constants/theme';
 import styles from './styles';
-
-const API_BASE_URL = 'http://127.0.0.1:3000/api/admin';
+import { buildApiUrl } from '../../config/api';
 const FIXED_ADMIN_EMAIL = 'admin@cropvision.local';
 
 const formatDate = (value) => {
@@ -24,12 +23,16 @@ const formatConfidence = (value) => {
 };
 
 export default function AdminPanel({ authToken, currentUser }) {
+  const { width } = useWindowDimensions();
   const [summary, setSummary] = useState(null);
   const [users, setUsers] = useState([]);
   const [samples, setSamples] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [actionKey, setActionKey] = useState(null);
+
+  const isCompactLayout = width < 960;
+  const summaryCardWidth = isCompactLayout ? '100%' : '23%';
 
   // Xac nhan thao tac nguy hiem theo cach tuong thich desktop/web va native.
   const requestConfirmation = (title, message) => new Promise((resolve) => {
@@ -46,7 +49,7 @@ export default function AdminPanel({ authToken, currentUser }) {
 
   // Goi API admin co kem Bearer token.
   const adminFetch = async (endpoint, options = {}) => {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(buildApiUrl(`/api/admin${endpoint}`), {
       ...options,
       headers: {
         'Content-Type': 'application/json',
@@ -178,21 +181,25 @@ export default function AdminPanel({ authToken, currentUser }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 30 }}>
-      <View style={styles.toolbar}>
+      <View style={[styles.toolbar, isCompactLayout && { alignItems: 'flex-start', flexDirection: 'column' }]}>
         <View>
           <Text style={styles.toolbarTitle}>Bang quan tri admin</Text>
           <Text style={styles.toolbarSubTitle}>
             Quan ly role, nguoi dung va du lieu phan tich cho {currentUser?.email}
           </Text>
         </View>
-        <Pressable style={styles.refreshBtn} onPress={() => loadAdminData(true)} disabled={isRefreshing}>
+        <Pressable
+          style={[styles.refreshBtn, isCompactLayout && { marginTop: 12 }]}
+          onPress={() => loadAdminData(true)}
+          disabled={isRefreshing}
+        >
           <Text style={styles.refreshText}>{isRefreshing ? 'Dang tai...' : 'Lam moi'}</Text>
         </Pressable>
       </View>
 
       <View style={styles.summaryGrid}>
         {summaryCards.map((card) => (
-          <View key={card.label} style={styles.summaryCard}>
+          <View key={card.label} style={[styles.summaryCard, { width: summaryCardWidth }]}>
             <Text style={styles.summaryLabel}>{card.label}</Text>
             <Text style={styles.summaryValue}>{card.value}</Text>
           </View>
@@ -212,12 +219,12 @@ export default function AdminPanel({ authToken, currentUser }) {
             const isFixedAdmin = user.email === FIXED_ADMIN_EMAIL;
             return (
               <View key={user.id} style={styles.row}>
-                <View style={styles.rowHeader}>
+                <View style={[styles.rowHeader, isCompactLayout && { flexDirection: 'column' }]}>
                   <View>
                     <Text style={styles.rowTitle}>{user.full_name}</Text>
                     <Text style={styles.rowSubTitle}>{user.email}</Text>
                   </View>
-                  <View style={[styles.badge, { backgroundColor: user.role === 'admin' ? COLORS.primary : COLORS.border }]}>
+                  <View style={[styles.badge, { backgroundColor: user.role === 'admin' ? COLORS.primary : COLORS.border }, isCompactLayout && { marginTop: 10, alignSelf: 'flex-start' }]}>
                     <Text style={styles.badgeText}>{user.role}</Text>
                   </View>
                 </View>
@@ -228,9 +235,9 @@ export default function AdminPanel({ authToken, currentUser }) {
                   <Text style={styles.metaText}>Tao luc: {formatDate(user.created_at)}</Text>
                 </View>
 
-                <View style={styles.actionRow}>
+                <View style={[styles.actionRow, isCompactLayout && { flexDirection: 'column' }]}>
                   <Pressable
-                    style={[styles.actionBtn, isFixedAdmin ? styles.mutedAction : styles.primaryAction]}
+                    style={[styles.actionBtn, isFixedAdmin ? styles.mutedAction : styles.primaryAction, isCompactLayout && { marginRight: 0, marginBottom: 10 }]}
                     onPress={() => handleToggleRole(user)}
                     disabled={isFixedAdmin || actionKey === `role-${user.id}`}
                   >
@@ -264,13 +271,13 @@ export default function AdminPanel({ authToken, currentUser }) {
           <Text style={styles.emptyText}>Chua co mau vat nao de quan ly.</Text>
         ) : (
           samples.map((sample) => (
-            <View key={sample.id} style={styles.row}>
-              <View style={styles.rowHeader}>
+              <View key={sample.id} style={styles.row}>
+              <View style={[styles.rowHeader, isCompactLayout && { flexDirection: 'column' }]}>
                 <View>
                   <Text style={styles.rowTitle}>{sample.sample_name}</Text>
                   <Text style={styles.rowSubTitle}>{sample.owner_email || 'Khong gan user'}</Text>
                 </View>
-                <View style={[styles.badge, { backgroundColor: COLORS.secondary }]}>
+                <View style={[styles.badge, { backgroundColor: COLORS.secondary }, isCompactLayout && { marginTop: 10, alignSelf: 'flex-start' }]}>
                   <Text style={styles.badgeText}>{sample.detection_count} detections</Text>
                 </View>
               </View>

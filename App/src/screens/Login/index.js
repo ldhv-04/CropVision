@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, ActivityIndicator } from 'react-native';
 import styles from './styles';
 import { COLORS } from '../../constants/theme';
+import { buildApiUrl } from '../../config/api';
 
 export default function LoginScreen({ onNavigate, onLoginSuccess }) {
   const [email, setEmail] = useState('');
@@ -17,7 +18,7 @@ export default function LoginScreen({ onNavigate, onLoginSuccess }) {
 
     setIsLoading(true);
     try {
-      const response = await fetch('http://127.0.0.1:3000/api/auth/login', {
+      const response = await fetch(buildApiUrl('/api/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
