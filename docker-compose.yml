@@ -1,0 +1,75 @@
+services:
+  db:
+    image: postgres:16
+    container_name: cropvision-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cropvision_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  ai_core:
+    build:
+      context: ./ai_core
+    container_name: cropvision-ai-core
+    environment:
+      MODEL_PATH: /app/weight/archive/best.pt
+      HOST: 0.0.0.0
+      PORT: 8000
+    ports:
+      - "${AI_CORE_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    container_name: cropvision-backend
+    depends_on:
+      db:
+        condition: service_healthy
+      ai_core:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-cropvision_db}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      JWT_SECRET: ${JWT_SECRET:-khoa_luan_cropvision_secret_key_2026}
+      ADMIN_FULL_NAME: ${ADMIN_FULL_NAME:-CropVision Admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@cropvision.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin@123}
+      AI_CORE_URL: http://ai_core:8000
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    volumes:
+      - backend_uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then((res) => { if (!res.ok) process.exit(1); }).catch(() => process.exit(1));"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  backend_uploads:
