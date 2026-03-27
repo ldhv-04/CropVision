@@ -18,6 +18,8 @@ Stack nay da duoc cau hinh de may moi chi can:
 - tao file `.env`
 - chay `docker compose up --build`
 
+Database trong Docker la nguon PostgreSQL chuan cho local setup. De tranh loi `password authentication failed for user "postgres"`, file `.env` o root repo phai duoc tao truoc khi chay Docker va phai giu cung mot bo `POSTGRES_*` trong suot vong doi volume `postgres_data`.
+
 ## Yeu cau
 
 - Docker Desktop 4+
@@ -59,7 +61,7 @@ Vi du:
 ```env
 POSTGRES_DB=cropvision_db
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
+POSTGRES_PASSWORD=12345678
 POSTGRES_PORT=5432
 
 BACKEND_PORT=3000
@@ -74,6 +76,14 @@ ADMIN_PASSWORD=Admin@123
 ```
 
 ## 3. Khoi dong stack
+
+Neu day la lan dau tien ban cai Docker cho repo nay, hoac ban tung doi password Postgres truoc do, hay reset database volume truoc:
+
+```powershell
+docker compose down -v
+```
+
+Lenh nay xoa volume `postgres_data` cu de PostgreSQL khoi tao lai bang dung thong tin trong file `.env` hien tai.
 
 ```powershell
 docker compose up --build
@@ -90,7 +100,10 @@ Lan dau tien:
 - Docker se build image `backend`
 - Docker se build image `ai_core`
 - Docker se pull image `postgres:16`
+- PostgreSQL se tao user/database theo `POSTGRES_*` trong file `.env`
 - PostgreSQL se tu tao schema tu `backend/initdb/001-init.sql`
+
+Neu root `.env` thieu `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`, `BACKEND_PORT`, hoac `AI_CORE_PORT`, Docker Compose se dung ngay thay vi fallback ngam sang gia tri khac.
 
 ## 4. Kiem tra trang thai
 
@@ -166,12 +179,20 @@ Neu muon xoa toan bo du lieu local:
 docker compose down -v
 ```
 
+Luu y quan trong voi PostgreSQL:
+
+- `POSTGRES_PASSWORD` chi duoc ap dung khi volume `postgres_data` duoc tao lan dau
+- Neu ban da tung chay stack voi mot password khac, viec sua file `.env` khong tu dong doi password trong database cu
+- Trong truong hop do, can `docker compose down -v` roi `docker compose up --build` de dong bo lai DB theo dung env
+
 ## 7. Luu y quan trong
 
 - Model YOLO da duoc dong goi san vao image `ai_core`
 - Khong can mount model tu host de chay local tren may moi
 - `backend/.env` khong duoc su dung khi chay bang Docker Compose
 - Cau hinh Docker runtime di qua file `.env` o root repo
+- `backend/.env` chi dung khi chay `npm run dev` truc tiep trong thu muc `backend`
+- Neu backend local ket noi toi PostgreSQL trong Docker, `backend/.env` phai dung cung `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME` tuong ung voi root `.env`
 - Neu `RESEND_API_KEY` de trong, backend van khoi dong duoc nhung chuc nang gui OTP email se that bai
 
 ## 8. Lenh huu ich
@@ -210,6 +231,7 @@ Nguyen nhan thuong gap:
 - database chua healthy
 - AI Core chua healthy
 - loi bien moi truong
+- root `.env` va du lieu trong volume `postgres_data` dang lech password
 
 Kiem tra:
 
@@ -217,6 +239,16 @@ Kiem tra:
 docker compose ps
 docker compose logs backend --tail=100
 ```
+
+Neu log backend co thong bao `password authentication failed for user "postgres"`:
+
+```powershell
+docker compose down -v
+copy .env.docker.example .env
+docker compose up --build
+```
+
+Neu ban can giu mot password khac voi file mau, hay sua file `.env` truoc khi khoi dong lai, nhung van phai xoa volume cu bang `docker compose down -v`.
 
 ### Frontend dang nhap khong duoc tu thiet bi khac
 

@@ -3,19 +3,20 @@ services:
     image: postgres:16
     container_name: cropvision-db
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-cropvision_db}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required in root .env}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required in root .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required in root .env}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT:?POSTGRES_PORT is required in root .env}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 10s
     restart: unless-stopped
 
   ai_core:
@@ -27,7 +28,7 @@ services:
       HOST: 0.0.0.0
       PORT: 8000
     ports:
-      - "${AI_CORE_PORT:-8000}:8000"
+      - "${AI_CORE_PORT:?AI_CORE_PORT is required in root .env}:8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
       interval: 15s
@@ -47,11 +48,11 @@ services:
         condition: service_healthy
     environment:
       PORT: 3000
-      DB_USER: ${POSTGRES_USER:-postgres}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DB_USER: ${POSTGRES_USER:?POSTGRES_USER is required in root .env}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required in root .env}
       DB_HOST: db
       DB_PORT: 5432
-      DB_NAME: ${POSTGRES_DB:-cropvision_db}
+      DB_NAME: ${POSTGRES_DB:?POSTGRES_DB is required in root .env}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       JWT_SECRET: ${JWT_SECRET:-khoa_luan_cropvision_secret_key_2026}
       ADMIN_FULL_NAME: ${ADMIN_FULL_NAME:-CropVision Admin}
@@ -59,7 +60,7 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin@123}
       AI_CORE_URL: http://ai_core:8000
     ports:
-      - "${BACKEND_PORT:-3000}:3000"
+      - "${BACKEND_PORT:?BACKEND_PORT is required in root .env}:3000"
     volumes:
       - backend_uploads:/app/uploads
     healthcheck:

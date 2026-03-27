@@ -42,6 +42,7 @@ Tai lieu day du:
 
 ```powershell
 copy .env.docker.example .env
+docker compose down -v
 docker compose up --build
 ```
 
@@ -59,6 +60,7 @@ Neu chay frontend tren may khac trong cung mang LAN:
 
 - Dat `EXPO_PUBLIC_API_ORIGIN=http://<ip-may-chay-docker>:3000`
 - Khong dung `127.0.0.1` vi se tro ve chinh thiet bi client
+- Neu IP LAN cua may host thay doi, can cap nhat lai `App/.env` hoac dat lai `EXPO_PUBLIC_API_ORIGIN`
 
 De chay frontend local voi stack Docker:
 
@@ -169,6 +171,7 @@ Docker Compose doc file `.env` o root repo voi:
 - `ADMIN_PASSWORD`
 
 Khi chay bang Docker, `backend/.env` khong duoc su dung. Toan bo cau hinh cho `db`, `backend`, `ai_core` di qua file `.env` o root repo.
+`POSTGRES_PASSWORD` trong root `.env` chi co hieu luc khi volume `postgres_data` duoc tao lan dau. Neu tung chay DB voi password khac, can `docker compose down -v` truoc khi khoi dong lai de tranh loi `password authentication failed for user "postgres"`.
 
 ## Tai khoan admin mac dinh
 
