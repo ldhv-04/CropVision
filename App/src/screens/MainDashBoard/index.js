@@ -24,8 +24,37 @@ const inferMimeType = (fileName = '') => {
   return 'image/jpeg';
 };
 
+const appendImageToFormData = async (formData, asset, fallbackFileName) => {
+  const imageUri = asset?.uri;
+  const fileName = asset?.fileName || fallbackFileName;
+  const mimeType = asset?.mimeType || inferMimeType(fileName);
+
+  if (!imageUri || !fileName) {
+    throw new Error('Khong tim thay thong tin anh de tai len.');
+  }
+
+  if (Platform.OS === 'web') {
+    if (asset?.file) {
+      formData.append('image', asset.file, fileName);
+      return;
+    }
+
+    const imageResponse = await fetch(imageUri);
+    const imageBlob = await imageResponse.blob();
+    formData.append('image', imageBlob, fileName);
+    return;
+  }
+
+  formData.append('image', {
+    uri: imageUri,
+    name: fileName,
+    type: mimeType,
+  });
+};
+
 export default function MainDashboard({ onLogout, currentUser, authToken }) {
   const { width } = useWindowDimensions();
+  const [selectedAsset, setSelectedAsset] = useState(null);
   const [imageUri, setImageUri] = useState(null);
   const [inferenceResults, setInferenceResults] = useState(null);
   const [resultImageBase64, setResultImageBase64] = useState(null);
@@ -55,13 +84,15 @@ export default function MainDashboard({ onLogout, currentUser, authToken }) {
 
   const handlePickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: false,
       quality: 1,
     });
 
     if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+      const pickedAsset = result.assets[0];
+      setSelectedAsset(pickedAsset);
+      setImageUri(pickedAsset.uri);
       setInferenceResults(null);
       setResultImageBase64(null);
       setHoveredDetectionIndex(null);
@@ -73,22 +104,20 @@ export default function MainDashboard({ onLogout, currentUser, authToken }) {
   };
 
   const handleRunInference = async () => {
-    if (!imageUri) {
+    if (!selectedAsset?.uri) {
       alert('Vui long tai mot buc anh len truoc!');
       return;
     }
 
     setIsAnalyzing(true);
     try {
-      const uriParts = imageUri.split('/');
+      const uriParts = selectedAsset.uri.split('/');
       const rawFileName = uriParts[uriParts.length - 1] || `sample-${Date.now()}.jpg`;
-      const realFileName = rawFileName.includes('.') ? rawFileName : `${rawFileName}.jpg`;
+      const realFileName = (selectedAsset.fileName || rawFileName).includes('.')
+        ? (selectedAsset.fileName || rawFileName)
+        : `${selectedAsset.fileName || rawFileName}.jpg`;
       const formData = new FormData();
-      formData.append('image', {
-        uri: imageUri,
-        name: realFileName,
-        type: inferMimeType(realFileName),
-      });
+      await appendImageToFormData(formData, selectedAsset, realFileName);
 
       const apiResponse = await fetch(buildApiUrl('/api/analyze'), {
         method: 'POST',
@@ -117,7 +146,7 @@ export default function MainDashboard({ onLogout, currentUser, authToken }) {
       }
     } catch (error) {
       console.error('Loi gui anh:', error);
-      alert('Khong the ket noi den may chu. Hay chac chan backend va AI Core dang chay, hoac dat EXPO_PUBLIC_API_HOST theo IP may dev.');
+      alert('Khong the ket noi den may chu. Hay chac chan backend va AI Core dang chay. Neu dang mo app tren thiet bi that hoac Expo tunnel, hay dat EXPO_PUBLIC_API_HOST theo IP hoac domain cua backend.');
     } finally {
       setIsAnalyzing(false);
     }

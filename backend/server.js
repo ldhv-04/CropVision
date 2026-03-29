@@ -15,6 +15,10 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+app.get('/api/health', (req, res) => {
+  res.json({ success: true, service: 'backend', port });
+});
+
 // Gan router cho API inference va auth.
 app.use('/api', inferenceRoutes);
 app.use('/api/auth', authRoutes);

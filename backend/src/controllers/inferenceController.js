@@ -3,6 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const inferenceModel = require('../models/inferenceModel');
 
+const AI_CORE_URL = (process.env.AI_CORE_URL || 'http://127.0.0.1:8000').replace(/\/+$/, '');
+
 const analyzeImage = async (req, res) => {
   try {
     if (!req.user?.userId) {
@@ -18,7 +20,7 @@ const analyzeImage = async (req, res) => {
     formData.append('file', blob, req.file.originalname);
 
     console.log(`Dang gui anh ${req.file.originalname} sang AI Core...`);
-    const pythonResponse = await axios.post('http://127.0.0.1:8000/predict', formData);
+    const pythonResponse = await axios.post(`${AI_CORE_URL}/predict`, formData);
     const inferenceData = pythonResponse.data;
 
     const uploadDir = path.join(__dirname, '../../uploads');
