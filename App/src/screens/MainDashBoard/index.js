@@ -7,6 +7,7 @@ import { COLORS } from '../../constants/theme';
 import SampleList from '../SampleList';
 import AdminPanel from '../../components/AdminPanel';
 import { buildApiUrl } from '../../config/api';
+import { useAuth } from '../../context/AuthContext';
 
 const DISEASE_COLOR_PALETTE = ['#facc15', '#f97316', '#fb7185', '#38bdf8', '#a3e635', '#c084fc'];
 
@@ -52,7 +53,8 @@ const appendImageToFormData = async (formData, asset, fallbackFileName) => {
   });
 };
 
-export default function MainDashboard({ onLogout, currentUser, authToken }) {
+export default function MainDashboard() {
+  const { user: currentUser, token: authToken, logout: onLogout } = useAuth();
   const { width } = useWindowDimensions();
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [imageUri, setImageUri] = useState(null);

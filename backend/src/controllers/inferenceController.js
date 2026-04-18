@@ -1,9 +1,5 @@
-const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
+const inferenceService = require('../services/inferenceService');
 const inferenceModel = require('../models/inferenceModel');
-
-const AI_CORE_URL = (process.env.AI_CORE_URL || 'http://127.0.0.1:8000').replace(/\/+$/, '');
 
 const analyzeImage = async (req, res) => {
   try {
@@ -15,38 +11,17 @@ const analyzeImage = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Vui long tai len mot buc anh.' });
     }
 
-    const blob = new Blob([req.file.buffer], { type: req.file.mimetype });
-    const formData = new FormData();
-    formData.append('file', blob, req.file.originalname);
+    const inferenceData = await inferenceService.callAiCore(
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype
+    );
 
-    console.log(`Dang gui anh ${req.file.originalname} sang AI Core...`);
-    const pythonResponse = await axios.post(`${AI_CORE_URL}/predict`, formData);
-    const inferenceData = pythonResponse.data;
-
-    const uploadDir = path.join(__dirname, '../../uploads');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
-    const safeFileName = `${Date.now()}_${req.file.originalname.replace(/\s/g, '_')}`;
-    const filePath = path.join(uploadDir, safeFileName);
-    fs.writeFileSync(filePath, req.file.buffer);
+    const { imageUrl } = await inferenceService.persistUpload(req.file.buffer, req.file.originalname);
 
     if (inferenceData.success) {
-      const sampleData = {
-        userId: req.user.userId,
-        sampleName: req.file.originalname,
-        cropType: 'unknown',
-        imageUrl: `/uploads/${safeFileName}`,
-        fileSize: req.file.size,
-      };
-
-      // Luu mau vat gan voi user dang dang nhap de phuc vu phan quyen lich su.
-      const savedSampleId = await inferenceModel.saveInferenceTransaction(
-        sampleData,
-        inferenceData.boxes
-      );
-      console.log(`Da luu du lieu thanh cong vao Database voi ID: ${savedSampleId}`);
+      const savedId = await inferenceService.saveResult(req.user.userId, req.file, imageUrl, inferenceData);
+      console.info(`[Inference] Sample saved → DB id=${savedId} user=${req.user.userId}`);
     }
 
     res.json({
@@ -55,7 +30,7 @@ const analyzeImage = async (req, res) => {
       data: inferenceData,
     });
   } catch (error) {
-    console.error('Loi tai Controller analyzeImage:', error.message);
+    console.error(`[Inference] analyzeImage error user=${req.user?.userId}:`, error.message);
     res.status(500).json({ success: false, message: 'Loi he thong may chu.' });
   }
 };
@@ -78,7 +53,7 @@ const getHistory = async (req, res) => {
       data: historyData,
     });
   } catch (error) {
-    console.error('Loi tai Controller getHistory:', error.message);
+    console.error(`[Inference] getHistory error user=${req.user?.userId}:`, error.message);
     res.status(500).json({ success: false, message: 'Loi khi truy xuat du lieu tu co so du lieu.' });
   }
 };

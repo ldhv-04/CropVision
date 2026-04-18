@@ -28,3 +28,7 @@ backend/uploads/
 
 # Tool caches
 .cache/
+
+#everything-claude-code
+everything-claude-code/
+.agent/

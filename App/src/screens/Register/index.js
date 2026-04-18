@@ -4,7 +4,7 @@ import styles from './styles';
 import { COLORS } from '../../constants/theme';
 import { buildApiUrl } from '../../config/api';
 
-export default function RegisterScreen({ onNavigate }) {
+export default function RegisterScreen({ navigation }) {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,7 +34,7 @@ export default function RegisterScreen({ onNavigate }) {
       
       if (data.success) {
         alert(data.message);
-        onNavigate('verifyEmail', { email: email });
+        navigation.navigate('VerifyEmail', { email });
       } else {
         alert('Lỗi: ' + data.message);
       }
@@ -113,7 +113,7 @@ export default function RegisterScreen({ onNavigate }) {
 
         <View style={styles.footerRow}>
           <Text style={styles.footerText}>Đã có tài khoản?</Text>
-          <Pressable onPress={() => onNavigate('login')}>
+          <Pressable onPress={() => navigation.navigate('Login')}>
             <Text style={styles.linkText}>Đăng nhập ngay</Text>
           </Pressable>
         </View>

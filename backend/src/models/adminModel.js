@@ -1,9 +1,6 @@
-const fs = require('fs');
-const path = require('path');
 const pool = require('../config/db');
 
 const FIXED_ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@cropvision.local';
-const BACKEND_ROOT = path.join(__dirname, '../..');
 
 // Tong hop so lieu quan tri nhanh cho dashboard admin.
 const getAdminSummary = async () => {
@@ -137,14 +134,6 @@ const deleteSampleById = async (sampleId) => {
     await client.query('DELETE FROM crop_samples WHERE id = $1', [sampleId]);
 
     await client.query('COMMIT');
-
-    if (sample.image_url && sample.image_url.startsWith('/uploads/')) {
-      const absoluteImagePath = path.join(BACKEND_ROOT, sample.image_url.replace(/^\//, ''));
-      if (fs.existsSync(absoluteImagePath)) {
-        fs.unlinkSync(absoluteImagePath);
-      }
-    }
-
     return sample;
   } catch (error) {
     await client.query('ROLLBACK');

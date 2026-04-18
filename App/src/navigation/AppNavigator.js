@@ -1,42 +1,45 @@
-import React, { useState } from 'react';
-import { Platform } from 'react-native';
+import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
-import LoginScreen from '../screens/LoginScreen';
-import RegisterScreen from '../screens/RegisterScreen';
+import { AuthProvider, useAuth } from '../context/AuthContext';
+
+import WelcomeScreen from '../screens/Welcome';
+import LoginScreen from '../screens/Login';
+import RegisterScreen from '../screens/Register';
+import VerifyEmailScreen from '../screens/VerifyEmail';
 import MainDashboard from '../screens/MainDashBoard';
-import MobileApp from '../screens/MobileApp';
 
 const Stack = createStackNavigator();
 
-export default function AppNavigator() {
-  const isMobile = Platform.OS === 'ios' || Platform.OS === 'android';
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  const handleLogin = () => setIsAuthenticated(true);
-  const handleLogout = () => setIsAuthenticated(false);
+// Bo dieu huong noi bo su dung AuthContext de quyet dinh man hinh nao hien thi.
+function RootNavigator() {
+  const { token } = useAuth();
+  const isAuthenticated = Boolean(token);
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!isAuthenticated ? (
-          <>
-            <Stack.Screen name="Login">
-              {props => <LoginScreen {...props} onLogin={handleLogin} />}
-            </Stack.Screen>
-            <Stack.Screen name="Register" component={RegisterScreen} />
-          </>
-        ) : isMobile ? (
-          <Stack.Screen name="Mobile">
-            {props => <MobileApp {...props} onLogout={handleLogout} />}
-          </Stack.Screen>
-        ) : (
-          <Stack.Screen name="Desktop">
-            {props => <MainDashboard {...props} onLogout={handleLogout} />}
-          </Stack.Screen>
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {!isAuthenticated ? (
+        <>
+          <Stack.Screen name="Welcome" component={WelcomeScreen} />
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
+        </>
+      ) : (
+        <Stack.Screen name="Main" component={MainDashboard} />
+      )}
+    </Stack.Navigator>
+  );
+}
+
+// Cay navigation chinh — duoc bao boc boi AuthProvider de RootNavigator truy cap duoc context.
+export default function AppNavigator() {
+  return (
+    <AuthProvider>
+      <NavigationContainer>
+        <RootNavigator />
+      </NavigationContainer>
+    </AuthProvider>
   );
 }

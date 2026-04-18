@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import styles from './styles';
 
-export default function WelcomeScreen({ onNavigate }) {
+export default function WelcomeScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <View style={styles.logoContainer}>
@@ -16,18 +16,18 @@ export default function WelcomeScreen({ onNavigate }) {
       <View style={styles.buttonContainer}>
         <Pressable 
           style={styles.primaryBtn} 
-          onPress={() => onNavigate('login')}
+          onPress={() => navigation.navigate('Login')}
         >
           <Text style={styles.primaryBtnText}>Đăng nhập</Text>
         </Pressable>
         
         <Pressable 
           style={styles.secondaryBtn} 
-          onPress={() => onNavigate('register')}
+          onPress={() => navigation.navigate('Register')}
         >
           <Text style={styles.secondaryBtnText}>Tạo tài khoản mới</Text>
         </Pressable>
       </View>
     </View>
   );
-}
+}

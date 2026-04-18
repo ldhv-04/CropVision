@@ -1,4 +1,5 @@
 const adminModel = require('../models/adminModel');
+const adminService = require('../services/adminService');
 
 const ALLOWED_ROLES = new Set(['user', 'admin']);
 
@@ -82,11 +83,10 @@ const deleteUser = async (req, res) => {
   }
 };
 
-// Cho phep admin xoa mau vat va du lieu suy luan lien quan.
 const deleteSample = async (req, res) => {
   try {
     const { sampleId } = req.params;
-    const deletedSample = await adminModel.deleteSampleById(sampleId);
+    const deletedSample = await adminService.deleteSampleWithFile(sampleId);
 
     if (!deletedSample) {
       return res.status(404).json({ success: false, message: 'Khong tim thay mau vat can xoa.' });

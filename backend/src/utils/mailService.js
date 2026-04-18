@@ -26,7 +26,7 @@ const sendOTP = async (toEmail, otpCode) => {
       `,
     });
 
-    console.log(`Da yeu cau Resend gui OTP toi ${toEmail}. ID Email:`, data.id);
+    console.info(`[Mail] OTP sent → ${toEmail} (Resend id=${data.id})`);
     return data;
   } catch (error) {
     console.error('Loi khi goi API Resend:', error);
