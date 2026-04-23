@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "CropVision AI",
+    "slug": "cropvision-ai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "cropvision",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "vn.edu.hcmus.cropvision"
+    },
+    "android": {
+      "package": "vn.edu.hcmus.cropvision",
+      "adaptiveIcon": {
+        "backgroundColor": "#0f172a"
+      }
+    },
+    "web": {
+      "output": "static",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-image-picker"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

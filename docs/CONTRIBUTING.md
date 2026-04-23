@@ -15,15 +15,14 @@ Chao mung ban den voi CropVision AI. Tai lieu nay huong dan cach thiet lap moi t
 ### App (`App/package.json`)
 | Command | Description |
 |---------|-------------|
-| `npm run start` | Khoi dong Expo server mac dinh |
-| `npm run mobile` | Khoi dong Expo o che do LAN |
-| `npm run mobile:tunnel`| Khoi dong Expo kem ngrok tunnel |
+| `npm run dev:desktop` | Khoi dong song song Web va Electron |
+| `npm run web` | Khoi dong React Native Web (port 8081) |
 | `npm run android` | Khoi dong tren Android emulator |
 | `npm run ios` | Khoi dong tren iOS simulator |
-| `npm run web` | Khoi dong React Native Web |
-| `npm run electron` | Khoi dong Electron window (can web dang chay) |
-| `npm run dev:desktop` | Khoi dong song song Web va Electron |
-| `npm run build:win` | Build ra ung dung .exe (NSIS) |
+| `npm run export:web` | Build production bundle (dist/) |
+| `npm run build:win` | Build binary Electron .exe |
+| `npm test` | Chay Jest unit tests |
+| `npm run test:coverage` | Kiem tra ty le bao phu code |
 <!-- AUTO-GENERATED: SCRIPTS -->
 
 <!-- AUTO-GENERATED: ENV -->
@@ -42,6 +41,13 @@ Chao mung ban den voi CropVision AI. Tai lieu nay huong dan cach thiet lap moi t
 | `ADMIN_EMAIL` | No | Email đăng nhập của Admin mặc định | `admin@cropvision.local` |
 | `ADMIN_PASSWORD` | No | Mật khẩu Admin mặc định | `Admin@123` |
 | `AI_CORE_URL` | No | URL trỏ tới dịch vụ AI | `http://127.0.0.1:8000` |
+
+### Frontend (`App/.env.example`)
+| Variable | Required | Description | Example |
+|----------|----------|-------------|---------|
+| `EXPO_PUBLIC_API_PROTOCOL` | Yes | HTTP/HTTPS protocol | `http` |
+| `EXPO_PUBLIC_API_HOST` | Yes | IP/Host Backend | `127.0.0.1` |
+| `EXPO_PUBLIC_API_PORT` | Yes | Port Backend | `3000` |
 <!-- AUTO-GENERATED: ENV -->
 
 ## Development Workflow

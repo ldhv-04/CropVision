@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, Pressable, ActivityIndicator } from 'react-native';
 import styles from './styles';
 import { COLORS } from '../../constants/theme';
-import { buildApiUrl } from '../../config/api';
+import { useAuthStore } from '../../modules/@core/auth/useAuthStore';
 
 export default function RegisterScreen({ navigation }) {
+  const { register, isLoading: authLoading } = useAuthStore();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleRegister = async () => {
     if (!fullName || !email || !password) {
@@ -22,27 +22,13 @@ export default function RegisterScreen({ navigation }) {
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const response = await fetch(buildApiUrl('/api/auth/register'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName, email, password })
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        alert(data.message);
-        navigation.navigate('VerifyEmail', { email });
-      } else {
-        alert('Lỗi: ' + data.message);
-      }
-    } catch (error) {
-      console.error(error);
-      alert('Không thể kết nối đến máy chủ.');
-    } finally {
-      setIsLoading(false);
+    const result = await register(fullName, email, password);
+    
+    if (result.success) {
+      alert(result.message);
+      navigation.navigate('VerifyEmail', { email });
+    } else {
+      alert('Lỗi: ' + result.message);
     }
   };
 
@@ -102,9 +88,9 @@ export default function RegisterScreen({ navigation }) {
         <Pressable 
           style={styles.registerBtn} 
           onPress={handleRegister}
-          disabled={isLoading}
+          disabled={authLoading}
         >
-          {isLoading ? (
+          {authLoading ? (
             <ActivityIndicator color={COLORS.white} />
           ) : (
             <Text style={styles.registerBtnText}>Đăng ký tài khoản</Text>

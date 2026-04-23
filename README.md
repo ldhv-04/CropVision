@@ -1,12 +1,45 @@
 # CropVision AI
 
-Hệ thống phát hiện bệnh lá cây dựa trên YOLOv8, gồm 3 thành phần vận hành tách biệt:
+Hệ thống phát hiện bệnh lá cây dựa trên YOLOv8, gồm 3 thành phần vận hành tách biệt theo mô hình Tri-Platform Modular Architecture:
 
+```mermaid
+graph TD
+    User((User))
+    Web[Web Browser]
+    Desktop[Electron App]
+    Mobile[Expo Go/Native]
+    
+    subgraph Frontend [App Module - Expo Router]
+        UI[Modular UI src/modules]
+        Core[@core Design & Stores]
+        Platform[Platform Services]
+    end
+    
+    subgraph Services
+        Backend[Backend API Node.js]
+        AICore[AI Core Python/YOLOv8]
+        DB[(PostgreSQL)]
+    end
+
+    User --> Web
+    User --> Desktop
+    User --> Mobile
+    Web & Desktop & Mobile --> UI
+    UI --> Core
+    UI --> Platform
+    Core --> Backend
+    Backend --> DB
+    Backend --> AICore
+```
+
+---
+
+## Cấu trúc tổng quan
 | Thành phần | Công nghệ | Mô tả |
 |------------|-----------|-------|
-| `App/` | Expo + React Native Web + Electron | Giao diện desktop/web |
-| `backend/` | Node.js + Express + PostgreSQL | API, xác thực, admin, lịch sử |
-| `ai_core/` | FastAPI + YOLOv8 (Ultralytics) | Dịch vụ suy luận AI |
+| `App/` | Expo SDK 55 + Router | Web/Android/iOS/Desktop |
+| `backend/` | Node.js + PostgreSQL | Business Logic & Data |
+| `ai_core/` | FastAPI + YOLOv8 | Computer Vision Discovery |
 
 ---
 
@@ -14,37 +47,39 @@ Hệ thống phát hiện bệnh lá cây dựa trên YOLOv8, gồm 3 thành ph�
 
 ```
 cropvision_db/
-├── App/                  # Frontend desktop/web
+├── App/                  # Frontend tri-platform (Web, Desktop, Mobile)
+│   ├── app/              # Expo Router (File-based Routing)
+│   │   ├── (auth)/       # Luồng xác thực (Welcome, Login, Register, Verify)
+│   │   ├── (main)/       # Luồng chính (Inference, History, Admin)
+│   │   └── _layout.js    # Root Layout & Global State provider
 │   ├── src/
-│   │   ├── components/   # AdminPanel, SampleDetailModal
-│   │   ├── config/       # api.js - cấu hình URL động
-│   │   ├── constants/    # theme.js
-│   │   ├── context/      # AuthContext.js - quản lý phiên đăng nhập
-│   │   ├── navigation/   # AppNavigator.js - trung tâm điều hướng
-│   │   └── screens/      # Login, Register, VerifyEmail, Welcome, MainDashBoard, SampleList
-│   ├── electron/         # main.js - Electron entry point
-│   └── App.js            # Shell khởi động, giao quyền cho AppNavigator
+│   │   ├── modules/      # Three-Layer Module Pattern (Core, Adaptive, Feature)
+│   │   │   ├── @core/    # Design tokens, global stores (Zustand), AppShell
+│   │   │   ├── platform/ # Adaptive UI services (ImagePickerService)
+│   │   │   ├── auth/     # Auth store logic
+│   │   │   ├── inference/# Inference module (stores, layout, actions)
+│   │   │   ├── history/  # History module (SampleList)
+│   │   │   └── admin/    # Admin module (User management, system stats)
+│   │   └── ...           # legacy src/ screens & navigation (phasing out)
+│   ├── electron/         # Electron platform host config
+│   └── dist/             # Production web bundle (for Vercel/Electron)
 │
-├── backend/
+├── backend/              # Node.js API Service
 │   └── src/
-│       ├── config/       # db.js - PostgreSQL pool
-│       ├── controllers/  # HTTP handlers mỏng (auth, inference, admin)
-│       ├── middleware/   # authMiddleware.js - JWT, RBAC
-│       ├── models/       # Data layer - truy vấn DB thuần túy
-│       ├── routes/       # Express routers + validation middleware
-│       ├── services/     # Business logic (authService, inferenceService, adminService)
-│       └── utils/        # mailService.js (Resend OTP)
+│       ├── controllers/  # Request handlers
+│       ├── middleware/   # JWT, RBAC, Validation
+│       ├── models/       # PostgreSQL Data Access Object (pure SQL)
+│       ├── routes/       # Express Route definitions
+│       ├── services/     # Business logic layer
+│       └── server.js     # Entry point Node.js
 │
-├── ai_core/
-│   ├── api/              # predict.py - FastAPI router
-│   ├── core/             # config.py - cấu hình từ env
-│   ├── models/           # yolo_model.py - YOLO singleton loader
-│   ├── schemas/          # prediction.py - Pydantic schemas
-│   ├── main.py           # Entry point FastAPI + uvicorn
-│   ├── Dockerfile        # Container image cho ai_core
-│   └── requirements.txt
+├── ai_core/              # Python AI Discovery Service
+│   ├── api/              # FastAPI routers
+│   ├── core/             # AI configuration (YOLO paths)
+│   ├── main.py           # Entry point uvicorn server
+│   └── Dockerfile        # Container source
 │
-├── docker-compose.yml    # Orchestration: db + backend + ai_core
+├── docker-compose.yml    # Orchestration (DB + Backend + AI)
 └── README.md
 ```
 
@@ -114,15 +149,15 @@ python main.py           # Khởi động FastAPI trên 127.0.0.1:8000
 
 > **Lưu ý:** Phải chạy `python main.py` từ trong môi trường ảo (venv/conda) đã cài đủ `fastapi`, `ultralytics`, `uvicorn`.
 
-### 3. Frontend desktop/web
+### 3. Frontend (App)
 
-```powershell
-cd App
-npm install
-npm run dev:desktop      # Mở Electron window
-# hoặc
-npm run dev              # Mở trong trình duyệt
-```
+| Lệnh | Mô tả |
+|------|-------|
+| `npm run dev:desktop` | (Khuyến nghị) Chạy Web + Electron Window |
+| `npm run web` | Chỉ chạy phiên bản trình duyệt (port 8081) |
+| `npm run android` / `ios` | Chạy trên thiết bị di động |
+| `npm run export:web` | Tạo production bundle trong `dist/` |
+| `npm test` | Chạy bộ kiểm thử Jest & E2E |
 
 ---
 

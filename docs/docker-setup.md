@@ -136,7 +136,9 @@ Frontend trong `App/` chay ngoai Docker.
 Tao `App/.env`:
 
 ```env
-EXPO_PUBLIC_API_ORIGIN=http://127.0.0.1:3000
+EXPO_PUBLIC_API_PROTOCOL=http
+EXPO_PUBLIC_API_HOST=127.0.0.1
+EXPO_PUBLIC_API_PORT=3000
 ```
 
 Sau do:
@@ -148,14 +150,14 @@ npm install
 npm run dev:desktop
 ```
 
-Neu file `.env` da co san, chi can dam bao `EXPO_PUBLIC_API_ORIGIN` dung gia tri dung.
+Neu file `.env` da co san, chi can dam bao `EXPO_PUBLIC_API_HOST` dung gia tri dung.
 
 ### Truong hop frontend chay tren may hoac thiet bi khac
 
 Dat:
 
 ```env
-EXPO_PUBLIC_API_ORIGIN=http://<ip-may-chay-docker>:3000
+EXPO_PUBLIC_API_HOST=<ip-may-chay-docker>
 ```
 
 Khong dung `127.0.0.1` trong truong hop nay, vi no se tro ve chinh thiet bi client.
@@ -254,12 +256,12 @@ Neu ban can giu mot password khac voi file mau, hay sua file `.env` truoc khi kh
 
 Nguyen nhan thuong gap:
 
-- dang de `EXPO_PUBLIC_API_ORIGIN=http://127.0.0.1:3000`
+- dang de `EXPO_PUBLIC_API_HOST=127.0.0.1`
 
 Can sua thanh:
 
 ```env
-EXPO_PUBLIC_API_ORIGIN=http://<ip-may-chay-docker>:3000
+EXPO_PUBLIC_API_HOST=<ip-may-chay-docker>
 ```
 
 ### Dang ky tai khoan bi loi gui email
