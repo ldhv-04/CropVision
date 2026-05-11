@@ -86,6 +86,19 @@ export const apiRequest = async (path, options = {}, token = null) => {
     headers,
   });
 
+  // [H1] Always parse JSON first so callers get the body even on errors.
   const data = await response.json();
+
+  // [H1] If the server returned a non-2xx status, throw an error that
+  //       includes both the status code and the server's message.
+  //       This lets callers (e.g. stores) distinguish network errors
+  //       from server-side validation failures.
+  if (!response.ok) {
+    const err = new Error(data.message || `Request failed with status ${response.status}`);
+    err.status = response.status;
+    err.data = data;
+    throw err;
+  }
+
   return data;
 };

@@ -29,6 +29,15 @@ export const ENDPOINTS = {
     deleteSample: (id) => `/api/admin/samples/${id}`,
   },
 
+  // Chat (9Router AI)
+  chat: {
+    sessions:       '/api/chat/sessions',
+    session:        (id) => `/api/chat/sessions/${id}`,
+    renameSession:  (id) => `/api/chat/sessions/${id}`,
+    deleteSession:  (id) => `/api/chat/sessions/${id}`,
+    sendMessage:    (id) => `/api/chat/sessions/${id}/messages`,
+  },
+
   // Health
   health: '/api/health',
 };

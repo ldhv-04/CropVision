@@ -7,19 +7,28 @@
     "scheme": "cropvision",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f172a"
+    },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "vn.edu.hcmus.cropvision"
+      "bundleIdentifier": "vn.edu.hcmus.cropvision",
+      "icon": "./assets/icon.png"
     },
     "android": {
       "package": "vn.edu.hcmus.cropvision",
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f172a"
       }
     },
     "web": {
       "output": "static",
-      "bundler": "metro"
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-router",

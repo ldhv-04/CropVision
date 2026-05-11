@@ -1,88 +1,89 @@
 import { StyleSheet } from 'react-native';
-import { COLORS } from '../../@core/constants/theme';
+import { COLORS, SPACING, RADIUS, FONT_SIZE } from '../../@core/constants/theme';
 
+// [L1] All magic numbers replaced with design tokens from theme.js.
+//      This ensures visual consistency across all modules.
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-    padding: 20
+    padding: SPACING.lg,           // was: 20
   },
   header: {
-    marginBottom: 20
+    marginBottom: SPACING.lg,      // was: 20
   },
   title: {
     color: COLORS.textPrimary,
-    fontSize: 24,
-    fontWeight: 'bold'
+    fontSize: FONT_SIZE.xl,        // was: 24
+    fontWeight: 'bold',
   },
   subTitle: {
     color: COLORS.textSecondary,
-    fontSize: 14,
-    marginTop: 5
+    fontSize: FONT_SIZE.sm,        // was: 14
+    marginTop: SPACING.xs,         // was: 5
   },
   loaderContainer: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
   },
   listContainer: {
-    paddingBottom: 20
+    paddingBottom: SPACING.lg,     // was: 20
   },
   card: {
     flex: 1,
     backgroundColor: COLORS.surface,
-    margin: 10,
-    borderRadius: 8,
+    margin: SPACING.sm,            // was: 10
+    borderRadius: RADIUS.sm,       // was: 8
     borderWidth: 1,
     borderColor: COLORS.border,
     overflow: 'hidden',
-    maxWidth: '31%' // Đảm bảo chia đều 3 cột trên Web/Electron
+    maxWidth: '31%',               // 3-column grid on Web/Electron
   },
   thumbnailImage: {
     height: 150,
     width: '100%',
-    //resizeMode: 'cover', // Cắt cúp ảnh cho đầy khung mà không làm méo tỷ lệ
-    backgroundColor: COLORS.black
+    backgroundColor: COLORS.black,
   },
   cardBody: {
-    padding: 15
+    padding: SPACING.md,           // was: 15
   },
   sampleName: {
     color: COLORS.textPrimary,
-    fontSize: 16,
+    fontSize: FONT_SIZE.lg,        // was: 16
     fontWeight: 'bold',
-    marginBottom: 8
+    marginBottom: SPACING.sm,      // was: 8
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4
+    marginBottom: SPACING.xs,      // was: 4
   },
   infoLabel: {
     color: COLORS.textSecondary,
-    fontSize: 12
+    fontSize: FONT_SIZE.xs,        // was: 12
   },
   infoValue: {
     color: COLORS.primary,
-    fontSize: 12,
-    fontWeight: 'bold'
+    fontSize: FONT_SIZE.xs,        // was: 12
+    fontWeight: 'bold',
   },
   diseaseValue: {
     color: COLORS.danger,
-    fontSize: 12,
-    fontWeight: 'bold'
+    fontSize: FONT_SIZE.xs,        // was: 12
+    fontWeight: 'bold',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 50
+    marginTop: SPACING.xxl,        // was: 50
   },
   emptyText: {
     color: COLORS.textSecondary,
-    fontSize: 16,
-    fontStyle: 'italic'
-  }
+    fontSize: FONT_SIZE.lg,        // was: 16
+    fontStyle: 'italic',
+  },
 });
 
 export default styles;

@@ -51,6 +51,46 @@ const useInferenceStore = create((set, get) => ({
   /** Called when the image container lays out on screen. */
   setPreviewFrame: (frame) => set({ previewFrame: frame }),
 
+  /**
+   * [M2] Build a FormData with the selected image for upload.
+   *
+   * Platform strategy (3 cases, simplified):
+   *   1. Web with File object  → use it directly (best quality, preserves metadata)
+   *   2. Web with data: URI    → convert to Blob via fetch()
+   *   3. Native (iOS/Android)  → pass {uri, name, type} object (RN polyfill handles it)
+   *
+   * @param {object} asset - The selected asset from image picker
+   * @returns {Promise<FormData>} Ready-to-send FormData with 'image' field
+   */
+  _buildImageFormData: async (asset) => {
+    const uriParts    = asset.uri.split('/');
+    const rawFileName = uriParts[uriParts.length - 1] || `sample-${Date.now()}.jpg`;
+    const fileName    = (asset.fileName || rawFileName).includes('.')
+      ? (asset.fileName || rawFileName)
+      : `${rawFileName}.jpg`;
+
+    const formData = new FormData();
+
+    if (typeof window !== 'undefined' && asset.file) {
+      // Case 1: Web — File object from <input type="file"> or dropzone
+      formData.append('image', asset.file, fileName);
+    } else if (typeof window !== 'undefined' || asset.uri?.startsWith('data:')) {
+      // Case 2: Web — data: URI or blob URL, convert to Blob first
+      const resp = await fetch(asset.uri);
+      const blob = await resp.blob();
+      formData.append('image', blob, fileName);
+    } else {
+      // Case 3: Native — React Native's FormData accepts {uri, name, type}
+      formData.append('image', {
+        uri:  asset.uri,
+        name: fileName,
+        type: asset.mimeType || 'image/jpeg',
+      });
+    }
+
+    return formData;
+  },
+
   /** Run YOLO inference via the backend API. */
   runInference: async (token) => {
     const { selectedAsset } = get();
@@ -59,32 +99,8 @@ const useInferenceStore = create((set, get) => ({
     set({ isAnalyzing: true, error: null });
 
     try {
-      const uriParts    = selectedAsset.uri.split('/');
-      const rawFileName = uriParts[uriParts.length - 1] || `sample-${Date.now()}.jpg`;
-      const fileName    = (selectedAsset.fileName || rawFileName).includes('.')
-        ? (selectedAsset.fileName || rawFileName)
-        : `${rawFileName}.jpg`;
-
-      const formData = new FormData();
-
-      // Platform-aware FormData append — handled by the caller via ImagePickerService
-      // The store receives a ready formData or builds it here generically
-      if (typeof window !== 'undefined' && selectedAsset.file) {
-        // Web: file object available directly
-        formData.append('image', selectedAsset.file, fileName);
-      } else if (selectedAsset.uri?.startsWith('data:') || typeof window !== 'undefined') {
-        // Web blob fallback
-        const resp = await fetch(selectedAsset.uri);
-        const blob = await resp.blob();
-        formData.append('image', blob, fileName);
-      } else {
-        // Native
-        formData.append('image', {
-          uri:  selectedAsset.uri,
-          name: fileName,
-          type: selectedAsset.mimeType || 'image/jpeg',
-        });
-      }
+      // [M2] Delegate FormData construction to helper (reduces cognitive load here)
+      const formData = await get()._buildImageFormData(selectedAsset);
 
       const data = await apiRequest(ENDPOINTS.inference.analyze, {
         method: 'POST',

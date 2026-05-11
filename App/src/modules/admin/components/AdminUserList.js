@@ -1,8 +1,7 @@
 import { View, Text, StyleSheet, Pressable, Platform, Alert } from 'react-native';
 import { COLORS, SPACING, RADIUS, FONT_SIZE } from '../../@core/constants/theme';
+import { FIXED_ADMIN_EMAIL } from '../../@core/constants/app'; // [M1] shared constant
 import { useLayoutMode } from '../../platform/hooks/useLayoutMode';
-
-const FIXED_ADMIN_EMAIL = 'admin@cropvision.local';
 
 export function AdminUserList({ users, actionKey, onToggleRole, onDelete }) {
   const { isCompact } = useLayoutMode();

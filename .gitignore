@@ -32,3 +32,25 @@ backend/uploads/
 #everything-claude-code
 everything-claude-code/
 .agent/
+
+#review folder
+The review and counter argument/
+
+#Config file
+package-lock.json
+package.json
+repomix-output.xml
+.gitignore
+.project_doc_record/meta-info.json
+.tours/architecture-flow.tour
+.project_doc_record/project_hierarchy.json
+.vscode/launch.json
+.mimo-context.md
+.gitignore
+.understand-anything/init.json
+.understand-anything/knowledge-graph.json
+.understand-anything/intermediate/assembled-graph.json
+.understand-anything/intermediate/layers.json
+.understand-anything/intermediate/scan-result.json
+.understand-anything/intermediate/tour.json
+.vscode/settings.json

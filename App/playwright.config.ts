@@ -5,12 +5,16 @@ export default defineConfig({
   fullyParallel: true,
   reporter: 'list',
   use: {
-    baseURL: 'http://localhost:3000',
+    // [M4] Expo Web dev server runs on port 8081 by default (not 3000).
+    //       Update this if you change the port in package.json "web" script.
+    baseURL: 'http://localhost:8081',
     trace: 'on-first-retry',
   },
   webServer: {
-    command: 'npx serve dist -p 3000',
-    port: 3000,
+    // [M4] Start Expo Web dev server for E2E tests.
+    //       Uses port 8081 to match the baseURL above.
+    command: 'npx expo start --web --port 8081',
+    port: 8081,
     reuseExistingServer: true,
   },
 });

@@ -26,6 +26,7 @@ export function AdminSummaryGrid({ summary }) {
 }
 
 const styles = StyleSheet.create({
+  // --- Admin Summary Grid ---
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -33,6 +34,7 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     marginBottom: SPACING.xl,
   },
+  // --- Grid Item: Summary Card ---
   card: {
     backgroundColor: COLORS.surface,
     padding: SPACING.lg,

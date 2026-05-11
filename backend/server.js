@@ -6,6 +6,7 @@ require('dotenv').config();
 const inferenceRoutes = require('./src/routes/inferenceRoutes');
 const authRoutes = require('./src/routes/authRoutes');
 const adminRoutes = require('./src/routes/adminRoutes');
+const chatRoutes = require('./src/routes/chatRoutes');
 const { ensureFixedAdminAccount } = require('./src/services/adminService');
 
 const app = express();
@@ -19,10 +20,11 @@ app.get('/api/health', (req, res) => {
   res.json({ success: true, service: 'backend', port });
 });
 
-// Gan router cho API inference va auth.
+// Gan router cho API inference, auth va chat.
 app.use('/api', inferenceRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Khoi dong server sau khi dam bao tai khoan admin co dinh da duoc tao trong DB.
 const startServer = async () => {

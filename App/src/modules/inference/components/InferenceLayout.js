@@ -6,10 +6,10 @@
  */
 
 import { View, StyleSheet, Text } from 'react-native';
-import { useMemo } from 'react';
 import { useInferenceStore } from '../store/useInferenceStore';
 import { useLayoutMode } from '../../platform/hooks/useLayoutMode';
 import { useDiseaseStats } from '../hooks/useDiseaseStats';
+import { useVisibleIndexes } from '../hooks/useVisibleIndexes'; // [refactor] shared hook
 
 import { InferencePreview } from './InferencePreview';
 import { InferenceActionPanel } from './InferenceActionPanel';
@@ -33,20 +33,8 @@ export function InferenceLayout() {
 
   const { diseaseColorMap, diseaseSummary } = useDiseaseStats(detections);
 
-  // Compute visible boxes based on filter + focus mode
-  const visibleIndexes = useMemo(() => {
-    if (!detections) return [];
-
-    let indexes = detections.map((_, i) => i);
-
-    // Apply class filter
-    if (activeDiseaseFilter !== 'all') {
-      indexes = indexes.filter((i) => detections[i]?.class_name === activeDiseaseFilter);
-    }
-
-    return indexes;
-  }, [detections, activeDiseaseFilter]);
-
+  // [refactor] Shared hook replaces inline useMemo duplication
+  const visibleIndexes = useVisibleIndexes(detections, activeDiseaseFilter);
   const focusedIndex = hoveredDetectionIndex ?? selectedDetectionIndex;
 
   return (

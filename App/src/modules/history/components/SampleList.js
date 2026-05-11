@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, ActivityIndicator, Image, Pressable, useWindowDimensions } from 'react-native';
 import { COLORS } from '../../@core/constants/theme';
 import styles from './styles';
-import SampleDetailModal from '../../../components/SampleDetailModal';
-import { resolveAssetUrl, buildUrl } from '../../@core/api/apiClient';
+import { resolveAssetUrl, apiRequest } from '../../@core/api/apiClient';
 import { ENDPOINTS } from '../../@core/api/endpoints';
+import SampleDetailModal from './SampleDetailModal';
 
 export default function SampleList({ authToken, currentUser }) {
   const { width } = useWindowDimensions();
@@ -24,18 +24,13 @@ export default function SampleList({ authToken, currentUser }) {
     if (!authToken) return;
 
     try {
-      const response = await fetch(buildUrl(ENDPOINTS.inference.samples), {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
-      const data = await response.json();
+      const data = await apiRequest(ENDPOINTS.inference.samples, {}, authToken);
 
       if (data.success) {
         setSamples(data.data);
       }
     } catch (error) {
-      console.error('Loi khi tai lich su:', error);
+      console.error('Lỗi khi tải lịch sử:', error);
     } finally {
       setIsLoading(false);
     }
@@ -57,7 +52,7 @@ export default function SampleList({ authToken, currentUser }) {
       : item.detections;
 
     const diseaseCount = detections.length;
-    const ownerLabel = item.owner_email || currentUser?.email || 'Khong ro chu so huu';
+    const ownerLabel = item.owner_email || currentUser?.email || 'Không rõ chủ sở hữu';
 
     return (
       <Pressable
@@ -80,20 +75,20 @@ export default function SampleList({ authToken, currentUser }) {
           </Text>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Ngay quet:</Text>
+            <Text style={styles.infoLabel}>Ngày quét:</Text>
             <Text style={styles.infoValue}>{formatDate(item.created_at)}</Text>
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>So vet benh:</Text>
+            <Text style={styles.infoLabel}>Số vết bệnh:</Text>
             <Text style={diseaseCount > 0 ? styles.diseaseValue : styles.infoValue}>
-              {diseaseCount} phat hien
+              {diseaseCount} phát hiện
             </Text>
           </View>
 
           {currentUser?.role === 'admin' && (
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Chu so huu:</Text>
+              <Text style={styles.infoLabel}>Chủ sở hữu:</Text>
               <Text style={styles.infoValue} numberOfLines={1}>{ownerLabel}</Text>
             </View>
           )}
@@ -106,7 +101,7 @@ export default function SampleList({ authToken, currentUser }) {
     return (
       <View style={styles.loaderContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={{ color: COLORS.textSecondary, marginTop: 10 }}>Dang tai du lieu...</Text>
+        <Text style={{ color: COLORS.textSecondary, marginTop: 10 }}>Đang tải dữ liệu...</Text>
       </View>
     );
   }
@@ -114,17 +109,17 @@ export default function SampleList({ authToken, currentUser }) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Danh sach Mau vat</Text>
+        <Text style={styles.title}>Danh sách Mẫu vật</Text>
         <Text style={styles.subTitle}>
           {currentUser?.role === 'admin'
-            ? 'Admin dang xem lich su phan tich toan he thong'
-            : 'Lich su phan tich YOLOv8 cua tai khoan hien tai'}
+            ? 'Admin đang xem lịch sử phân tích toàn hệ thống'
+            : 'Lịch sử phân tích YOLOv8 của tài khoản hiện tại'}
         </Text>
       </View>
 
       {samples.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Chua co mau phan tich nao trong pham vi truy cap hien tai.</Text>
+          <Text style={styles.emptyText}>Chưa có mẫu phân tích nào trong phạm vi truy cập hiện tại.</Text>
         </View>
       ) : (
         <FlatList
