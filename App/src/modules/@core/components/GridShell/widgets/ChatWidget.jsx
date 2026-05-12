@@ -36,6 +36,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { COLORS, SPACING, RADIUS, FONT_SIZE } from '../../../constants/theme';
 import { useInferenceStore } from '../../../../inference/store/useInferenceStore';
+import { apiRequest as coreApiRequest } from '../../../api/apiClient';
+import { useAuthStore } from '../../../auth/useAuthStore';
 
 // ── Styles ──────────────────────────────────────────────────
 
@@ -184,34 +186,13 @@ const styles = {
 
 // ── API Helper ──────────────────────────────────────────────
 
-const API_BASE = typeof window !== 'undefined' ? '' : 'http://localhost:3000';
-
 /**
- * Make authenticated API request to chat endpoints.
- * 
- * @param {string} path - API path (e.g., '/sessions', '/sessions/1/consult')
- * @param {object} options - Fetch options (method, body, headers)
- * @returns {Promise<object>} Parsed JSON response
- * @throws {Error} If response.ok is false
+ * Wrapper around core apiRequest that prepends /api/chat to the path.
+ * Gets the token from the auth store automatically.
  */
-const apiRequest = async (path, options = {}) => {
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...options.headers,
-  };
-
-  const response = await fetch(`${API_BASE}/api/chat${path}`, {
-    ...options,
-    headers,
-  });
-
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message || 'API request failed');
-  }
-  return data;
+const chatApiRequest = async (path, options = {}) => {
+  const token = useAuthStore.getState().token;
+  return coreApiRequest(`/api/chat${path}`, options, token);
 };
 
 // ── Message Bubble Component ────────────────────────────────
@@ -293,7 +274,7 @@ export const ChatWidget = () => {
       try {
         // Try to create a new session for this inference
         const title = imageName ? `Tư vấn: ${imageName}` : 'Tư vấn bệnh cây trồng';
-        const res = await apiRequest('/sessions', {
+        const res = await chatApiRequest('/sessions', {
           method: 'POST',
           body: JSON.stringify({ title }),
         });
@@ -346,7 +327,7 @@ export const ChatWidget = () => {
         ? { content: content.trim(), detections: detections || [], inferenceId: sampleId }
         : { content: content.trim() };
 
-      const res = await apiRequest(endpoint, {
+      const res = await chatApiRequest(endpoint, {
         method: 'POST',
         body: JSON.stringify(body),
       });
@@ -404,7 +385,7 @@ export const ChatWidget = () => {
   // New chat
   const handleNewChat = useCallback(async () => {
     try {
-      const res = await apiRequest('/sessions', {
+      const res = await chatApiRequest('/sessions', {
         method: 'POST',
         body: JSON.stringify({ title: 'Cuộc trò chuyện mới' }),
       });
