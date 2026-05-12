@@ -71,13 +71,13 @@ const deleteSession = async (sessionId, userId) => {
 
 // ── Messages ────────────────────────────────────────────────
 
-const insertMessage = async (sessionId, role, content, tokensUsed = 0) => {
+const insertMessage = async (sessionId, role, content, tokensUsed = 0, metadata = null) => {
   const query = `
-    INSERT INTO chat_messages (session_id, role, content, tokens_used)
-    VALUES ($1, $2, $3, $4)
-    RETURNING id, role, content, tokens_used, created_at;
+    INSERT INTO chat_messages (session_id, role, content, tokens_used, metadata)
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING id, role, content, tokens_used, metadata, created_at;
   `;
-  const result = await pool.query(query, [sessionId, role, content, tokensUsed]);
+  const result = await pool.query(query, [sessionId, role, content, tokensUsed, metadata]);
 
   // Touch session updated_at so it sorts to the top.
   await pool.query(

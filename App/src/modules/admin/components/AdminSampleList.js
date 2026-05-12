@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   col: { flexDirection: 'column', alignItems: 'flex-start' },
   rowTitle: { color: COLORS.textPrimary, fontSize: FONT_SIZE.md, fontWeight: '600' },
   rowSub: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm },
-  badge: { backgroundColor: COLORS.secondary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: RADIUS.sm },
+  badge: { backgroundColor: COLORS.secondary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.sm, minWidth: 80, alignItems: 'center' },
   badgeCompact: { marginTop: SPACING.xs },
   badgeText: { color: COLORS.white, fontSize: FONT_SIZE.xs, fontWeight: 'bold' },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md, marginVertical: SPACING.sm },

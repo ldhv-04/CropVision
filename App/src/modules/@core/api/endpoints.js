@@ -36,6 +36,8 @@ export const ENDPOINTS = {
     renameSession:  (id) => `/api/chat/sessions/${id}`,
     deleteSession:  (id) => `/api/chat/sessions/${id}`,
     sendMessage:    (id) => `/api/chat/sessions/${id}/messages`,
+    consult:        (id) => `/api/chat/sessions/${id}/consult`,  // Consult with YOLO detection context
+    searchDiseases: '/api/chat/diseases/search',                 // Search diseases by keyword
   },
 
   // Health

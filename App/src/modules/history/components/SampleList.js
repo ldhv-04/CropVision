@@ -56,10 +56,11 @@ export default function SampleList({ authToken, currentUser }) {
 
     return (
       <Pressable
-        style={({ pressed }) => [
+        style={({ pressed, hovered }) => [
           styles.card,
           { maxWidth: cardMaxWidth },
-          pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] },
+          hovered && { transform: [{ scale: 1.02 }], boxShadow: '0 4px 12px rgba(0,0,0,0.15)' },
+          pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
         ]}
         onPress={() => handleCardPress(item)}
       >

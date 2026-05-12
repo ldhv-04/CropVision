@@ -39,6 +39,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     overflow: 'hidden',
     maxWidth: '31%',               // 3-column grid on Web/Electron
+    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+    cursor: 'pointer',
   },
   thumbnailImage: {
     height: 150,

@@ -1,4 +1,4 @@
-/**
+1/**
  * GridShell Layout Configuration — Configuration-Driven Layout
  *
  * SINGLE SOURCE OF TRUTH for all dashboard layouts.
@@ -32,6 +32,7 @@ import { StatsWidget }   from './widgets/StatsWidget';
 import { ResultsWidget } from './widgets/ResultsWidget';
 import { ControlWidget } from './widgets/ControlWidget';
 import { ContentWidget } from './widgets/ContentWidget';
+import { ChatWidget }    from './widgets/ChatWidget';
 
 // ─── Widget Registry ────────────────────────────────────────────────────────
 // Name → { component, title }
@@ -46,6 +47,7 @@ export const WIDGET_REGISTRY = {
   Results:  { component: ResultsWidget, title: 'Kết quả phát hiện' },
   Control:  { component: ControlWidget, title: 'Điều khiển' },
   Content:  { component: ContentWidget, title: 'Nội dung' },
+  Chat:     { component: ChatWidget,    title: 'AI Tư vấn' },
 };
 
 // ─── Layout Variants ────────────────────────────────────────────────────────
@@ -59,32 +61,28 @@ export const WIDGET_REGISTRY = {
 export const LAYOUT_VARIANTS = {
 
   // ─── Inference page ─────────────────────────────────────────────────────
+  // 4 columns: sidebar(220px) | canvas(1fr) | chat(320px) | user(64px)
+  // 3 rows:    nav(64px) | main(1fr) | bottom(120px)
   inference: {
     default: {
-      // 4 columns: sidebar(220px) | canvas(2fr) | canvas(2fr) | right-panel(1fr)
-      columns: '220px 2fr 2fr 1fr',
-      // 4 rows: nav(64px) | main(1fr) | main(1fr) | bottom(180px)
-      rows: '64px 1fr 1fr 180px',
+      columns: '220px 1fr 320px',
+      rows: '64px 1fr 120px',
       areas: [
-        ['Nav',    'Canvas',  'Canvas',  'User'   ],
-        ['Menu',   'Canvas',  'Canvas',  'Stats'  ],
-        ['Menu',   'Canvas',  'Canvas',  'Results'],
-        ['Menu',   'Control', 'Control', 'Results'],
+        ['Nav',     'Canvas',  'Chat'   ],
+        ['Menu',    'Canvas',  'Chat'   ],
+        ['Menu',    'Control', 'Chat'   ],
       ],
     },
     tablet: {
-      // 4 columns: narrower sidebar(180px) | canvas(2fr) | canvas(2fr) | right(1fr)
-      columns: '180px 2fr 2fr 1fr',
-      rows: '56px 1fr 1fr 160px',
+      columns: '180px 1fr 280px',
+      rows: '56px 1fr 100px',
       areas: [
-        ['Nav',    'Canvas',  'Canvas',  'User'   ],
-        ['Menu',   'Canvas',  'Canvas',  'Stats'  ],
-        ['Menu',   'Canvas',  'Canvas',  'Results'],
-        ['Menu',   'Control', 'Control', 'Control'],
+        ['Nav',     'Canvas',  'Chat'   ],
+        ['Menu',    'Canvas',  'Chat'   ],
+        ['Menu',    'Control', 'Chat'   ],
       ],
     },
     mobile: {
-      // 1 column: full-width stack
       columns: '1fr',
       rows: 'auto',
       areas: [
@@ -92,36 +90,31 @@ export const LAYOUT_VARIANTS = {
         ['User'    ],
         ['Canvas'  ],
         ['Control' ],
-        ['Stats'   ],
-        ['Results' ],
+        ['Chat'    ],
         ['Menu'    ],
       ],
     },
   },
 
   // ─── Admin / History pages ──────────────────────────────────────────────
-  // 4 columns: sidebar(220px) | content(2fr) | content(2fr) | user(1fr)
-  // 4 rows:    nav(64px) | main(1fr) | main(1fr) | main(1fr)
+  // 3 columns: sidebar(220px) | content(1fr) | user(280px)
+  // 2 rows:    nav(64px) | main(1fr)
   admin: {
     default: {
-      // Match inference structure: 4 columns, 4 rows
-      columns: '220px 2fr 2fr 1fr',
-      rows: '64px 1fr 1fr 1fr',
+      // 3 columns: sidebar(220px) | content(1fr) | user(280px)
+      columns: '220px 1fr 280px',
+      rows: '64px 1fr',
       areas: [
-        ['Nav',  'Content', 'Content', 'User'   ],
-        ['Menu', 'Content', 'Content', 'Content'],
-        ['Menu', 'Content', 'Content', 'Content'],
-        ['Menu', 'Content', 'Content', 'Content'],
+        ['Nav',    '.',       'User'   ],
+        ['Menu',   'Content', 'Content'],
       ],
     },
     tablet: {
-      columns: '180px 2fr 2fr 1fr',
-      rows: '56px 1fr 1fr 1fr',
+      columns: '180px 1fr 240px',
+      rows: '56px 1fr',
       areas: [
-        ['Nav',  'Content', 'Content', 'User'   ],
-        ['Menu', 'Content', 'Content', 'Content'],
-        ['Menu', 'Content', 'Content', 'Content'],
-        ['Menu', 'Content', 'Content', 'Content'],
+        ['Nav',    '.',       'User'   ],
+        ['Menu',   'Content', 'Content'],
       ],
     },
     mobile: {

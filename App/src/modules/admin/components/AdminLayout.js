@@ -43,41 +43,43 @@ export function AdminLayout() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={[styles.toolbar, isCompact && styles.toolbarCompact]}>
-        <View>
-          <Text style={styles.toolbarTitle}>Bảng quản trị Admin</Text>
-          <Text style={styles.toolbarSub}>Quản lý người dùng, role và lịch sử hệ thống</Text>
+      <View style={styles.inner}>
+        <View style={[styles.toolbar, isCompact && styles.toolbarCompact]}>
+          <View>
+            <Text style={styles.toolbarTitle}>Bảng quản trị Admin</Text>
+            <Text style={styles.toolbarSub}>Quản lý người dùng, role và lịch sử hệ thống</Text>
+          </View>
+          
+          <Pressable
+            style={styles.refreshBtn}
+            onPress={() => loadAdminData(token, true)}
+            disabled={isRefreshing}
+          >
+            <Text style={styles.refreshText}>{isRefreshing ? 'Đang tải...' : 'Làm mới'}</Text>
+          </Pressable>
         </View>
-        
-        <Pressable
-          style={styles.refreshBtn}
-          onPress={() => loadAdminData(token, true)}
-          disabled={isRefreshing}
-        >
-          <Text style={styles.refreshText}>{isRefreshing ? 'Đang tải...' : 'Làm mới'}</Text>
-        </Pressable>
+
+        {error && (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
+        <AdminSummaryGrid summary={summary} />
+
+        <AdminUserList
+          users={users}
+          actionKey={actionKey}
+          onToggleRole={(user) => toggleUserRole(token, user)}
+          onDelete={(id) => deleteUser(token, id)}
+        />
+
+        <AdminSampleList
+          samples={samples}
+          actionKey={actionKey}
+          onDelete={(id) => deleteSample(token, id)}
+        />
       </View>
-
-      {error && (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      )}
-
-      <AdminSummaryGrid summary={summary} />
-
-      <AdminUserList
-        users={users}
-        actionKey={actionKey}
-        onToggleRole={(user) => toggleUserRole(token, user)}
-        onDelete={(id) => deleteUser(token, id)}
-      />
-
-      <AdminSampleList
-        samples={samples}
-        actionKey={actionKey}
-        onDelete={(id) => deleteSample(token, id)}
-      />
     </ScrollView>
   );
 }
@@ -85,6 +87,7 @@ export function AdminLayout() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   content: { padding: SPACING.lg, paddingBottom: 60 },
+  inner: { width: '100%' },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background },
   loaderText: { color: COLORS.textSecondary, marginTop: SPACING.md },
   toolbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.xl },

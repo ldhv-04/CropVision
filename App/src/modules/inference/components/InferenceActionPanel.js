@@ -1,6 +1,9 @@
 /**
  * InferenceActionPanel — Inference Module Component
- * Buttons for selecting image and running analysis.
+ *
+ * Hiển thị 2 nút: "Chọn ảnh" (outline) và "Phân tích ngay" (primary).
+ * Nút "Chọn ảnh" chiếm 1/3 chiều rộng, nút "Phân tích" chiếm 2/3.
+ * Cả 2 nút có cùng chiều cao nhờ flex direction row.
  */
 
 import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
@@ -13,6 +16,7 @@ export function InferenceActionPanel() {
   const token = useAuthStore((s) => s.token);
   const { isAnalyzing, imageUri, setSelectedAsset, runInference } = useInferenceStore();
 
+  /** Mở image picker và lưu asset được chọn vào store */
   const handlePickImage = async () => {
     try {
       const asset = await ImagePickerService.pickImage();
@@ -24,6 +28,7 @@ export function InferenceActionPanel() {
     }
   };
 
+  /** Gọi inference API nếu đã chọn ảnh và đang không phân tích */
   const handleAnalyze = () => {
     if (!imageUri || isAnalyzing) return;
     runInference(token);
@@ -60,7 +65,8 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     gap: SPACING.md,
-    marginTop: SPACING.md,
+    width: '100%',
+    maxWidth: 500,
   },
   disabled: { opacity: 0.5 },
   btnOutline: {

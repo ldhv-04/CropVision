@@ -17,10 +17,12 @@ const useInferenceStore = create((set, get) => ({
   selectedAsset:     null,   // Full asset from image picker
   imageUri:          null,   // URI for preview rendering
   imageMetadata:     { width: 0, height: 0 },  // Original image dimensions
+  imageName:         null,   // Original filename from server (for display)
 
   // ─── Inference results ─────────────────────────────────────────────────
   detections:        null,   // Array of YOLO boxes or null if not run yet
   resultImageBase64: null,   // Base64 annotated image from AI core
+  sampleId:          null,   // Database sample ID (for linking to chat consultation)
 
   // ─── UI interaction state ──────────────────────────────────────────────
   isAnalyzing:          false,
@@ -39,6 +41,7 @@ const useInferenceStore = create((set, get) => ({
   setSelectedAsset: (asset) => set({
     selectedAsset:          asset,
     imageUri:               asset?.uri ?? null,
+    imageName:              asset?.fileName || null,
     detections:             null,
     resultImageBase64:      null,
     hoveredDetectionIndex:  null,
@@ -112,6 +115,8 @@ const useInferenceStore = create((set, get) => ({
           detections:             data.data.boxes,
           resultImageBase64:      data.data.image_base64,
           imageMetadata:          { width: data.data.image_width || 0, height: data.data.image_height || 0 },
+          imageName:              data.data.image_name || get().imageName,
+          sampleId:               data.data.sample_id || null,  // Store sample ID for chat consultation
           hoveredDetectionIndex:  null,
           selectedDetectionIndex: null,
           activeDiseaseFilter:    'all',

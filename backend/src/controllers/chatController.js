@@ -5,6 +5,19 @@
  * - Validate auth from req.user (set by authenticateToken middleware)
  * - Delegate to service layer
  * - Return consistent { success, message, data } envelope
+ *
+ * Endpoints:
+ * - Session CRUD: create, list, get, rename, delete
+ * - Messages: send (regular), consult (with YOLO context)
+ * - Disease search: keyword search for autocomplete
+ *
+ * Error Handling:
+ * - Validation errors: 400 (bad request)
+ * - Auth errors: 401 (unauthorized)
+ * - Not found: 404
+ * - Server errors: 500 (with generic message to client)
+ * - 9Router errors: 502 (bad gateway)
+ * - Rate limit: 429 (too many requests)
  */
 
 const chatService = require('../services/chatService');
@@ -116,6 +129,53 @@ const sendMessage = async (req, res) => {
   }
 };
 
+// ── Consult (Inference-specific) ────────────────────────────
+
+const consultWithInference = async (req, res) => {
+  try {
+    const sessionId = parseInt(req.params.sessionId, 10);
+    const { content, detections, inferenceId } = req.body || {};
+
+    if (isNaN(sessionId)) {
+      return res.status(400).json({ success: false, message: 'Session ID khong hop le.' });
+    }
+    if (!content || !content.trim()) {
+      return res.status(400).json({ success: false, message: 'Noi dung tin nhan khong duoc de trong.' });
+    }
+
+    const result = await chatService.consultWithInference(
+      sessionId,
+      req.user.userId,
+      content.trim(),
+      detections || [],
+      inferenceId || null
+    );
+
+    res.json({ success: true, message: 'Tu van thanh cong.', data: result });
+  } catch (error) {
+    console.error('[Chat] consultWithInference error:', error.message);
+    res.status(error.status || 500).json({ success: false, message: error.message || 'Loi khi tu van.' });
+  }
+};
+
+// ── Search Diseases ─────────────────────────────────────────
+
+const searchDiseases = async (req, res) => {
+  try {
+    const { q, limit } = req.query || {};
+    if (!q || q.trim().length < 2) {
+      return res.status(400).json({ success: false, message: 'Tu khoa tim kiem it nhat 2 ky tu.' });
+    }
+
+    const diseaseService = require('../services/diseaseService');
+    const results = await diseaseService.searchDiseases(q.trim(), parseInt(limit, 10) || 10);
+    res.json({ success: true, message: 'Tim kiem thanh cong.', data: results });
+  } catch (error) {
+    console.error('[Chat] searchDiseases error:', error.message);
+    res.status(500).json({ success: false, message: 'Loi khi tim kiem benh.' });
+  }
+};
+
 module.exports = {
   createSession,
   listSessions,
@@ -123,4 +183,6 @@ module.exports = {
   renameSession,
   deleteSession,
   sendMessage,
+  consultWithInference,
+  searchDiseases,
 };

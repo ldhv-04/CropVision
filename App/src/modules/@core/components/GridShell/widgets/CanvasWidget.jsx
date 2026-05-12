@@ -1,5 +1,9 @@
 /**
  * CanvasWidget — Image preview + YOLO detection overlay
+ *
+ * Hiển thị ảnh được chọn cùng với các bounding box từ YOLO.
+ * Có placeholder khi chưa chọn ảnh.
+ * Hiển thị tên file ở góc dưới với ellipsis nếu tên quá dài.
  */
 
 import { useInferenceStore } from '../../../../inference/store/useInferenceStore';
@@ -11,20 +15,57 @@ import { ws } from '../styles';
 export function CanvasWidget() {
   const {
     detections, hoveredDetectionIndex, selectedDetectionIndex,
-    activeDiseaseFilter, setHovered, toggleSelected,
+    activeDiseaseFilter, setHovered, toggleSelected, imageUri, imageName,
   } = useInferenceStore();
   const { diseaseColorMap } = useDiseaseStats(detections);
   const visibleIndexes = useVisibleIndexes(detections, activeDiseaseFilter);
 
   return (
-    <div style={{ ...ws.fill, backgroundColor: '#000', borderRadius: 8, overflow: 'hidden' }}>
-      <InferencePreview
-        visibleIndexes={visibleIndexes}
-        diseaseColorMap={diseaseColorMap}
-        focusedIndex={hoveredDetectionIndex ?? selectedDetectionIndex}
-        onHover={setHovered}
-        onPressBox={toggleSelected}
-      />
+    <div style={{ ...ws.fill, backgroundColor: '#0a0a0a', borderRadius: 8, overflow: 'hidden', position: 'relative' }}>
+      {imageUri ? (
+        <>
+          <InferencePreview
+            visibleIndexes={visibleIndexes}
+            diseaseColorMap={diseaseColorMap}
+            focusedIndex={hoveredDetectionIndex ?? selectedDetectionIndex}
+            onHover={setHovered}
+            onPressBox={toggleSelected}
+          />
+          {/* Hiển thị tên file ảnh ở góc dưới bên trái, có ellipsis nếu quá dài */}
+          {imageName && (
+            <div style={{
+              position: 'absolute',
+              bottom: 8,
+              left: 8,
+              right: 8,
+              backgroundColor: 'rgba(0,0,0,0.7)',
+              color: '#aaa',
+              fontSize: 11,
+              padding: '4px 8px',
+              borderRadius: 4,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              maxWidth: '100%',
+            }}>
+              {imageName}
+            </div>
+          )}
+        </>
+      ) : (
+        <div style={{
+          ...ws.fill,
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#666',
+          fontSize: 14,
+          gap: 8,
+        }}>
+          <div style={{ fontSize: 48, opacity: 0.3 }}>🖼️</div>
+          <div>Tải ảnh lên để bắt đầu phân tích</div>
+          <div style={{ fontSize: 12, color: '#444' }}>Hỗ trợ JPG, PNG, WEBP</div>
+        </div>
+      )}
     </div>
   );
 }
