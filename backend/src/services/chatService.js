@@ -22,11 +22,19 @@ const axios = require('axios');
 const chatModel = require('../models/chatModel');
 const diseaseService = require('./diseaseService');
 
-const NINEROUTER_URL = (process.env.NINEROUTER_URL || 'http://localhost:20128').replace(/\/+$/, '');
+const NINEROUTER_URL = (process.env.NINEROUTER_URL || '').replace(/\/+$/, '');
 const NINEROUTER_KEY = process.env.NINEROUTER_KEY || '';
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai';
 
 const DEFAULT_MODEL = 'ag/gemini-3-flash';
 const MAX_HISTORY_MESSAGES = 50; // Cap context window to avoid huge payloads.
+
+// ── Startup diagnostic ──────────────────────────────────────
+console.log(`[Chat] Config loaded: GEMINI_API_KEY=${GEMINI_API_KEY ? '***SET***' : 'NOT SET'}`);
+console.log(`[Chat] Config loaded: NINEROUTER_URL=${NINEROUTER_URL || 'NOT SET'}`);
+console.log(`[Chat] Default model: ${DEFAULT_MODEL}`);
 
 // ── System Prompt for Plant Disease Expert ──────────────────
 
@@ -66,15 +74,118 @@ BIỆN PHÁP AN TOÀN (code-level):
 // ── Helpers ─────────────────────────────────────────────────
 
 /**
- * Build the Authorization header for 9Router.
- * Omitted entirely when no key is configured (auth disabled).
+ * Resolve which LLM backend to use and return { url, headers, model }.
+ *
+ * Priority:
+ *  1. GEMINI_API_KEY set → Google Gemini API (free tier)
+ *  2. NINEROUTER_URL set → 9Router proxy (legacy)
+ */
+const resolveLLMBackend = (model) => {
+  if (GEMINI_API_KEY) {
+    return {
+      url: `${GEMINI_BASE_URL}/chat/completions`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GEMINI_API_KEY}`,
+      },
+      model: model || DEFAULT_MODEL,
+    };
+  }
+  if (NINEROUTER_URL) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (NINEROUTER_KEY) {
+      headers['Authorization'] = `Bearer ${NINEROUTER_KEY}`;
+    }
+    return {
+      url: `${NINEROUTER_URL}/v1/chat/completions`,
+      headers,
+      model: model || DEFAULT_MODEL,
+    };
+  }
+  // Fallback — will fail at runtime, logged clearly
+  return {
+    url: `${GEMINI_BASE_URL}/chat/completions`,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer MISSING_KEY`,
+    },
+    model: model || DEFAULT_MODEL,
+  };
+};
+
+/**
+ * Build the Authorization header for 9Router (legacy helper).
  */
 const buildAuthHeaders = () => {
+  if (GEMINI_API_KEY) {
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${GEMINI_API_KEY}`,
+    };
+  }
   const headers = { 'Content-Type': 'application/json' };
   if (NINEROUTER_KEY) {
     headers['Authorization'] = `Bearer ${NINEROUTER_KEY}`;
   }
   return headers;
+};
+
+/**
+ * Call LLM with automatic backend resolution.
+ *
+ * @param {Object[]} messages - OpenAI-compatible messages array
+ * @param {string} model - Model name
+ * @returns {Object} { assistantContent, tokensUsed }
+ */
+const callLLM = async (messages, model) => {
+  const { url, headers, model: resolvedModel } = resolveLLMBackend(model);
+
+  console.log(`[Chat] Calling LLM: ${url}`);
+  console.log(`[Chat] Model: ${resolvedModel}`);
+  console.log(`[Chat] Messages count: ${messages.length}`);
+
+  const MAX_RETRIES = 3;
+  const BASE_DELAY_MS = 5000;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await axios.post(
+        url,
+        { model: resolvedModel, messages, stream: false },
+        { headers, timeout: 60000 }
+      );
+
+      const choice = response.data?.choices?.[0];
+      const assistantContent = choice?.message?.content || '';
+      const tokensUsed = response.data?.usage?.total_tokens || 0;
+
+      console.log(`[Chat] LLM response OK, tokens: ${tokensUsed}`);
+      return { assistantContent, tokensUsed };
+    } catch (error) {
+      const status = error.response?.status;
+
+      if (status === 429 && attempt < MAX_RETRIES) {
+        const retryDelay = error.response?.data?.[0]?.error?.details?.find(
+          d => d['@type']?.includes('RetryInfo')
+        )?.retryDelay;
+        const waitMs = retryDelay
+          ? parseInt(retryDelay) * 1000
+          : BASE_DELAY_MS * attempt;
+        console.warn(`[Chat] Rate limited (429). Retry ${attempt}/${MAX_RETRIES} in ${waitMs}ms...`);
+        await new Promise(r => setTimeout(r, waitMs));
+        continue;
+      }
+
+      console.error(`[Chat] LLM call FAILED: ${error.message}`);
+      if (error.response) {
+        console.error(`[Chat] Response status: ${status}`);
+        console.error(`[Chat] Response data:`, JSON.stringify(error.response.data, null, 2));
+      } else if (error.request) {
+        console.error(`[Chat] No response received. Request was made to: ${url}`);
+      }
+      throw error;
+    }
+  }
 };
 
 /**
@@ -172,24 +283,18 @@ const sendMessage = async (sessionId, userId, content) => {
   const messages = buildMessagesPayload(dbMessages, content);
   const model = session.model || DEFAULT_MODEL;
 
-  // 4. Call 9Router.
+  // 4. Call LLM (Gemini or 9Router).
   let assistantContent = '';
   let tokensUsed = 0;
 
   try {
-    const response = await axios.post(
-      `${NINEROUTER_URL}/v1/chat/completions`,
-      { model, messages, stream: false },
-      { headers: buildAuthHeaders(), timeout: 60000 }
-    );
-
-    const choice = response.data?.choices?.[0];
-    assistantContent = choice?.message?.content || '';
-    tokensUsed = response.data?.usage?.total_tokens || 0;
+    const result = await callLLM(messages, model);
+    assistantContent = result.assistantContent;
+    tokensUsed = result.tokensUsed;
   } catch (error) {
     const status = error.response?.status;
     const detail = error.response?.data?.error?.message || error.message;
-    console.error(`[Chat] 9Router error (${status}): ${detail}`);
+    console.error(`[Chat] LLM error (${status}): ${detail}`);
 
     const err = new Error('Loi khi goi dich vu AI. Vui long thu lai.');
     err.status = status === 429 ? 429 : 502;
@@ -253,24 +358,18 @@ const consultWithInference = async (sessionId, userId, content, detections = [],
   const messages = buildMessagesPayload(dbMessages, content, diseaseContext);
   const model = session.model || DEFAULT_MODEL;
 
-  // 5. Call 9Router.
+  // 5. Call LLM (Gemini or 9Router).
   let assistantContent = '';
   let tokensUsed = 0;
 
   try {
-    const response = await axios.post(
-      `${NINEROUTER_URL}/v1/chat/completions`,
-      { model, messages, stream: false },
-      { headers: buildAuthHeaders(), timeout: 60000 }
-    );
-
-    const choice = response.data?.choices?.[0];
-    assistantContent = choice?.message?.content || '';
-    tokensUsed = response.data?.usage?.total_tokens || 0;
+    const result = await callLLM(messages, model);
+    assistantContent = result.assistantContent;
+    tokensUsed = result.tokensUsed;
   } catch (error) {
     const status = error.response?.status;
     const detail = error.response?.data?.error?.message || error.message;
-    console.error(`[Chat] 9Router error (${status}): ${detail}`);
+    console.error(`[Chat] LLM error (${status}): ${detail}`);
 
     const err = new Error('Loi khi goi dich vu AI. Vui long thu lai.');
     err.status = status === 429 ? 429 : 502;

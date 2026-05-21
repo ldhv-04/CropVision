@@ -54,3 +54,8 @@ repomix-output.xml
 .understand-anything/intermediate/scan-result.json
 .understand-anything/intermediate/tour.json
 .vscode/settings.json
+
+
+/Internal documents
+docs/ 
+docs/CHATBOT_SRS.md

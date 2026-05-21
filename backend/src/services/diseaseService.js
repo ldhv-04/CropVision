@@ -136,6 +136,11 @@ const buildDiseaseContext = (disease) => {
     });
   }
 
+  // Source citation
+  if (disease.source) {
+    context += `\n## Nguồn tham khảo:\n${disease.source}\n`;
+  }
+
   return context;
 };
 

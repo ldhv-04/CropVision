@@ -65,21 +65,21 @@ export const LAYOUT_VARIANTS = {
   // 3 rows:    nav(64px) | main(1fr) | bottom(120px)
   inference: {
     default: {
-      columns: '220px 1fr 320px',
+      columns: '220px 2fr 1fr 320px',
       rows: '64px 1fr 120px',
       areas: [
-        ['Nav',     'Canvas',  'Chat'   ],
-        ['Menu',    'Canvas',  'Chat'   ],
-        ['Menu',    'Control', 'Chat'   ],
+        ['Nav',    'Canvas',  'Stats',   'Chat' ],
+        ['Menu',   'Canvas',  'Stats',   'Chat' ],
+        ['Menu',   'Control', 'Control', 'Chat' ],
       ],
     },
     tablet: {
-      columns: '180px 1fr 280px',
+      columns: '180px 2fr 1fr 280px',
       rows: '56px 1fr 100px',
       areas: [
-        ['Nav',     'Canvas',  'Chat'   ],
-        ['Menu',    'Canvas',  'Chat'   ],
-        ['Menu',    'Control', 'Chat'   ],
+        ['Nav',    'Canvas',  'Stats',   'Chat' ],
+        ['Menu',   'Canvas',  'Stats',   'Chat' ],
+        ['Menu',   'Control', 'Control', 'Chat' ],
       ],
     },
     mobile: {
@@ -89,6 +89,7 @@ export const LAYOUT_VARIANTS = {
         ['Nav'     ],
         ['User'    ],
         ['Canvas'  ],
+        ['Stats'   ],
         ['Control' ],
         ['Chat'    ],
         ['Menu'    ],
