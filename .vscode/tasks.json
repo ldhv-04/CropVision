@@ -1,0 +1,29 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "expo:start-web",
+            "type": "shell",
+            "command": "npm run web",
+            "options": {
+                "cwd": "${workspaceFolder}/App"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "custom",
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": ".*",
+                    "endsPattern": ".*Expo.*started.*|.*webpack.*compiled.*|.*localhost.*"
+                }
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        }
+    ]
+}
