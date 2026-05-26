@@ -11,6 +11,7 @@ import { useDiseaseStats } from '../../../../inference/hooks/useDiseaseStats';
 import { useVisibleIndexes } from '../../../../inference/hooks/useVisibleIndexes';
 import { InferencePreview } from '../../../../inference/components/InferencePreview';
 import { ws } from '../styles';
+import { useTheme } from '../../../context/ThemeContext';
 
 export function CanvasWidget() {
   const {
@@ -19,9 +20,10 @@ export function CanvasWidget() {
   } = useInferenceStore();
   const { diseaseColorMap } = useDiseaseStats(detections);
   const visibleIndexes = useVisibleIndexes(detections, activeDiseaseFilter);
+  const { colors } = useTheme();
 
   return (
-    <div style={{ ...ws.fill, backgroundColor: '#0a0a0a', borderRadius: 8, overflow: 'hidden', position: 'relative' }}>
+    <div style={{ ...ws.fill, backgroundColor: colors.surfaceAlt, borderRadius: 8, overflow: 'hidden', position: 'relative' }}>
       {imageUri ? (
         <>
           <InferencePreview
@@ -57,13 +59,13 @@ export function CanvasWidget() {
           ...ws.fill,
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#666',
+          color: colors.textSecondary,
           fontSize: 14,
           gap: 8,
         }}>
           <div style={{ fontSize: 48, opacity: 0.3 }}>🖼️</div>
           <div>Tải ảnh lên để bắt đầu phân tích</div>
-          <div style={{ fontSize: 12, color: '#444' }}>Hỗ trợ JPG, PNG, WEBP</div>
+          <div style={{ fontSize: 12, color: colors.textMuted }}>Hỗ trợ JPG, PNG, WEBP</div>
         </div>
       )}
     </div>

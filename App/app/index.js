@@ -9,10 +9,15 @@ import { useAuthStore } from '../src/modules/@core/auth/useAuthStore';
  */
 export default function Index() {
   const token = useAuthStore((s) => s.token);
+  const user = useAuthStore((s) => s.user);
   const isAuthenticated = Boolean(token);
 
   if (isAuthenticated) {
-    return <Redirect href="/inference" />;
+    if (user?.role === 'admin') {
+      return <Redirect href="/(station)" />;
+    } else {
+      return <Redirect href="/(agrivision)" />;
+    }
   }
 
   return <Redirect href="/welcome" />;

@@ -1,44 +1,124 @@
 /**
- * MenuWidget — Sidebar navigation + logout
- * Filters admin-only items based on user role.
+ * MenuWidget — Sidebar navigation with smart farming sections.
+ *
+ * Sections:
+ *   PHÂN TÍCH  — Inference analysis, Dashboard overview
+ *   QUẢN LÝ   — Sample history, Admin
+ *
+ * Uses useTheme() for dynamic dark/light mode color resolution.
  */
 
 import { router, usePathname } from 'expo-router';
 import { useAuthStore } from '../../../auth/useAuthStore';
-import { ws } from '../styles';
+import { useTheme } from '../../../context/ThemeContext';
 
-const NAV_ITEMS = [
-  { label: 'Phân tích ảnh', href: '/inference', key: 'inference' },
-  { label: 'Lịch sử mẫu vật', href: '/history', key: 'history' },
-  { label: 'Quản trị', href: '/admin', key: 'admin', adminOnly: true },
+const NAV_SECTIONS = [
+  {
+    label: 'Phân tích',
+    items: [
+      { label: 'Tổng quan',     href: '/dashboard', key: 'dashboard', icon: '📊' },
+      { label: 'Phân tích ảnh', href: '/inference', key: 'inference', icon: '🔬' },
+    ],
+  },
+  {
+    label: 'Quản lý',
+    items: [
+      { label: 'Lịch sử mẫu', href: '/history', key: 'history', icon: '📋' },
+      { label: 'Quản trị',    href: '/admin',   key: 'admin',   icon: '⚙️', adminOnly: true },
+    ],
+  },
 ];
 
 export function MenuWidget() {
-  const pathname = usePathname();
-  const logout = useAuthStore((s) => s.logout);
-  const user = useAuthStore((s) => s.user);
-  const isAdmin = user?.role === 'admin';
-  const activeKey = NAV_ITEMS.find((i) => pathname.includes(i.key))?.key ?? 'inference';
-  const items = NAV_ITEMS.filter((i) => !i.adminOnly || isAdmin);
+  const pathname   = usePathname();
+  const logout     = useAuthStore((s) => s.logout);
+  const user       = useAuthStore((s) => s.user);
+  const isAdmin    = user?.role === 'admin';
+  const { colors } = useTheme();
+
+  const activeKey = NAV_SECTIONS.flatMap((s) => s.items)
+    .find((i) => pathname.includes(i.key))?.key ?? 'inference';
+
+  const menuWidgetStyle = {
+    padding: 12,
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    boxSizing: 'border-box',
+    backgroundColor: colors.surface,
+  };
+
+  const sectionLabelStyle = {
+    fontSize: 10,
+    fontWeight: 700,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    padding: '8px 12px 4px',
+  };
+
+  const navItemBase = {
+    width: '100%', textAlign: 'left', padding: '9px 12px',
+    borderRadius: 10, border: 'none', backgroundColor: 'transparent',
+    fontSize: 13, fontWeight: 500, cursor: 'pointer',
+    display: 'flex', alignItems: 'center', gap: 9,
+    transition: 'background-color 0.15s, color 0.15s',
+  };
+
+  const logoutStyle = {
+    width: '100%', padding: '9px 12px', borderRadius: 10,
+    border: `1px solid ${colors.dangerBorder}`,
+    backgroundColor: `${colors.danger}12`,
+    color: colors.danger, fontSize: 13, fontWeight: 600,
+    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+  };
 
   return (
-    <div style={ws.menuWidget}>
-      <div style={ws.navList}>
-        {items.map((item) => {
-          const active = activeKey === item.key;
+    <div style={menuWidgetStyle}>
+      {/* Navigation sections */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {NAV_SECTIONS.map((section) => {
+          const visibleItems = section.items.filter((i) => !i.adminOnly || isAdmin);
+          if (!visibleItems.length) return null;
           return (
-            <button
-              key={item.key}
-              onClick={() => router.push(item.href)}
-              style={active ? { ...ws.navItem, ...ws.navItemActive } : ws.navItem}
-            >
-              {item.label}
-            </button>
+            <div key={section.label}>
+              <div style={sectionLabelStyle}>{section.label}</div>
+              {visibleItems.map((item) => {
+                const active = activeKey === item.key;
+                const itemStyle = {
+                  ...navItemBase,
+                  color: active ? colors.primaryGlow : colors.textSecondary,
+                  backgroundColor: active ? `${colors.primary}28` : 'transparent',
+                  fontWeight: active ? 700 : 500,
+                };
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => router.push(item.href)}
+                    style={itemStyle}
+                  >
+                    <span style={{ fontSize: 15, width: 18, textAlign: 'center' }}>
+                      {item.icon}
+                    </span>
+                    {item.label}
+                    {active && (
+                      <span style={{
+                        marginLeft: 'auto', width: 6, height: 6,
+                        borderRadius: 3, backgroundColor: colors.primaryGlow,
+                      }} />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           );
         })}
       </div>
-      <button onClick={logout} style={ws.logoutBtn}>
-        Đăng xuất
+
+      {/* Logout */}
+      <button onClick={logout} style={logoutStyle}>
+        <span>🚪</span> Đăng xuất
       </button>
     </div>
   );

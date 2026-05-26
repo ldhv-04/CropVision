@@ -60,6 +60,26 @@ const stmts = [
   'CREATE INDEX IF NOT EXISTS idx_crop_diseases_class ON crop_diseases(disease_class)',
   'CREATE INDEX IF NOT EXISTS idx_treatment_disease ON treatment_methods(disease_id)',
   'CREATE INDEX IF NOT EXISTS idx_pesticide_disease ON pesticide_disease_map(disease_id)',
+  `CREATE TABLE IF NOT EXISTS fields (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    crop_type VARCHAR(255) NOT NULL,
+    area NUMERIC(10, 2),
+    latitude NUMERIC(10, 6) NOT NULL,
+    longitude NUMERIC(10, 6) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS weather_cache (
+    latitude NUMERIC(10, 6) NOT NULL,
+    longitude NUMERIC(10, 6) NOT NULL,
+    weather_data JSONB NOT NULL,
+    cached_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (latitude, longitude)
+  )`,
+  'ALTER TABLE crop_samples ADD COLUMN IF NOT EXISTS field_id UUID REFERENCES fields(id) ON DELETE SET NULL',
+  "ALTER TABLE crop_samples ADD COLUMN IF NOT EXISTS source_type VARCHAR(50) DEFAULT 'mobile'",
+  'ALTER TABLE crop_samples ADD COLUMN IF NOT EXISTS batch_id UUID',
 ];
 
 async function run() {

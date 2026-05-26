@@ -134,7 +134,7 @@ const sendMessage = async (req, res) => {
 const consultWithInference = async (req, res) => {
   try {
     const sessionId = parseInt(req.params.sessionId, 10);
-    const { content, detections, inferenceId } = req.body || {};
+    const { content, detections, inferenceId, fieldId } = req.body || {};
 
     if (isNaN(sessionId)) {
       return res.status(400).json({ success: false, message: 'Session ID khong hop le.' });
@@ -148,7 +148,8 @@ const consultWithInference = async (req, res) => {
       req.user.userId,
       content.trim(),
       detections || [],
-      inferenceId || null
+      inferenceId || null,
+      fieldId || null
     );
 
     res.json({ success: true, message: 'Tu van thanh cong.', data: result });
@@ -176,6 +177,26 @@ const searchDiseases = async (req, res) => {
   }
 };
 
+const getDiseaseByClass = async (req, res) => {
+  try {
+    const { diseaseClass } = req.params;
+    if (!diseaseClass) {
+      return res.status(400).json({ success: false, message: 'Class name khong duoc de trong.' });
+    }
+
+    const diseaseService = require('../services/diseaseService');
+    const result = await diseaseService.getDiseaseByClass(diseaseClass);
+    if (!result) {
+      return res.status(404).json({ success: false, message: 'Khong tim thay thong tin benh.' });
+    }
+
+    res.json({ success: true, message: 'Lay thong tin benh thanh cong.', data: result });
+  } catch (error) {
+    console.error('[Chat] getDiseaseByClass error:', error.message);
+    res.status(500).json({ success: false, message: 'Loi khi lay thong tin benh.' });
+  }
+};
+
 module.exports = {
   createSession,
   listSessions,
@@ -185,4 +206,6 @@ module.exports = {
   sendMessage,
   consultWithInference,
   searchDiseases,
+  getDiseaseByClass,
 };
+

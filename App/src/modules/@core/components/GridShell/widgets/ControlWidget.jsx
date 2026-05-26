@@ -7,17 +7,20 @@
 
 import { InferenceActionPanel } from '../../../../inference/components/InferenceActionPanel';
 import { ws } from '../styles';
+import { useTheme } from '../../../context/ThemeContext';
 
 export function ControlWidget() {
+  const { colors } = useTheme();
+  
   return (
     <div style={{
       ...ws.fill,
       alignItems: 'center',
       justifyContent: 'center',
       padding: '12px 16px',
-      backgroundColor: '#111',
+      backgroundColor: colors.surfaceAlt,
       borderRadius: 8,
-      borderTop: '1px solid #222',
+      borderTop: `1px solid ${colors.border}`,
     }}>
       <InferenceActionPanel />
     </div>

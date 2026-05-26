@@ -7,6 +7,8 @@ const inferenceRoutes = require('./src/routes/inferenceRoutes');
 const authRoutes = require('./src/routes/authRoutes');
 const adminRoutes = require('./src/routes/adminRoutes');
 const chatRoutes = require('./src/routes/chatRoutes');
+const weatherRoutes = require('./src/routes/weatherRoutes');
+const fieldRoutes = require('./src/routes/fieldRoutes');
 const { ensureFixedAdminAccount } = require('./src/services/adminService');
 
 const app = express();
@@ -25,6 +27,8 @@ app.use('/api', inferenceRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/weather', weatherRoutes);
+app.use('/api/fields', fieldRoutes);
 
 // Khoi dong server sau khi dam bao tai khoan admin co dinh da duoc tao trong DB.
 const startServer = async () => {

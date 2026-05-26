@@ -2,7 +2,7 @@
  * GridShell — Configuration-Driven CSS Grid Layout
  *
  * Pure renderer: reads layout config → renders CSS Grid.
- * Zero layout logic — all configuration lives in layoutConfig.js.
+ * Wrapped in ThemeProvider so all child widgets can call useTheme().
  *
  * To add a new widget:
  *   1. Create component in widgets/ folder
@@ -14,12 +14,14 @@
 
 import { useMemo } from 'react';
 import { useLayoutConfig } from './hooks/useLayoutConfig';
-import { ws } from './styles';
+import { ThemeProvider, useTheme } from '../../context/ThemeContext';
+import { SHADOWS } from '../../constants/theme';
 
-export function GridShell() {
+/** Inner shell: reads theme then renders the grid */
+function GridShellInner() {
   const { layout, widgets } = useLayoutConfig();
+  const { colors } = useTheme();
 
-  // Convert areas[][] → CSS grid-template-areas string
   const templateAreas = useMemo(
     () => layout.areas.map((row) => `"${row.join(' ')}"`).join(' '),
     [layout.areas],
@@ -27,28 +29,53 @@ export function GridShell() {
 
   const gridStyle = useMemo(
     () => ({
-      ...ws.shell,
+      width: '100vw',
+      height: '100vh',
       display: 'grid',
-      // columns/rows are now CSS value strings (e.g. '220px 2fr 1fr')
-      // — used directly, no repeat() wrapper needed
       gridTemplateColumns: layout.columns,
       gridTemplateRows: layout.rows === 'auto' ? 'auto' : layout.rows,
       gridTemplateAreas: templateAreas,
       gap: '6px',
-      // Ensure grid items can shrink below content size
+      padding: 6,
+      boxSizing: 'border-box',
       alignItems: 'stretch',
+      backgroundColor: colors.background,
+      fontFamily: '"Inter", "Outfit", system-ui, -apple-system, sans-serif',
+      transition: 'background-color 0.3s ease',
     }),
-    [layout, templateAreas],
+    [layout, templateAreas, colors.background],
   );
+
+  const surfaceStyle = (name) => ({
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    border: `1px solid ${colors.border}`,
+    boxShadow: SHADOWS.card,
+    overflow: 'hidden',
+    height: '100%',
+    minHeight: 0,
+    boxSizing: 'border-box',
+    gridArea: name,
+    transition: 'background-color 0.3s ease, border-color 0.3s ease',
+  });
 
   return (
     <div style={gridStyle}>
       {widgets.map(({ name, component: Widget }) => (
-        <div key={name} style={{ ...ws.surface, gridArea: name }}>
+        <div key={name} style={surfaceStyle(name)}>
           <Widget />
         </div>
       ))}
     </div>
+  );
+}
+
+/** Public entry point — wraps entire shell in ThemeProvider */
+export function GridShell() {
+  return (
+    <ThemeProvider>
+      <GridShellInner />
+    </ThemeProvider>
   );
 }
 

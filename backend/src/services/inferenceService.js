@@ -57,9 +57,12 @@ const persistUpload = async (fileBuffer, originalName) => {
 };
 
 // Luu giao dich suy luan (sample + cac box) vao database.
-const saveResult = async (userId, file, imageUrl, inferenceData) => {
+const saveResult = async (userId, file, imageUrl, inferenceData, extra = {}) => {
   const sampleData = {
     userId,
+    fieldId: extra.fieldId,
+    sourceType: extra.sourceType,
+    batchId: extra.batchId,
     sampleName: file.originalname,
     cropType: 'unknown',
     imageUrl,

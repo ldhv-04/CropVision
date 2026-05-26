@@ -56,7 +56,13 @@ repomix-output.xml
 .vscode/settings.json
 
 
-/Internal documents
+#Internal documents
 docs/ 
 docs/CHATBOT_SRS.md
 cropvision_db/
+
+#Spec Kit
+.specify/
+.gemini/
+GEMINI.md
+

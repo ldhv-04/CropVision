@@ -34,19 +34,20 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { COLORS, SPACING, RADIUS, FONT_SIZE } from '../../../constants/theme';
+import { SPACING, RADIUS, FONT_SIZE } from '../../../constants/theme';
 import { useInferenceStore } from '../../../../inference/store/useInferenceStore';
 import { apiRequest as coreApiRequest } from '../../../api/apiClient';
 import { useAuthStore } from '../../../auth/useAuthStore';
+import { useTheme } from '../../../context/ThemeContext';
 
 // ── Styles ──────────────────────────────────────────────────
 
-const styles = {
+const getStyles = (colors) => ({
   container: {
     display: 'flex',
     flexDirection: 'column',
     height: '100%',
-    backgroundColor: COLORS.background || '#f5f5f5',
+    backgroundColor: colors.surfaceAlt,
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   },
   header: {
@@ -54,9 +55,9 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: `${SPACING.sm || 8}px ${SPACING.md || 12}px`,
-    backgroundColor: COLORS.primary || '#2563eb',
+    backgroundColor: colors.primaryGlow || colors.primary,
     color: '#fff',
-    borderBottom: `1px solid ${COLORS.border || '#e5e7eb'}`,
+    borderBottom: `1px solid ${colors.border}`,
   },
   headerTitle: {
     fontSize: FONT_SIZE.md || 14,
@@ -90,46 +91,48 @@ const styles = {
   },
   userBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: COLORS.primary || '#2563eb',
+    backgroundColor: colors.primary,
     color: '#fff',
     borderBottomRightRadius: 2,
   },
   aiBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: '#fff',
-    color: COLORS.text || '#1f2937',
-    border: `1px solid ${COLORS.border || '#e5e7eb'}`,
+    backgroundColor: colors.surface,
+    color: colors.textPrimary,
+    border: `1px solid ${colors.border}`,
     borderBottomLeftRadius: 2,
   },
   typingIndicator: {
     alignSelf: 'flex-start',
     padding: `${SPACING.sm || 8}px ${SPACING.md || 12}px`,
-    backgroundColor: '#fff',
-    border: `1px solid ${COLORS.border || '#e5e7eb'}`,
+    backgroundColor: colors.surface,
+    border: `1px solid ${colors.border}`,
     borderRadius: RADIUS.md || 8,
     fontSize: FONT_SIZE.sm || 13,
-    color: COLORS.textSecondary || '#6b7280',
+    color: colors.textSecondary,
     fontStyle: 'italic',
   },
   inputContainer: {
     display: 'flex',
     flexDirection: 'row',
     padding: SPACING.sm || 8,
-    borderTop: `1px solid ${COLORS.border || '#e5e7eb'}`,
-    backgroundColor: '#fff',
+    borderTop: `1px solid ${colors.border}`,
+    backgroundColor: colors.surface,
     gap: SPACING.xs || 4,
   },
   input: {
     flex: 1,
     padding: `${SPACING.sm || 8}px ${SPACING.md || 12}px`,
-    border: `1px solid ${COLORS.border || '#e5e7eb'}`,
+    border: `1px solid ${colors.border}`,
     borderRadius: RADIUS.md || 8,
     fontSize: FONT_SIZE.sm || 13,
+    backgroundColor: colors.surfaceAlt,
+    color: colors.textPrimary,
     outline: 'none',
   },
   sendBtn: {
     padding: `${SPACING.sm || 8}px ${SPACING.md || 12}px`,
-    backgroundColor: COLORS.primary || '#2563eb',
+    backgroundColor: colors.primary,
     color: '#fff',
     border: 'none',
     borderRadius: RADIUS.md || 8,
@@ -144,14 +147,14 @@ const styles = {
   treatmentCard: {
     marginTop: SPACING.sm || 8,
     padding: SPACING.sm || 8,
-    backgroundColor: '#f0fdf4',
-    border: '1px solid #86efac',
+    backgroundColor: colors.successBg,
+    border: `1px solid ${colors.successBorder}`,
     borderRadius: RADIUS.sm || 4,
     fontSize: FONT_SIZE.sm || 13,
   },
   treatmentTitle: {
     fontWeight: 600,
-    color: '#166534',
+    color: colors.success,
     marginBottom: 4,
   },
   feedbackBtns: {
@@ -162,8 +165,9 @@ const styles = {
   feedbackBtn: {
     padding: '2px 8px',
     fontSize: FONT_SIZE.xs || 11,
-    backgroundColor: '#f3f4f6',
-    border: '1px solid #d1d5db',
+    backgroundColor: colors.surfaceAlt,
+    border: `1px solid ${colors.border}`,
+    color: colors.textSecondary,
     borderRadius: RADIUS.sm || 4,
     cursor: 'pointer',
   },
@@ -173,7 +177,7 @@ const styles = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    color: COLORS.textSecondary || '#6b7280',
+    color: colors.textMuted,
     fontSize: FONT_SIZE.sm || 13,
     textAlign: 'center',
     padding: SPACING.lg || 16,
@@ -182,7 +186,7 @@ const styles = {
     fontSize: 32,
     marginBottom: SPACING.sm || 8,
   },
-};
+});
 
 // ── API Helper ──────────────────────────────────────────────
 
@@ -197,7 +201,7 @@ const chatApiRequest = async (path, options = {}) => {
 
 // ── Message Bubble Component ────────────────────────────────
 
-const MessageBubble = ({ message, onFeedback }) => {
+const MessageBubble = ({ message, onFeedback, styles }) => {
   const isUser = message.role === 'user';
   const bubbleStyle = {
     ...styles.messageBubble,
@@ -250,6 +254,9 @@ const MessageBubble = ({ message, onFeedback }) => {
 // ── Main ChatWidget Component ───────────────────────────────
 
 export const ChatWidget = () => {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
+
   // Get inference data from Zustand store
   const { detections, imageName, sampleId } = useInferenceStore();
   
@@ -424,6 +431,7 @@ export const ChatWidget = () => {
             key={msg.id}
             message={msg}
             onFeedback={handleFeedback}
+            styles={styles}
           />
         ))}
 

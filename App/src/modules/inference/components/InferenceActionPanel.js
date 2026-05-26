@@ -12,9 +12,18 @@ import { useInferenceStore } from '../store/useInferenceStore';
 import { useAuthStore } from '../../@core/auth/useAuthStore';
 import { ImagePickerService } from '../../platform/services/ImagePickerService';
 
+// Lazy import — only available in AgriVision context (not in Station/Web admin)
+let useFieldStore;
+try {
+  useFieldStore = require('../../agrivision/store/useFieldStore').useFieldStore;
+} catch {
+  useFieldStore = () => ({ selectedFieldId: null });
+}
+
 export function InferenceActionPanel() {
   const token = useAuthStore((s) => s.token);
   const { isAnalyzing, imageUri, setSelectedAsset, runInference } = useInferenceStore();
+  const { selectedFieldId } = useFieldStore();
 
   /** Mở image picker và lưu asset được chọn vào store */
   const handlePickImage = async () => {
@@ -31,8 +40,9 @@ export function InferenceActionPanel() {
   /** Gọi inference API nếu đã chọn ảnh và đang không phân tích */
   const handleAnalyze = () => {
     if (!imageUri || isAnalyzing) return;
-    runInference(token);
+    runInference(token, selectedFieldId || null);
   };
+
 
   return (
     <View style={styles.container}>

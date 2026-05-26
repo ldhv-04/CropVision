@@ -36,4 +36,32 @@ export const ImagePickerService = {
 
     return result.assets[0];
   },
+
+  /**
+   * Request camera permissions and take a photo using the device camera.
+   * Returns a standard asset object or null if cancelled.
+   */
+  takePhoto: async () => {
+    // 1. Request camera permissions (required on iOS/Android)
+    if (Platform.OS !== 'web') {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        throw new Error('Cần quyền truy cập camera để tiếp tục.');
+      }
+    }
+
+    // 2. Launch camera
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      quality: 1,
+    });
+
+    if (result.canceled || !result.assets || result.assets.length === 0) {
+      return null;
+    }
+
+    return result.assets[0];
+  },
 };
+

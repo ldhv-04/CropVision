@@ -40,6 +40,18 @@ export const ENDPOINTS = {
     searchDiseases: '/api/chat/diseases/search',                 // Search diseases by keyword
   },
 
+  // Fields (AgriVision)
+  fields: {
+    list:   '/api/fields',
+    create: '/api/fields',
+    detail: (id) => `/api/fields/${id}`,
+  },
+
+  // Weather (AgriVision)
+  weather: {
+    current: (lat, lon) => `/api/weather?lat=${lat}&lon=${lon}`,
+  },
+
   // Health
   health: '/api/health',
 };

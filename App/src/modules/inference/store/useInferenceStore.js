@@ -9,6 +9,7 @@
  */
 
 import { create } from 'zustand';
+import { Platform } from 'react-native';
 import { apiRequest } from '../../@core/api/apiClient';
 import { ENDPOINTS } from '../../@core/api/endpoints';
 
@@ -74,10 +75,10 @@ const useInferenceStore = create((set, get) => ({
 
     const formData = new FormData();
 
-    if (typeof window !== 'undefined' && asset.file) {
+    if (Platform.OS === 'web' && asset.file) {
       // Case 1: Web — File object from <input type="file"> or dropzone
       formData.append('image', asset.file, fileName);
-    } else if (typeof window !== 'undefined' || asset.uri?.startsWith('data:')) {
+    } else if (Platform.OS === 'web' || asset.uri?.startsWith('data:')) {
       // Case 2: Web — data: URI or blob URL, convert to Blob first
       const resp = await fetch(asset.uri);
       const blob = await resp.blob();
@@ -94,8 +95,11 @@ const useInferenceStore = create((set, get) => ({
     return formData;
   },
 
-  /** Run YOLO inference via the backend API. */
-  runInference: async (token) => {
+  /** Run YOLO inference via the backend API.
+   *  @param {string} token - JWT auth token
+   *  @param {string|null} [fieldId] - Optional field ID for weather+crop context injection
+   */
+  runInference: async (token, fieldId = null) => {
     const { selectedAsset } = get();
     if (!selectedAsset?.uri) return;
 
@@ -104,6 +108,9 @@ const useInferenceStore = create((set, get) => ({
     try {
       // [M2] Delegate FormData construction to helper (reduces cognitive load here)
       const formData = await get()._buildImageFormData(selectedAsset);
+
+      // [AgriVision] Inject field context if provided
+      if (fieldId) formData.append('field_id', fieldId);
 
       const data = await apiRequest(ENDPOINTS.inference.analyze, {
         method: 'POST',

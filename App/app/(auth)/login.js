@@ -11,6 +11,8 @@ export default function LoginScreen() {
   const login = useAuthStore((s) => s.login);
   const isLoading = useAuthStore((s) => s.isLoading);
 
+  const user = useAuthStore((s) => s.user);
+
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('Thiếu thông tin', 'Vui lòng nhập email và mật khẩu.');
@@ -20,8 +22,12 @@ export default function LoginScreen() {
     const result = await login(email.trim(), password);
     if (!result.success) {
       Alert.alert('Đăng nhập thất bại', result.message);
+    } else {
+      // Get role from store state (set by login action)
+      const currentUser = useAuthStore.getState().user;
+      const role = currentUser?.role || 'user';
+      router.replace(role === 'admin' ? '/(station)' : '/(agrivision)');
     }
-    // On success, root index.js will auto-redirect to (main)/inference via store state
   };
 
   return (
@@ -60,7 +66,7 @@ export default function LoginScreen() {
         </View>
 
         <Pressable
-          id="login-submit"
+          testID="login-submit"
           style={[styles.btn, isLoading && styles.btnDisabled]}
           onPress={handleLogin}
           disabled={isLoading}

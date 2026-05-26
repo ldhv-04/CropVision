@@ -40,10 +40,17 @@ const analyzeImage = async (req, res) => {
     // Lưu file ảnh vào thư mục uploads
     const { imageUrl } = await inferenceService.persistUpload(req.file.buffer, req.file.originalname);
 
+    // Extract new fields for Phase 1 and Drone integration
+    const { field_id, source_type, batch_id } = req.body;
+
     // Lưu kết quả vào database nếu phân tích thành công
     let sampleId = null;
     if (inferenceData.success) {
-      sampleId = await inferenceService.saveResult(req.user.userId, req.file, imageUrl, inferenceData);
+      sampleId = await inferenceService.saveResult(req.user.userId, req.file, imageUrl, inferenceData, {
+        fieldId: field_id || null,
+        sourceType: source_type || 'mobile',
+        batchId: batch_id || null
+      });
       console.info(`[Inference] Sample saved → DB id=${sampleId} user=${req.user.userId}`);
     }
 

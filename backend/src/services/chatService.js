@@ -21,6 +21,8 @@
 const axios = require('axios');
 const chatModel = require('../models/chatModel');
 const diseaseService = require('./diseaseService');
+const weatherService = require('./weatherService');
+const pool = require('../config/db');
 
 const NINEROUTER_URL = (process.env.NINEROUTER_URL || '').replace(/\/+$/, '');
 const NINEROUTER_KEY = process.env.NINEROUTER_KEY || '';
@@ -201,8 +203,19 @@ const buildMessagesPayload = (dbMessages, newUserContent, diseaseContext = null)
 
   // System prompt with optional disease context
   let systemContent = SYSTEM_PROMPT;
-  if (diseaseContext) {
-    systemContent += `\n\n---\n\n## THÔNG TIN BỆNH TỪ HỆ THỐNG:\n\n${diseaseContext}\n\nHãy tư vấn dựa trên thông tin trên.`;
+  
+  if (diseaseContext && diseaseContext.weatherData) {
+    systemContent += `\n\n---\n\n## THÔNG TIN NGỮ CẢNH (QUAN TRỌNG):\n\n`;
+    systemContent += `- Tình trạng thời tiết hiện tại: ${diseaseContext.weatherData.description}, Nhiệt độ: ${diseaseContext.weatherData.temp}°C, Độ ẩm: ${diseaseContext.weatherData.humidity}%.\n`;
+    systemContent += `- Lượng mưa 1h: ${diseaseContext.weatherData.rain_1h}mm.\n`;
+    if (diseaseContext.cropType) {
+      systemContent += `- Loại cây trồng (Nông dân khai báo): ${diseaseContext.cropType}\n`;
+    }
+    systemContent += `\nLƯU Ý LỚN DÀNH CHO AI: Hãy tư vấn dùng thuốc và phương pháp dựa trên yếu tố thời tiết (ví dụ: mưa nhiều thì phải dùng thuốc bám dính tốt, nắng nóng thì cẩn thận cháy lá).`;
+  }
+
+  if (diseaseContext && diseaseContext.text) {
+    systemContent += `\n\n---\n\n## THÔNG TIN BỆNH TỪ HỆ THỐNG:\n\n${diseaseContext.text}\n\nHãy tư vấn dựa trên thông tin trên.`;
   }
   messages.push({ role: 'system', content: systemContent });
 
@@ -328,9 +341,10 @@ const sendMessage = async (sessionId, userId, content) => {
  * @param {string} content - User's question
  * @param {Object[]} detections - YOLO detections [{class_name, confidence}, ...]
  * @param {number} inferenceId - Optional inference sample ID
+ * @param {number} fieldId - Optional field ID to fetch weather and crop type
  * @returns {Object} AI response with recommendations
  */
-const consultWithInference = async (sessionId, userId, content, detections = [], inferenceId = null) => {
+const consultWithInference = async (sessionId, userId, content, detections = [], inferenceId = null, fieldId = null) => {
   // 1. Verify ownership.
   const session = await chatModel.getSessionById(sessionId, userId);
   if (!session) {
@@ -344,18 +358,40 @@ const consultWithInference = async (sessionId, userId, content, detections = [],
   const dbMessages = existing?.messages || [];
 
   // 3. Build disease context from detections
-  let diseaseContext = null;
+  let diseaseContextText = null;
   let topDiseases = [];
 
   if (detections && detections.length > 0) {
     topDiseases = await diseaseService.getTopDiseases(detections, 3, 0.4);
     if (topDiseases.length > 0) {
-      diseaseContext = diseaseService.buildMultiDiseaseContext(topDiseases);
+      diseaseContextText = diseaseService.buildMultiDiseaseContext(topDiseases);
     }
   }
 
+  let weatherData = null;
+  let cropType = null;
+  
+  // 3.5. Fetch Field and Weather Context if fieldId is provided
+  if (fieldId) {
+    try {
+      const fieldResult = await pool.query('SELECT crop_type, latitude, longitude FROM fields WHERE id = $1 AND user_id = $2', [fieldId, userId]);
+      if (fieldResult.rows.length > 0) {
+        cropType = fieldResult.rows[0].crop_type;
+        weatherData = await weatherService.getWeatherData(fieldResult.rows[0].latitude, fieldResult.rows[0].longitude);
+      }
+    } catch (e) {
+      console.error('[Chat] Failed to fetch field/weather data for context', e.message);
+    }
+  }
+
+  const enhancedContext = {
+    text: diseaseContextText,
+    weatherData,
+    cropType
+  };
+
   // 4. Build OpenAI-compatible payload with disease context
-  const messages = buildMessagesPayload(dbMessages, content, diseaseContext);
+  const messages = buildMessagesPayload(dbMessages, content, enhancedContext);
   const model = session.model || DEFAULT_MODEL;
 
   // 5. Call LLM (Gemini or 9Router).

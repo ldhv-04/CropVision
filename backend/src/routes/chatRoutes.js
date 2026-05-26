@@ -54,5 +54,7 @@ router.post('/sessions/:sessionId/consult', chatController.consultWithInference)
 
 // Disease search
 router.get('/diseases/search', chatController.searchDiseases);
+router.get('/diseases/class/:diseaseClass', chatController.getDiseaseByClass);
+
 
 module.exports = router;
