@@ -36,12 +36,40 @@ describe('Auth Service', () => {
             expect(mailService.sendOTP).toHaveBeenCalledWith('test@gmail.com', expect.any(String));
         });
 
-        it('should throw an error if email already exists', async () => {
+        it('should throw an error if email already exists and is verified', async () => {
             userModel.getUserByEmail.mockResolvedValue({ id: 1, is_verified: true });
 
             await expect(
-                authService.registerUser('test@gmail.com', 'Test User', 'Password@123')
+                authService.registerUser('Test User', 'test@gmail.com', 'Password@123')
             ).rejects.toThrow('Email này đã được đăng ký.');
+        });
+
+        it('should delete existing unverified user and allow re-registration', async () => {
+            userModel.getUserByEmail.mockResolvedValue({ id: 12, is_verified: false });
+            userModel.deleteUserById.mockResolvedValue();
+            userModel.ensureUserRoleColumn.mockResolvedValue();
+            userModel.createUser.mockResolvedValue({ id: 13 });
+            mailService.sendOTP.mockResolvedValue(true);
+
+            await authService.registerUser('Test User', 'test@gmail.com', 'Password@123');
+
+            expect(userModel.deleteUserById).toHaveBeenCalledWith(12);
+            expect(userModel.createUser).toHaveBeenCalled();
+            expect(mailService.sendOTP).toHaveBeenCalledWith('test@gmail.com', expect.any(String));
+        });
+
+        it('should rollback and delete newly created user if sendOTP fails', async () => {
+            userModel.getUserByEmail.mockResolvedValue(null);
+            userModel.ensureUserRoleColumn.mockResolvedValue();
+            userModel.createUser.mockResolvedValue({ id: 99 });
+            mailService.sendOTP.mockRejectedValue(new Error('Email service error'));
+            userModel.deleteUserById.mockResolvedValue();
+
+            await expect(
+                authService.registerUser('Test User', 'test@gmail.com', 'Password@123')
+            ).rejects.toThrow('Email service error');
+
+            expect(userModel.deleteUserById).toHaveBeenCalledWith(99);
         });
     });
 

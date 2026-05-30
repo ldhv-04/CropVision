@@ -7,9 +7,14 @@ import { useAuthStore } from '../../src/modules/@core/auth/useAuthStore';
  */
 export default function AuthLayout() {
   const token = useAuthStore((s) => s.token);
+  const user = useAuthStore((s) => s.user);
 
   if (Boolean(token)) {
-    return <Redirect href="/inference" />;
+    if (user?.role === 'admin') {
+      return <Redirect href="/(station)" />;
+    } else {
+      return <Redirect href="/(agrivision)" />;
+    }
   }
 
   return (

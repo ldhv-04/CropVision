@@ -10,9 +10,13 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const registerUser = async (fullName, email, password) => {
   const existingUser = await userModel.getUserByEmail(email);
   if (existingUser) {
-    const err = new Error('Email này đã được đăng ký.');
-    err.status = 400;
-    throw err;
+    if (existingUser.is_verified) {
+      const err = new Error('Email này đã được đăng ký.');
+      err.status = 400;
+      throw err;
+    }
+    // Neu email da duoc dang ky nhung chua xac thuc, xoa de cho phep dang ky lai
+    await userModel.deleteUserById(existingUser.id);
   }
 
   const salt = await bcrypt.genSalt(10);
@@ -22,8 +26,17 @@ const registerUser = async (fullName, email, password) => {
 
   // Dam bao bang users da san sang cho co che role truoc khi tao user moi.
   await userModel.ensureUserRoleColumn();
-  await userModel.createUser(fullName, email, passwordHash, otpCode, otpExpiresAt);
-  await mailService.sendOTP(email, otpCode);
+  const newUser = await userModel.createUser(fullName, email, passwordHash, otpCode, otpExpiresAt);
+
+  try {
+    await mailService.sendOTP(email, otpCode);
+  } catch (error) {
+    // Rollback user vua tao trong database neu gui email loi
+    if (newUser && newUser.id) {
+      await userModel.deleteUserById(newUser.id);
+    }
+    throw error;
+  }
 };
 
 // Xac thuc OTP email cua nguoi dung.

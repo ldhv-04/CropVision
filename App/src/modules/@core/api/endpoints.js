@@ -21,12 +21,15 @@ export const ENDPOINTS = {
 
   // Admin
   admin: {
-    summary:      '/api/admin/summary',
-    users:        '/api/admin/users',
-    userRole:     (id) => `/api/admin/users/${id}/role`,
-    deleteUser:   (id) => `/api/admin/users/${id}`,
-    samples:      '/api/admin/samples',
-    deleteSample: (id) => `/api/admin/samples/${id}`,
+    summary:            '/api/admin/summary',
+    statsEnhanced:      '/api/admin/stats/enhanced',
+    statsTimeline:      (days) => `/api/admin/stats/timeline?days=${days || 30}`,
+    statsDiseases:      '/api/admin/stats/diseases',
+    users:              '/api/admin/users',
+    userRole:           (id) => `/api/admin/users/${id}/role`,
+    deleteUser:         (id) => `/api/admin/users/${id}`,
+    samples:            '/api/admin/samples',
+    deleteSample:       (id) => `/api/admin/samples/${id}`,
   },
 
   // Chat (9Router AI)
@@ -42,14 +45,77 @@ export const ENDPOINTS = {
 
   // Fields (AgriVision)
   fields: {
-    list:   '/api/fields',
-    create: '/api/fields',
-    detail: (id) => `/api/fields/${id}`,
+    list:       '/api/fields',
+    create:     '/api/fields',
+    detail:     (id) => `/api/fields/${id}`,
+    update:     (id) => `/api/fields/${id}`,
+    delete:     (id) => `/api/fields/${id}`,
+    activities: (id) => `/api/fields/${id}/activities`,
+    addActivity: (id) => `/api/fields/${id}/activities`,
   },
 
   // Weather (AgriVision)
   weather: {
     current: (lat, lon) => `/api/weather?lat=${lat}&lon=${lon}`,
+  },
+
+  // Disease Encyclopedia
+  diseases: {
+    list:         '/api/diseases',
+    detail:       (id) => `/api/diseases/${id}`,
+    cropTypes:    '/api/diseases/crops/list',
+    pesticides:   '/api/diseases/pesticides/list',
+    symptomTree:  '/api/diseases/symptoms/tree',
+  },
+
+  // Alerts (Station → Field)
+  alerts: {
+    create:       '/api/alerts',
+    active:       (lat, lng) => lat && lng ? `/api/alerts?lat=${lat}&lng=${lng}` : '/api/alerts',
+    all:          '/api/alerts/all',
+    suggestions:  (days, minDet) => `/api/alerts/suggestions?days=${days || 7}&min_detections=${minDet || 5}`,
+    metrics:      (id) => `/api/alerts/${id}/metrics`,
+    acknowledge:  (id) => `/api/alerts/${id}/acknowledge`,
+    deactivate:   (id) => `/api/alerts/${id}/deactivate`,
+  },
+
+  // Epidemics & Outbreaks (Geo-Spatial and Forecasting)
+  epidemic: {
+    report:             '/api/epidemic/report',
+    alerts:             '/api/epidemic/alerts',
+    alertRead:          (id) => `/api/epidemic/alerts/${id}/read`,
+    reportResolve:      (id) => `/api/epidemic/reports/${id}/resolve`,
+    simulate:           '/api/epidemic/simulate',
+    outbreaks:          '/api/epidemic/outbreaks',
+    outbreakDetail:     (id) => `/api/epidemic/outbreaks/${id}`,
+  },
+
+  // Sub-zones
+  subzones: {
+    list:       (fieldId) => `/api/fields/${fieldId}/subzones`,
+    create:     (fieldId) => `/api/fields/${fieldId}/subzones`,
+    detail:     (id) => `/api/subzones/${id}`,
+    update:     (id) => `/api/subzones/${id}`,
+    delete:     (id) => `/api/subzones/${id}`,
+    metrics:    (id) => `/api/subzones/${id}/metrics`,
+    // NEW: Field Management Redesign endpoints
+    summary:        (fieldId) => `/api/fields/${fieldId}/zones/summary`,
+    timeSeries:     (id, metric, range) => `/api/subzones/${id}/metrics/timeseries?metric=${metric}&range=${range || '7d'}`,
+    healthHistory:  (id) => `/api/subzones/${id}/health-history`,
+  },
+
+  // GPS Boundary Walk (mobile farmer → field perimeter mapping)
+  walk: {
+    start:    (fieldId) => `/api/fields/${fieldId}/walk/start`,
+    status:   (fieldId, walkId) => `/api/fields/${fieldId}/walk/${walkId}`,
+    points:   (fieldId, walkId) => `/api/fields/${fieldId}/walk/${walkId}/points`,
+    complete: (fieldId, walkId) => `/api/fields/${fieldId}/walk/${walkId}/complete`,
+  },
+
+  // Homepage (aggregated widget data)
+  homepage: {
+    summary:  '/api/homepage/summary',
+    diseases: (limit) => `/api/homepage/diseases?limit=${limit || 8}`,
   },
 
   // Health

@@ -11,7 +11,7 @@ test.describe('Auth Flow', () => {
     await page.goto('/');
     await expect(page).toHaveURL(/.*\/welcome/, { timeout: 20000 });
     // Use exact span text to avoid strict mode violation
-    await expect(page.locator('span.text-gradient-primary')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('span.text-gradient-primary').first()).toBeVisible({ timeout: 10000 });
     await expect(page.locator('button:has-text("Bắt đầu miễn phí")')).toBeVisible({ timeout: 10000 });
   });
 

@@ -9,6 +9,16 @@
 
 import { Platform } from 'react-native';
 
+// Dynamically get token to avoid circular import issue with useAuthStore
+const getAuthToken = () => {
+  try {
+    const { useAuthStore } = require('../auth/useAuthStore');
+    return useAuthStore.getState().token;
+  } catch (e) {
+    return null;
+  }
+};
+
 // ─────────────────────────────────────────────
 // Origin resolution (ported from legacy api.js)
 // ─────────────────────────────────────────────
@@ -70,9 +80,11 @@ export const resolveAssetUrl = (path) => {
 export const apiRequest = async (path, options = {}, token = null) => {
   const url = buildUrl(path);
 
+  const activeToken = token || getAuthToken();
+
   const headers = {
     'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(activeToken ? { Authorization: `Bearer ${activeToken}` } : {}),
     ...(options.headers || {}),
   };
 
@@ -102,3 +114,49 @@ export const apiRequest = async (path, options = {}, token = null) => {
 
   return data;
 };
+
+// Default api helper object containing convenience methods
+const api = {
+  get: (path, options = {}, token = null) =>
+    apiRequest(path, { ...options, method: 'GET' }, token),
+  post: (path, body, options = {}, token = null) => {
+    const isFormData = body instanceof FormData;
+    return apiRequest(
+      path,
+      {
+        ...options,
+        method: 'POST',
+        body: isFormData ? body : JSON.stringify(body),
+      },
+      token
+    );
+  },
+  put: (path, body, options = {}, token = null) => {
+    const isFormData = body instanceof FormData;
+    return apiRequest(
+      path,
+      {
+        ...options,
+        method: 'PUT',
+        body: isFormData ? body : JSON.stringify(body),
+      },
+      token
+    );
+  },
+  delete: (path, options = {}, token = null) =>
+    apiRequest(path, { ...options, method: 'DELETE' }, token),
+  patch: (path, body, options = {}, token = null) => {
+    const isFormData = body instanceof FormData;
+    return apiRequest(
+      path,
+      {
+        ...options,
+        method: 'PATCH',
+        body: isFormData ? body : JSON.stringify(body),
+      },
+      token
+    );
+  },
+};
+
+export default api;

@@ -24,6 +24,8 @@ import { OverviewStatsWidget } from './widgets/OverviewStatsWidget';
 import { MapWidget } from './widgets/MapWidget';
 import { SensorGridWidget } from './widgets/SensorGridWidget';
 import { AlertsFeedWidget } from './widgets/AlertsFeedWidget';
+import { EpidemicLedgerWidget } from './widgets/EpidemicLedgerWidget';
+import { ScanTrendWidget } from './widgets/ScanTrendWidget';
 
 // ─── Widget Registry ────────────────────────────────────────────────────────
 
@@ -37,15 +39,58 @@ export const WIDGET_REGISTRY = {
   Control: { component: ControlWidget, title: 'Điều khiển' },
   Content: { component: ContentWidget, title: 'Nội dung' },
   Chat: { component: ChatWidget, title: 'AI Tư vấn' },
-  OverviewStats: { component: OverviewStatsWidget, title: 'Tổng quan' },
-  Map: { component: MapWidget, title: 'Bản đồ cánh đồng' },
+  OverviewStats: { component: OverviewStatsWidget, title: 'KPI Tổng quan' },
+  Map: { component: MapWidget, title: 'Bản đồ giám sát' },
+  ScanTrend: { component: ScanTrendWidget, title: 'Xu hướng quét' },
   SensorGrid: { component: SensorGridWidget, title: 'Cảm biến IoT' },
-  AlertsFeed: { component: AlertsFeedWidget, title: 'Cảnh báo & Hành động' },
+  AlertsFeed: { component: AlertsFeedWidget, title: 'Cảnh báo' },
+  EpidemicLedger: { component: EpidemicLedgerWidget, title: 'Sổ dịch tễ' },
 };
 
 // ─── Layout Variants ────────────────────────────────────────────────────────
 
 export const LAYOUT_VARIANTS = {
+
+
+    // ─── Dashboard / Smart Farming Overview ─────────────────────────────
+  // 3 columns: sidebar(220px) | main area(1fr) | right panel(300px)
+  // 4 rows: nav | overview cards | map+sensors | alerts
+  dashboard: {
+    default: {
+      columns: '220px 1fr 300px',
+      rows: '64px 120px 1fr 220px',
+      areas: [
+        ['Nav', '.', 'User'],
+        ['Menu', 'OverviewStats', 'OverviewStats'],
+        ['Menu', 'Map', 'EpidemicLedger'],
+        ['Menu', 'ScanTrend', 'EpidemicLedger'],
+      ],
+    },
+    tablet: {
+      columns: '180px 1fr 260px',
+      rows: '56px 110px 1fr 200px',
+      areas: [
+        ['Nav', '.', 'User'],
+        ['Menu', 'OverviewStats', 'OverviewStats'],
+        ['Menu', 'Map', 'EpidemicLedger'],
+        ['Menu', 'ScanTrend', 'EpidemicLedger'],
+      ],
+    },
+    mobile: {
+      columns: '1fr',
+      rows: 'auto',
+      areas: [
+        ['Nav'],
+        ['User'],
+        ['OverviewStats'],
+        ['Map'],
+        ['ScanTrend'],
+        ['AlertsFeed'],
+        ['EpidemicLedger'],
+        ['Menu'],
+      ],
+    },
+  },
 
   // ─── Inference page ─────────────────────────────────────────────────
   // 4 columns: sidebar | canvas | stats | chat
@@ -83,44 +128,6 @@ export const LAYOUT_VARIANTS = {
     },
   },
 
-  // ─── Dashboard / Smart Farming Overview ─────────────────────────────
-  // 3 columns: sidebar(220px) | main area(1fr) | right panel(300px)
-  // 4 rows: nav | overview cards | map+sensors | alerts
-  dashboard: {
-    default: {
-      columns: '220px 1fr 300px',
-      rows: '64px 140px 1fr 250px',
-      areas: [
-        ['Nav', '.', 'User'],
-        ['Menu', 'OverviewStats', 'OverviewStats'],
-        ['Menu', 'Map', 'AlertsFeed'],
-        ['Menu', 'SensorGrid', 'AlertsFeed'],
-      ],
-    },
-    tablet: {
-      columns: '180px 1fr 260px',
-      rows: '56px 130px 1fr 220px',
-      areas: [
-        ['Nav', '.', 'User'],
-        ['Menu', 'OverviewStats', 'OverviewStats'],
-        ['Menu', 'Map', 'AlertsFeed'],
-        ['Menu', 'SensorGrid', 'AlertsFeed'],
-      ],
-    },
-    mobile: {
-      columns: '1fr',
-      rows: 'auto',
-      areas: [
-        ['Nav'],
-        ['User'],
-        ['OverviewStats'],
-        ['Map'],
-        ['SensorGrid'],
-        ['AlertsFeed'],
-        ['Menu'],
-      ],
-    },
-  },
 
   // ─── Admin / History pages ──────────────────────────────────────────
   admin: {
@@ -157,12 +164,18 @@ export const LAYOUT_VARIANTS = {
 
 export const ROUTE_VARIANT_MAP = [
   { pattern: '/dashboard', variant: 'dashboard' },
+  { pattern: '/(station)', variant: 'dashboard' },
+  { pattern: '/analysis', variant: 'inference' },
+  { pattern: '/inference', variant: 'inference' },
+  { pattern: '/system', variant: 'admin' },
   { pattern: '/history', variant: 'admin' },
   { pattern: '/admin', variant: 'admin' },
-  // Default → inference
+  { pattern: '/alerts', variant: 'admin' },
+  { pattern: '/fields', variant: 'admin' },
+  // Default → dashboard (defined below)
 ];
 
-export const DEFAULT_VARIANT = 'inference';
+export const DEFAULT_VARIANT = 'dashboard';
 
 // ─── Breakpoint Thresholds (px) ─────────────────────────────────────────────
 

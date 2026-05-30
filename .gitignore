@@ -67,3 +67,18 @@ cropvision_db/
 GEMINI.md
 
 Hoang_Vu_CV.md
+
+#Vibecode promax kit
+.agents/
+.claude/
+.codex/
+process/
+.gitignore
+CLAUDE.md
+knowledge.md
+.gitignore
+AGENTS.md
+knowledge.md
+.vc-installed-files
+.vc-version
+knowledge.md

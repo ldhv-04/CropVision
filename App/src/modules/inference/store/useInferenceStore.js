@@ -13,6 +13,14 @@ import { Platform } from 'react-native';
 import { apiRequest } from '../../@core/api/apiClient';
 import { ENDPOINTS } from '../../@core/api/endpoints';
 
+// Lazy import expo-location — only available in native/Expo context
+let Location;
+try {
+  Location = require('expo-location');
+} catch {
+  Location = null;
+}
+
 const useInferenceStore = create((set, get) => ({
   // ─── Image selection state ─────────────────────────────────────────────
   selectedAsset:     null,   // Full asset from image picker
@@ -95,11 +103,42 @@ const useInferenceStore = create((set, get) => ({
     return formData;
   },
 
+  /**
+   * Capture device GPS coordinates. Returns [lat, lon] or null.
+   * Gracefully handles web (navigator.geolocation), native (expo-location), and failures.
+   */
+  _captureGPS: async () => {
+    try {
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
+        return new Promise((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => resolve([pos.coords.latitude, pos.coords.longitude]),
+            () => resolve(null),
+            { enableHighAccuracy: false, timeout: 5000, maximumAge: 30000 }
+          );
+        });
+      }
+
+      if (Location) {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') return null;
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        return [loc.coords.latitude, loc.coords.longitude];
+      }
+    } catch (e) {
+      console.warn('[GPS] Could not capture location:', e.message);
+    }
+    return null;
+  },
+
   /** Run YOLO inference via the backend API.
    *  @param {string} token - JWT auth token
    *  @param {string|null} [fieldId] - Optional field ID for weather+crop context injection
+   *  @param {object|null} [fieldCoords] - Optional {latitude, longitude} from selected field
    */
-  runInference: async (token, fieldId = null) => {
+  runInference: async (token, fieldId = null, fieldCoords = null) => {
     const { selectedAsset } = get();
     if (!selectedAsset?.uri) return;
 
@@ -111,6 +150,16 @@ const useInferenceStore = create((set, get) => ({
 
       // [AgriVision] Inject field context if provided
       if (fieldId) formData.append('field_id', fieldId);
+
+      // [GPS] Capture location — prefer field coords, fallback to device GPS
+      let coords = fieldCoords;
+      if (!coords) {
+        coords = await get()._captureGPS();
+      }
+      if (coords) {
+        formData.append('latitude', String(coords[0]));
+        formData.append('longitude', String(coords[1]));
+      }
 
       const data = await apiRequest(ENDPOINTS.inference.analyze, {
         method: 'POST',

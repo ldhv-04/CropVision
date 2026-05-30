@@ -8,10 +8,17 @@
 import { Tabs } from 'expo-router';
 import { useAuthStore } from '../../src/modules/@core/auth/useAuthStore';
 import { Redirect } from 'expo-router';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, useWindowDimensions } from 'react-native';
 import { LIGHT_COLORS, SPACING, FONT_SIZE } from '../../src/modules/@core/constants/theme';
 import { CameraModal } from '../../src/modules/agrivision/components/CameraModal';
 import { useState } from 'react';
+
+// GridShell — web-only dashboard layout (lazily required to avoid bundling DOM libs on native)
+let GridShell = null;
+if (Platform.OS === 'web') {
+  GridShell = require('../../src/modules/@core/components/GridShell').GridShell;
+}
+
 
 const C = LIGHT_COLORS;
 
@@ -37,9 +44,15 @@ export default function AgriVisionLayout() {
   const token = useAuthStore((s) => s.token);
   const user = useAuthStore((s) => s.user);
   const [modalVisible, setModalVisible] = useState(false);
+  const { width } = useWindowDimensions();
 
   if (!token) return <Redirect href="/welcome" />;
   if (user?.role === 'admin') return <Redirect href="/(station)" />;
+
+  // ── Web/Electron: render GridShell (full-screen dashboard) only on desktop screens ──
+  if (Platform.OS === 'web' && GridShell && width > 768) {
+    return <GridShell />;
+  }
 
   return (
     <>
@@ -66,8 +79,8 @@ export default function AgriVisionLayout() {
         <Tabs.Screen
           name="fields"
           options={{
-            title: 'Cánh đồng',
-            headerTitle: 'Cánh đồng của tôi',
+            title: 'Quản lý',
+            headerTitle: 'Quản lý cánh đồng',
             tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>🌾</Text>,
           }}
         />
@@ -90,6 +103,13 @@ export default function AgriVisionLayout() {
           }}
         />
         <Tabs.Screen
+          name="encyclopedia"
+          options={{
+            href: null, // Hidden from tab bar — accessed via homepage widget
+            headerTitle: 'Bách khoa bệnh',
+          }}
+        />
+        <Tabs.Screen
           name="settings"
           options={{
             title: 'Cài đặt',
@@ -108,6 +128,28 @@ export default function AgriVisionLayout() {
           name="inference"
           options={{
             href: null, // Hide from tab bar
+            headerShown: false,
+          }}
+        />
+        {/* Hidden screens: accessible via router.push() only, not as tabs */}
+        <Tabs.Screen
+          name="field-map"
+          options={{
+            href: null, // Touch comment to trigger Metro rebuild
+            headerShown: false,
+          }}
+        />
+        <Tabs.Screen
+          name="fieldsLegacy"
+          options={{
+            href: null,
+            headerShown: false,
+          }}
+        />
+        <Tabs.Screen
+          name="zone-detail"
+          options={{
+            href: null,
             headerShown: false,
           }}
         />

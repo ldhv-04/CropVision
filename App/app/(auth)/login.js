@@ -22,11 +22,6 @@ export default function LoginScreen() {
     const result = await login(email.trim(), password);
     if (!result.success) {
       Alert.alert('Đăng nhập thất bại', result.message);
-    } else {
-      // Get role from store state (set by login action)
-      const currentUser = useAuthStore.getState().user;
-      const role = currentUser?.role || 'user';
-      router.replace(role === 'admin' ? '/(station)' : '/(agrivision)');
     }
   };
 

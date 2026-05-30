@@ -7,8 +7,8 @@ const saveInferenceTransaction = async (sampleData, inferenceResults) => {
     await client.query('BEGIN');
 
     const insertSampleQuery = `
-      INSERT INTO crop_samples (user_id, sample_name, crop_type, image_url, file_size, field_id, source_type, batch_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO crop_samples (user_id, sample_name, crop_type, image_url, file_size, field_id, source_type, batch_id, latitude, longitude)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING id;
     `;
 
@@ -21,6 +21,8 @@ const saveInferenceTransaction = async (sampleData, inferenceResults) => {
       sampleData.fieldId || null,
       sampleData.sourceType || 'mobile',
       sampleData.batchId || null,
+      sampleData.latitude || null,
+      sampleData.longitude || null,
     ];
 
     const sampleResult = await client.query(insertSampleQuery, sampleValues);
@@ -71,6 +73,8 @@ const getSamplesHistory = async ({ userId, role }) => {
       cs.sample_name,
       cs.crop_type,
       cs.image_url,
+      cs.latitude,
+      cs.longitude,
       cs.created_at,
       u.full_name AS owner_name,
       u.email AS owner_email,

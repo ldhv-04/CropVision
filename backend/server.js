@@ -9,6 +9,12 @@ const adminRoutes = require('./src/routes/adminRoutes');
 const chatRoutes = require('./src/routes/chatRoutes');
 const weatherRoutes = require('./src/routes/weatherRoutes');
 const fieldRoutes = require('./src/routes/fieldRoutes');
+const diseaseRoutes = require('./src/routes/diseaseRoutes');
+const alertRoutes = require('./src/routes/alertRoutes');
+// [NEW] Geo-Spatial Mapping & Epidemiological Dispersion module routes
+const { topLevelRouter: subZoneTopRouter } = require('./src/routes/subZoneRoutes');
+const epidemicRoutes = require('./src/routes/epidemicRoutes');
+const homepageRoutes = require('./src/routes/homepageRoutes');
 const { ensureFixedAdminAccount } = require('./src/services/adminService');
 
 const app = express();
@@ -29,6 +35,12 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/weather', weatherRoutes);
 app.use('/api/fields', fieldRoutes);
+app.use('/api/diseases', diseaseRoutes);
+app.use('/api/alerts', alertRoutes);
+// [NEW] Geo-Spatial & Epidemic module endpoints
+app.use('/api/subzones', subZoneTopRouter);       // /api/subzones/:id, /api/subzones/:id/metrics
+app.use('/api/epidemic', epidemicRoutes);          // /api/epidemic/report, /api/epidemic/alerts
+app.use('/api/homepage', homepageRoutes);          // /api/homepage/summary, /api/homepage/diseases
 
 // Khoi dong server sau khi dam bao tai khoan admin co dinh da duoc tao trong DB.
 const startServer = async () => {

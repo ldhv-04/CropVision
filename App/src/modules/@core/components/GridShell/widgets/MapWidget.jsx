@@ -1,316 +1,387 @@
 /**
- * MapWidget — Interactive SVG Farm Field Map
+ * MapWidget — Leaflet Map with Vietnam Province Boundaries
  *
- * Displays an interactive vector map dividing the farm into
- * clickable field segments, color-coded by health status.
- *
- * Architecture:
- *   - Renders a modular SVG with predefined polygon zones
- *   - Each zone has hover tooltip showing soil metrics
- *   - Heatmap toggle: Moisture / pH / Disease Risk / Default
- *   - Prepared for GeoJSON data: replace FIELD_ZONES with
- *     parsed GeoJSON features when backend provides them
- *
- * Data integration:
- *   - useInferenceStore: applies disease risk overlay when
- *     detections are present
- *   - Future: connect to /api/sensors/fields for live soil data
+ * Features:
+ * - OpenStreetMap tiles with clear boundaries
+ * - Vietnam province boundary overlay (GADM GeoJSON)
+ * - Scan location markers (color-coded by severity)
+ * - Click marker → popup with scan details
+ * - State management moved to useMapStore (Epoch 2)
+ * Theme-aware: uses useTheme() for light/dark mode support.
  */
 
-import { useState, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
+import { useAuthStore } from '../../../auth/useAuthStore';
 import { useTheme } from '../../../context/ThemeContext';
-import { useInferenceStore } from '../../../../inference/store/useInferenceStore';
+import { useSubZoneStore } from '../../../../agrivision/store/useSubZoneStore';
+import { useMapStore } from '../../../store/useMapStore';
 
-// ── Field zone definitions (replace with GeoJSON parser when available) ──────
-// Each zone: { id, label, path (SVG path d attr), metrics }
-const FIELD_ZONES = [
-  {
-    id: 'A1', label: 'Khu A1 – Ngô',
-    // SVG polygon coordinates (viewBox 0 0 600 400)
-    points: '30,30 180,30 180,160 30,160',
-    metrics: { moisture: 72, ph: 6.4, nitrogen: 85, risk: 15 },
-  },
-  {
-    id: 'A2', label: 'Khu A2 – Lúa',
-    points: '190,30 340,30 340,160 190,160',
-    metrics: { moisture: 88, ph: 6.1, nitrogen: 70, risk: 42 },
-  },
-  {
-    id: 'A3', label: 'Khu A3 – Cà chua',
-    points: '350,30 500,30 500,160 350,160',
-    metrics: { moisture: 65, ph: 6.8, nitrogen: 90, risk: 68 },
-  },
-  {
-    id: 'B1', label: 'Khu B1 – Khoai lang',
-    points: '30,170 230,170 230,310 30,310',
-    metrics: { moisture: 78, ph: 5.9, nitrogen: 60, risk: 22 },
-  },
-  {
-    id: 'B2', label: 'Khu B2 – Dưa hấu',
-    points: '240,170 500,170 500,310 240,310',
-    metrics: { moisture: 55, ph: 6.6, nitrogen: 75, risk: 35 },
-  },
-  {
-    id: 'C1', label: 'Khu C1 – Rau cải',
-    points: '30,320 280,320 280,380 30,380',
-    metrics: { moisture: 80, ph: 7.0, nitrogen: 95, risk: 8 },
-  },
-  {
-    id: 'C2', label: 'Khu C2 – Ớt',
-    points: '290,320 500,320 500,380 290,380',
-    metrics: { moisture: 62, ph: 6.3, nitrogen: 80, risk: 55 },
-  },
-];
+const SEVERITY_COLORS = {
+  severe: '#ef4444',
+  moderate: '#f59e0b',
+  mild: '#4ade80',
+};
 
-const HEATMAP_MODES = [
-  { key: 'risk',     label: '🦠 Bệnh',     metric: 'risk',     invert: false },
-  { key: 'moisture', label: '💧 Ẩm độ',    metric: 'moisture', invert: false },
-  { key: 'ph',       label: '⚗️ pH',       metric: 'ph',       invert: false, max: 14 },
-  { key: 'nitrogen', label: '🌿 Nitơ',     metric: 'nitrogen', invert: false },
-];
-
-function getZoneColor(value, mode, colors, max = 100) {
-  const pct = Math.min(value / max, 1);
-  if (mode.key === 'risk') {
-    // High risk → danger, low risk → success
-    if (pct >= 0.65) return colors.danger;
-    if (pct >= 0.35) return colors.warning;
-    return colors.success;
-  }
-  // For moisture/nitrogen/ph: higher = healthier
-  if (pct >= 0.7)  return colors.success;
-  if (pct >= 0.45) return colors.warning;
-  return colors.danger;
+function getStyles(c) {
+  return {
+    container: {
+      position: 'relative',
+      width: '100%',
+      height: '100%',
+      borderRadius: 12,
+      overflow: 'hidden',
+      border: `1px solid ${c.border}`,
+    },
+    map: {
+      width: '100%',
+      height: '100%',
+      background: c.surface,
+    },
+    loadingOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: c.surface,
+      zIndex: 1000,
+    },
+    loadingText: {
+      color: c.textMuted,
+      fontSize: 13,
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+    },
+    legend: {
+      position: 'absolute',
+      bottom: 12,
+      right: 12,
+      background: `${c.surface}e6`,
+      borderRadius: 10,
+      padding: '8px 12px',
+      display: 'flex',
+      gap: 12,
+      zIndex: 1000,
+      border: `1px solid ${c.border}`,
+      backdropFilter: 'blur(8px)',
+    },
+    legendItem: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6,
+    },
+    legendDot: {
+      width: 8,
+      height: 8,
+      borderRadius: '50%',
+      boxShadow: '0 0 6px rgba(0,0,0,0.3)',
+    },
+    legendLabel: {
+      color: c.textSecondary,
+      fontSize: 10,
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontWeight: 600,
+    },
+  };
 }
 
 export function MapWidget() {
-  const { colors }  = useTheme();
-  const { detections } = useInferenceStore();
+  const token = useAuthStore((s) => s.token);
+  const { colors } = useTheme();
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markersRef = useRef(null);
+  const outbreaksLayerRef = useRef(null);
+  const simulationLayerRef = useRef(null);
+  const affectedLayerRef = useRef(null);
 
-  const [hoverZone, setHoverZone]   = useState(null);
-  const [activeMode, setActiveMode] = useState(HEATMAP_MODES[0]);
-  const [selectedZone, setSelected] = useState(null);
+  const { outbreaks, selectedOutbreak, simulationResult } = useSubZoneStore();
+  const { activeLayers, mapData, fetchMapData, timelineFilter, setSelectedFeature } = useMapStore();
+  const styles = getStyles(colors);
 
-  const handleZoneClick = useCallback((zone) => {
-    setSelected((prev) => prev?.id === zone.id ? null : zone);
+  useEffect(() => {
+    if (token) {
+      fetchMapData(token);
+    }
+  }, [token, fetchMapData]);
+
+  // Reactive layer updates for outbreaks and simulation cones
+  useEffect(() => {
+    const L = window.L;
+    if (!L || !mapInstanceRef.current) return;
+
+    const map = mapInstanceRef.current;
+
+    // ── 1. Update Outbreaks Layer ──
+    if (outbreaksLayerRef.current) {
+      outbreaksLayerRef.current.clearLayers();
+
+      if (activeLayers.includes('outbreaks')) {
+        outbreaks.forEach((o) => {
+          const boundary = typeof o.boundary === 'string' ? JSON.parse(o.boundary) : o.boundary;
+          if (boundary && boundary.coordinates) {
+            const latlngs = boundary.coordinates[0].map(([lng, lat]) => [lat, lng]);
+
+            // Draw the infected subzone boundary
+            const poly = L.polygon(latlngs, {
+              color: '#ef4444',
+              fillColor: '#ef4444',
+              fillOpacity: 0.35,
+              weight: 3.5,
+              className: 'outbreak-infected-poly'
+            }).addTo(outbreaksLayerRef.current);
+
+            poly.on('click', () => {
+              setSelectedFeature({ type: 'outbreak', data: o });
+            });
+
+            poly.bindTooltip(`<div style="font-family:system-ui;font-weight:700;color:#991b1b;">⚠️ Dịch bệnh: ${o.disease_type?.replace(/_/g, ' ')}</div>`, {
+              permanent: true,
+              direction: 'center',
+              className: 'outbreak-tooltip'
+            });
+
+            // Place warning marker head at centroid
+            const bounds = poly.getBounds();
+            const centroid = bounds.getCenter();
+            const warningIcon = L.divIcon({
+              className: 'warning-marker',
+              html: `<div style="
+                width: 24px; height: 24px; border-radius: 50%;
+                background: #ef4444; border: 2px solid #fff;
+                box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+                display: flex; align-items: center; justify-content: center;
+                font-size: 13px; font-weight: bold; color: #fff;
+                animation: pulse 1.8s infinite;
+              ">🚨</div>`,
+              iconSize: [24, 24],
+              iconAnchor: [12, 12],
+            });
+
+            const centroidMarker = L.marker(centroid, { icon: warningIcon }).addTo(outbreaksLayerRef.current);
+            centroidMarker.on('click', () => {
+              setSelectedFeature({ type: 'outbreak', data: o });
+            });
+          }
+        });
+      }
+    }
+
+    // ── 2. Update Simulation Cone Layer ──
+    if (simulationLayerRef.current) {
+      simulationLayerRef.current.clearLayers();
+
+      if (activeLayers.includes('simulations') && simulationResult && simulationResult.simulationCone) {
+        const cone = simulationResult.simulationCone;
+        if (cone.geometry && cone.geometry.coordinates) {
+          const latlngs = cone.geometry.coordinates[0].map(([lng, lat]) => [lat, lng]);
+
+          const conePoly = L.polygon(latlngs, {
+            color: '#ef4444',
+            fillColor: '#ef4444',
+            fillOpacity: 0.18,
+            weight: 2,
+            dashArray: '5, 8',
+          }).addTo(simulationLayerRef.current);
+
+          // Fit bounds to show the full simulation area
+          map.fitBounds(conePoly.getBounds(), { padding: [40, 40] });
+        }
+      }
+    }
+
+    // ── 3. Update Affected Zones Layer ──
+    if (affectedLayerRef.current) {
+      affectedLayerRef.current.clearLayers();
+
+      // If simulation is active and has affectedZoneIds, highlight them
+      if (activeLayers.includes('simulations') && simulationResult && simulationResult.affectedZoneIds && selectedOutbreak && selectedOutbreak.affectedZones) {
+        const affectedZones = selectedOutbreak.affectedZones;
+
+        affectedZones.forEach((z) => {
+          // Verify if this zone is in the affected list
+          if (simulationResult.affectedZoneIds.includes(z.zone_id)) {
+            const boundary = typeof z.boundary === 'string' ? JSON.parse(z.boundary) : z.boundary;
+            if (boundary && boundary.coordinates) {
+              const latlngs = boundary.coordinates[0].map(([lng, lat]) => [lat, lng]);
+
+              const poly = L.polygon(latlngs, {
+                color: '#f59e0b',
+                fillColor: '#f59e0b',
+                fillOpacity: 0.3,
+                weight: 2.5,
+                dashArray: '3, 5',
+              }).addTo(affectedLayerRef.current);
+
+              poly.bindTooltip(`<div style="font-family:system-ui;font-weight:600;color:#92400e;">⚠️ Đe dọa: Cây ${z.crop_type}</div>`, {
+                permanent: false,
+                direction: 'center'
+              });
+            }
+          }
+        });
+      }
+    }
+  }, [outbreaks, selectedOutbreak, simulationResult, activeLayers, setSelectedFeature]);
+
+  // Reactive layer update for scans
+  useEffect(() => {
+    const L = window.L;
+    if (!L || !markersRef.current) return;
+    
+    markersRef.current.clearLayers();
+    
+    if (activeLayers.includes('scans') && mapData.scans) {
+      const now = new Date();
+      let cutoffDate = null;
+      if (timelineFilter === '7d') cutoffDate = new Date(now.setDate(now.getDate() - 7));
+      else if (timelineFilter === '1m') cutoffDate = new Date(now.setMonth(now.getMonth() - 1));
+      else if (timelineFilter === '3m') cutoffDate = new Date(now.setMonth(now.getMonth() - 3));
+
+      const filteredScans = cutoffDate 
+        ? mapData.scans.filter(s => new Date(s.created_at) >= cutoffDate)
+        : mapData.scans;
+
+      filteredScans.forEach((scan) => {
+        if (!scan.latitude || !scan.longitude) return;
+
+        const detections = scan.detections || [];
+        const hasDisease = detections.some(d => !d.disease_class?.includes('Healthy'));
+        const severity = detections.find(d => d.disease_class?.includes('Late_blight') || d.disease_class?.includes('severe'))
+          ? 'severe' : hasDisease ? 'moderate' : 'mild';
+        const color = SEVERITY_COLORS[severity];
+
+        const icon = L.divIcon({
+          className: 'custom-marker',
+          html: `<div style="
+            width: 10px; height: 10px; border-radius: 50%;
+            background: ${color}; border: 2px solid ${color}80;
+            box-shadow: 0 0 8px ${color}60;
+          "></div>`,
+          iconSize: [10, 10],
+          iconAnchor: [5, 5],
+        });
+
+        const marker = L.marker([parseFloat(scan.latitude), parseFloat(scan.longitude)], { icon })
+          .addTo(markersRef.current);
+
+        // Click event to open Detail Drawer instead of HTML popup
+        marker.on('click', () => {
+          setSelectedFeature({ type: 'scan', data: scan });
+        });
+      });
+    }
+  }, [mapData.scans, activeLayers, timelineFilter, setSelectedFeature]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !mapRef.current) return;
+
+    const loadMap = async () => {
+      // Inject Leaflet CSS
+      if (!document.querySelector('link[href*="leaflet"]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(link);
+      }
+
+      // Inject custom styling tags
+      if (!document.getElementById('map-widget-custom-styles')) {
+        const style = document.createElement('style');
+        style.id = 'map-widget-custom-styles';
+        style.innerHTML = `
+          @keyframes pulse {
+            0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+          }
+          .outbreak-tooltip {
+            background-color: rgba(254, 226, 226, 0.9) !important;
+            border: 1.5px solid #f87171 !important;
+            border-radius: 6px !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+
+      // Load Leaflet JS
+      if (!window.L) {
+        await new Promise((resolve) => {
+          const script = document.createElement('script');
+          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+          script.onload = resolve;
+          document.head.appendChild(script);
+        });
+      }
+
+      const L = window.L;
+      if (!mapRef.current || mapInstanceRef.current) return;
+
+      // Initialize map centered on Vietnam
+      const map = L.map(mapRef.current, {
+        zoomControl: true,
+        attributionControl: false,
+      }).setView([14.0583, 108.2772], 6);
+      mapInstanceRef.current = map;
+
+      // OpenStreetMap tiles (clear boundaries)
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+      }).addTo(map);
+
+      // Attribution
+      L.control.attribution({ prefix: false }).addAttribution('© OpenStreetMap contributors').addTo(map);
+
+      // Marker layer group
+      const markersLayer = L.layerGroup().addTo(map);
+      markersRef.current = markersLayer;
+
+      // Layer groups for geo-epidemic module
+      const outbreaksLayer = L.layerGroup().addTo(map);
+      outbreaksLayerRef.current = outbreaksLayer;
+
+      const simulationLayer = L.layerGroup().addTo(map);
+      simulationLayerRef.current = simulationLayer;
+
+      const affectedLayer = L.layerGroup().addTo(map);
+      affectedLayerRef.current = affectedLayer;
+    };
+
+    loadMap();
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
   }, []);
 
-  // If detections present, boost risk in A3/C2 for demo
-  const getRisk = useCallback((zone) => {
-    if (detections?.length > 0 && (zone.id === 'A3' || zone.id === 'C2')) {
-      return Math.min(zone.metrics.risk + detections.length * 8, 95);
-    }
-    return zone.metrics.risk;
-  }, [detections]);
-
-  const getMetricValue = useCallback((zone, mode) => {
-    if (mode.key === 'risk') return getRisk(zone);
-    return zone.metrics[mode.metric] ?? 50;
-  }, [getRisk]);
-
   return (
-    <div style={{
-      height: '100%', display: 'flex', flexDirection: 'column',
-      backgroundColor: colors.surface, boxSizing: 'border-box',
-    }}>
-      {/* Header */}
-      <div style={{
-        padding: '12px 16px 8px',
-        borderBottom: `1px solid ${colors.border}`,
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      }}>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: colors.textPrimary }}>
-            🗺️ Bản đồ cánh đồng
-          </div>
-          <div style={{ fontSize: 11, color: colors.textSecondary }}>
-            Bấm vào khu vực để xem chi tiết
-          </div>
+    <div style={styles.container}>
+      <div ref={mapRef} style={styles.map} />
+      {mapData.loading && (
+        <div style={styles.loadingOverlay}>
+          <div style={styles.loadingText}>🗺️ Đang tải bản đồ...</div>
         </div>
-        {/* Heatmap mode toggles */}
-        <div style={{ display: 'flex', gap: 4 }}>
-          {HEATMAP_MODES.map((mode) => (
-            <button
-              key={mode.key}
-              onClick={() => setActiveMode(mode)}
-              style={{
-                padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                border: `1px solid ${activeMode.key === mode.key ? colors.primaryGlow : colors.border}`,
-                backgroundColor: activeMode.key === mode.key
-                  ? `${colors.primary}30` : 'transparent',
-                color: activeMode.key === mode.key ? colors.primaryGlow : colors.textSecondary,
-                cursor: 'pointer', transition: 'all 0.15s',
-              }}
-            >
-              {mode.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* SVG Map + Info Panel */}
-      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-        {/* Map */}
-        <div style={{ flex: 1, padding: 12, position: 'relative' }}>
-          <svg
-            viewBox="0 0 530 410"
-            style={{ width: '100%', height: '100%' }}
-          >
-            {/* Background grid */}
-            <defs>
-              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none"
-                  stroke={colors.border} strokeWidth="0.5" opacity="0.4"/>
-              </pattern>
-            </defs>
-            <rect width="530" height="410" fill="url(#grid)" />
-
-            {/* Field zones */}
-            {FIELD_ZONES.map((zone) => {
-              const metric = getMetricValue(zone, activeMode);
-              const max = activeMode.key === 'ph' ? 14 : 100;
-              const fill = getZoneColor(metric, activeMode, colors, max);
-              const isHovered = hoverZone?.id === zone.id;
-              const isSelected = selectedZone?.id === zone.id;
-
-              return (
-                <g key={zone.id}>
-                  <polygon
-                    points={zone.points}
-                    fill={fill}
-                    fillOpacity={isHovered || isSelected ? 0.75 : 0.45}
-                    stroke={isSelected ? colors.primaryGlow : fill}
-                    strokeWidth={isSelected ? 2.5 : 1}
-                    style={{ cursor: 'pointer', transition: 'all 0.2s' }}
-                    onMouseEnter={() => setHoverZone(zone)}
-                    onMouseLeave={() => setHoverZone(null)}
-                    onClick={() => handleZoneClick(zone)}
-                  />
-                  {/* Zone label */}
-                  <text
-                    x={zone.points.split(' ').map(p => +p.split(',')[0]).reduce((a,b) => a+b,0) /
-                       zone.points.split(' ').length}
-                    y={zone.points.split(' ').map(p => +p.split(',')[1]).reduce((a,b) => a+b,0) /
-                       zone.points.split(' ').length + 4}
-                    textAnchor="middle" fontSize="11" fontWeight="700"
-                    fill={colors.textPrimary} opacity="0.9"
-                    style={{ pointerEvents: 'none' }}
-                  >
-                    {zone.id}
-                  </text>
-                  {/* Metric value badge */}
-                  <text
-                    x={zone.points.split(' ').map(p => +p.split(',')[0]).reduce((a,b) => a+b,0) /
-                       zone.points.split(' ').length}
-                    y={zone.points.split(' ').map(p => +p.split(',')[1]).reduce((a,b) => a+b,0) /
-                       zone.points.split(' ').length + 18}
-                    textAnchor="middle" fontSize="9"
-                    fill={colors.textSecondary} opacity="0.8"
-                    style={{ pointerEvents: 'none' }}
-                  >
-                    {activeMode.key === 'ph'
-                      ? `pH ${metric}`
-                      : `${metric}${activeMode.key === 'risk' ? '%⚠' : '%'}`
-                    }
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-
-          {/* Hover tooltip */}
-          {hoverZone && (
-            <div style={{
-              position: 'absolute', bottom: 16, left: 16,
-              backgroundColor: colors.surfaceAlt,
-              border: `1px solid ${colors.borderStrong}`,
-              borderRadius: 10, padding: '8px 12px',
-              fontSize: 12, color: colors.textPrimary,
-              boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-              pointerEvents: 'none',
-            }}>
-              <div style={{ fontWeight: 700, marginBottom: 2 }}>{hoverZone.label}</div>
-              <div style={{ color: colors.textSecondary }}>
-                💧 Ẩm: {hoverZone.metrics.moisture}% &nbsp;
-                ⚗️ pH: {hoverZone.metrics.ph} &nbsp;
-                🌿 N: {hoverZone.metrics.nitrogen}%
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Selected zone detail panel */}
-        {selectedZone && (
-          <div style={{
-            width: 170, padding: 14, borderLeft: `1px solid ${colors.border}`,
-            backgroundColor: colors.surfaceAlt, display: 'flex',
-            flexDirection: 'column', gap: 10, overflowY: 'auto',
-          }}>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: colors.textPrimary }}>
-                {selectedZone.label}
-              </div>
-              <div style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>
-                Chi tiết cánh đồng
-              </div>
-            </div>
-            {[
-              { label: '💧 Ẩm độ đất', value: `${selectedZone.metrics.moisture}%`,
-                color: colors.info },
-              { label: '⚗️ Độ pH',     value: `${selectedZone.metrics.ph}`,
-                color: colors.primaryGlow },
-              { label: '🌿 Nitơ',       value: `${selectedZone.metrics.nitrogen}%`,
-                color: colors.success },
-              { label: '🦠 Nguy cơ bệnh', value: `${getRisk(selectedZone)}%`,
-                color: getRisk(selectedZone) > 60 ? colors.danger : colors.warning },
-            ].map(({ label, value, color }) => (
-              <div key={label} style={{
-                padding: '8px 10px', borderRadius: 10,
-                border: `1px solid ${colors.border}`,
-                backgroundColor: colors.surface,
-              }}>
-                <div style={{ fontSize: 10, color: colors.textMuted, marginBottom: 3 }}>
-                  {label}
-                </div>
-                <div style={{ fontSize: 18, fontWeight: 800, color }}>
-                  {value}
-                </div>
-              </div>
-            ))}
-            <button
-              onClick={() => setSelected(null)}
-              style={{
-                marginTop: 'auto', padding: '7px', borderRadius: 8,
-                border: `1px solid ${colors.border}`, backgroundColor: 'transparent',
-                color: colors.textSecondary, fontSize: 12, cursor: 'pointer',
-              }}
-            >
-              Đóng ✕
-            </button>
-          </div>
-        )}
-      </div>
-
+      )}
       {/* Legend */}
-      <div style={{
-        padding: '6px 16px', borderTop: `1px solid ${colors.border}`,
-        display: 'flex', gap: 16, alignItems: 'center',
-        fontSize: 11, color: colors.textSecondary,
-      }}>
-        <span style={{ fontWeight: 600, color: colors.textMuted }}>Chú giải:</span>
-        {[
-          { color: colors.success, label: 'Tốt' },
-          { color: colors.warning, label: 'Trung bình' },
-          { color: colors.danger,  label: 'Cần xử lý' },
-        ].map(({ color, label }) => (
-          <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: color }} />
-            {label}
-          </span>
-        ))}
-        <span style={{ marginLeft: 'auto', color: colors.textMuted, fontStyle: 'italic' }}>
-          GeoJSON-ready
-        </span>
+      <div style={styles.legend}>
+        <div style={styles.legendItem}>
+          <div style={{ ...styles.legendDot, background: SEVERITY_COLORS.severe }} />
+          <span style={styles.legendLabel}>Nghiêm trọng</span>
+        </div>
+        <div style={styles.legendItem}>
+          <div style={{ ...styles.legendDot, background: SEVERITY_COLORS.moderate }} />
+          <span style={styles.legendLabel}>Trung bình</span>
+        </div>
+        <div style={styles.legendItem}>
+          <div style={{ ...styles.legendDot, background: SEVERITY_COLORS.mild }} />
+          <span style={styles.legendLabel}>Khỏe mạnh</span>
+        </div>
       </div>
     </div>
   );

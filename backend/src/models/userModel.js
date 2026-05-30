@@ -57,10 +57,16 @@ const verifyUserAccount = async (email) => {
   await pool.query(query, [email]);
 };
 
+const deleteUserById = async (id) => {
+  const query = 'DELETE FROM users WHERE id = $1;';
+  await pool.query(query, [id]);
+};
+
 module.exports = {
   ensureUserRoleColumn,
   getUserByEmail,
   createUser,
   upsertAdminUser,
-  verifyUserAccount
+  verifyUserAccount,
+  deleteUserById
 };

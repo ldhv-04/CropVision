@@ -17,14 +17,16 @@ const NAV_SECTIONS = [
     label: 'Phân tích',
     items: [
       { label: 'Tổng quan',     href: '/dashboard', key: 'dashboard', icon: '📊' },
-      { label: 'Phân tích ảnh', href: '/inference', key: 'inference', icon: '🔬' },
+      { label: 'Phân tích ảnh', href: '/analysis', key: 'analysis', icon: '🔬' },
     ],
   },
   {
     label: 'Quản lý',
     items: [
+      { label: 'Cánh đồng',   href: '/fields',  key: 'fields',  icon: '🌾' },
       { label: 'Lịch sử mẫu', href: '/history', key: 'history', icon: '📋' },
-      { label: 'Quản trị',    href: '/admin',   key: 'admin',   icon: '⚙️', adminOnly: true },
+      { label: 'Cảnh báo',    href: '/alerts',  key: 'alerts',  icon: '🚨', adminOnly: true },
+      { label: 'Quản trị',    href: '/system',  key: 'system',  icon: '⚙️', adminOnly: true },
     ],
   },
 ];
@@ -37,7 +39,7 @@ export function MenuWidget() {
   const { colors } = useTheme();
 
   const activeKey = NAV_SECTIONS.flatMap((s) => s.items)
-    .find((i) => pathname.includes(i.key))?.key ?? 'inference';
+    .find((i) => pathname.includes(i.key) || (i.key === 'analysis' && pathname.includes('inference')))?.key ?? 'dashboard';
 
   const menuWidgetStyle = {
     padding: 12,

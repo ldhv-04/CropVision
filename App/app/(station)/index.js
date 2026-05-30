@@ -17,6 +17,12 @@ import { useAdminStore } from '../../src/modules/admin/store/useAdminStore';
 import { KpiCard } from '../../src/modules/station/components/KpiCard';
 import { DARK_COLORS, SPACING, RADIUS, FONT_SIZE } from '../../src/modules/@core/constants/theme';
 
+// MapShell — web-only dashboard layout (lazily required to avoid bundling DOM libs on native)
+let MapShell = null;
+if (Platform.OS === 'web') {
+  MapShell = require('../../src/modules/@core/components/MapShell').MapShell;
+}
+
 const C = DARK_COLORS;
 
 // Simple bar chart using RN Views (fallback if gifted-charts fails on native)
@@ -96,6 +102,12 @@ export default function StationCommandCenter() {
     loadAdminData(token);
   }, []);
 
+  // ── Web: render the new MapShell dashboard ──
+  if (Platform.OS === 'web' && MapShell) {
+    return <MapShell />;
+  }
+
+  // ── Mobile: keep existing native layout ──
   const onRefresh = () => loadAdminData(token, true);
 
   const recentSamples = samples.slice(0, 10);

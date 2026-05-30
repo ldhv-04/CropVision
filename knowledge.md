@@ -1,122 +1,277 @@
-# CropVision AI — Project Knowledge
+# CropVision — Knowledge Base
 
-Plant-leaf disease detection system (YOLOv8 + Gemini chat) with a tri-platform frontend (Web / Electron Desktop / Android-iOS) and a dual-persona UX:
-- **AgriVision** — Mobile-first UI for farmers (Bottom Tabs + Drawer, light theme)
-- **CropVision Station** — Desktop/Web UI for admins/analysts (CSS Grid, dark theme)
+> Auto-generated technical reference for all backend modules, database schema, and API endpoints.
 
-Role-based routing in Expo Router: admins land in `(station)`, regular users in `(agrivision)`.
+---
 
-## Architecture
+## System Architecture
 
-Three independent services orchestrated via `docker-compose.yml`:
-
-| Path | Stack | Purpose |
-|------|-------|---------|
-| `App/` | Expo SDK 55 + Expo Router + React 19 + Zustand | Web/Desktop/Mobile UI |
-| `backend/` | Node.js 18+ / Express 5 / `pg` / JWT / Multer | REST API, auth, business logic |
-| `ai_core/` | FastAPI + Ultralytics YOLOv8 | Image inference (`/predict`) |
-| `db` (compose) | PostgreSQL 16 | Persistent store, init via `backend/initdb/*.sql` |
-
-Data flow: **App → backend (`/api/...`) → ai_core (`AI_CORE_URL`) + Postgres**. Backend forwards uploaded images to AI Core, persists results in `crop_samples`.
-
-### Key directories
-
-- `App/app/` — Expo Router file-based routes. Route groups: `(auth)`, `(agrivision)`, `(station)`, `(main)` (legacy).
-- `App/src/modules/` — Three-layer module pattern:
-  - `@core/` — design tokens, `apiClient`, `endpoints`, `useAuthStore`, `AppShell`, `GridShell` widgets, `ThemeContext`
-  - `platform/` — adaptive services (`ImagePickerService`, `useLayoutMode`, `usePlatformInfo`)
-  - Feature modules: `agrivision/`, `inference/`, `history/`, `admin/`, `station/`, `landing/`
-- `App/src/screens/` and `App/src/navigation/` — **legacy** (phasing out, do not extend).
-- `backend/src/` — classic layered structure: `routes/ → controllers/ → services/ → models/ → config/db.js`. Auth middleware in `middleware/authMiddleware.js`.
-- `backend/initdb/` — SQL bootstrapped by Postgres on first volume init: `001-init.sql`, `002-chat.sql`, `003-diseases.sql`.
-- `ai_core/api/predict.py` — FastAPI predict endpoint; weights at `ai_core/weight/archive/best.pt`.
-- `specs/` — feature specs/plans (e.g. `phase-1-dual-platform/`).
-
-## Commands
-
-### Docker (recommended full stack — db + backend + ai_core; App still runs outside Docker)
-```powershell
-copy .env.docker.example .env   # set JWT_SECRET, POSTGRES_*, RESEND_API_KEY, GEMINI_API_KEY
-docker compose up --build
-docker compose down              # stop
-docker compose down -v           # wipe DB volume (required after changing POSTGRES_PASSWORD)
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    PRESENTATION LAYER                           │
+│  Mobile App (Expo/React Native)  │  Station Admin Dashboard    │
+│  - MapView + polygon overlays    │  - Mapbox GL / Deck.gl      │
+│  - GPS boundary walk streaming   │  - Incident ledger          │
+└────────────────────┬────────────┴──────────────┬────────────────┘
+                     │  REST API                 │  REST API
+                     ▼                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    BUSINESS LAYER                                │
+│  Express.js Backend (Node.js)                                   │
+│  ┌──────────────┐ ┌───────────────┐ ┌────────────────────────┐  │
+│  │ GeoService    │ │ EpidemicServ. │ │ MockMetricService      │  │
+│  │ (Validation)  │ │ (Cone Model)  │ │ (Sinusoidal Telemetry) │  │
+│  └──────────────┘ └───────────────┘ └────────────────────────┘  │
+│  ┌──────────────┐ ┌───────────────┐ ┌────────────────────────┐  │
+│  │ WalkService   │ │ DiseaseServ.  │ │ AI Core (FastAPI)      │  │
+│  │ (GPS → Geo)   │ │ (Knowledge)   │ │ (YOLOv8 Inference)     │  │
+│  └──────────────┘ └───────────────┘ └────────────────────────┘  │
+└────────────────────────────────┬────────────────────────────────┘
+                                 │  pg Pool (raw SQL)
+                                 ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    DATA LAYER                                    │
+│  PostgreSQL 16 (Docker)                                         │
+│  - GeoJSON boundary storage (JSONB)                             │
+│  - Compound indexes for time-series metrics                     │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Backend (`cd backend`)
-```powershell
-copy .env.example .env
-npm install
-npm run dev              # nodemon
-npm start                # node server.js
-npm test                 # jest (tests in backend/tests/)
-npm run test:coverage
+---
+
+## Database Schema
+
+### Tables
+
+| Table | Purpose | ID Type |
+|-------|---------|---------|
+| `users` | User accounts (farmer, station_admin) | SERIAL |
+| `fields` | Farm plots with GeoJSON boundary | UUID |
+| `sub_zones` | Sub-plots within fields (crop, status) | SERIAL |
+| `zone_metrics` | Time-series telemetry per sub-zone | SERIAL |
+| `disease_reports` | Disease occurrences in sub-zones | SERIAL |
+| `zone_alerts` | Epidemic broadcast notifications | SERIAL |
+| `gps_walks` | GPS walk sessions for boundary mapping | SERIAL |
+| `crop_samples` | YOLO inference input images | SERIAL |
+| `inference_results` | YOLO detection results | SERIAL |
+| `crop_diseases` | Disease knowledge base | SERIAL |
+| `treatment_methods` | Treatment options per disease | SERIAL |
+| `pesticides` | Pesticide products | SERIAL |
+| `alerts` | Station-wide admin alerts | SERIAL |
+| `chat_sessions` | AI chat sessions | SERIAL |
+| `chat_messages` | AI chat messages | SERIAL |
+| `field_activities` | Field activity timeline | SERIAL |
+| `weather_cache` | Cached weather data | Composite |
+
+### Key Relationships
+
+```
+users (1) ──→ (N) fields (UUID)
+fields (1) ──→ (N) sub_zones (FK: field_id UUID)
+sub_zones (1) ──→ (N) zone_metrics (FK: sub_zone_id)
+sub_zones (1) ──→ (N) disease_reports (FK: sub_zone_id)
+disease_reports (1) ──→ (N) zone_alerts (FK: disease_report_id)
+fields (1) ──→ (N) gps_walks (FK: field_id UUID)
+fields (1) ──→ (N) field_activities (FK: field_id UUID)
 ```
 
-### AI Core (`cd ai_core`)
-```powershell
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-python main.py           # uvicorn on 127.0.0.1:8000
-pytest                   # tests in ai_core/tests/
+### Sub-Zone Status Flow
+```
+HEALTHY ──→ WARNING (when nearby zone reports disease)
+WARNING ──→ INFECTED (when disease confirmed in zone)
+INFECTED ──→ HEALTHY (when disease report resolved)
 ```
 
-### App (`cd App`)
-```powershell
-npm install
-npm run dev:desktop      # web (8081) + Electron — primary dev workflow
-npm run web              # web only on :8081
-npm run android | ios    # native (requires native toolchain)
-npm run export:web       # production web bundle to App/dist/
-npm run build:win        # electron-builder NSIS installer to App/release/
-npm test                 # jest (jest-expo/node preset); ignores /e2e/
-npm run test:coverage
-npx playwright test      # e2e (auto-starts expo web; see playwright.config.ts)
+---
+
+## API Endpoints
+
+### Authentication (`/api/auth`)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/auth/register` | No | Register new user |
+| POST | `/api/auth/login` | No | Login, returns JWT |
+| POST | `/api/auth/verify-email` | No | Verify email with OTP |
+| GET | `/api/auth/me` | Yes | Get current user profile |
+
+### Fields (`/api/fields`)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/fields` | Yes | List user's fields (optional `?zone_status=HEALTHY\|WARNING\|INFECTED`) |
+| POST | `/api/fields` | Yes | Create field with GeoJSON boundary |
+| GET | `/api/fields/:id` | Yes | Get field detail + activities |
+| PUT | `/api/fields/:id` | Yes | Update field (boundary, growth_stage) |
+| DELETE | `/api/fields/:id` | Yes | Delete field |
+| POST | `/api/fields/:id/activities` | Yes | Add activity to field |
+| GET | `/api/fields/:id/activities` | Yes | List activities for field |
+
+### Sub-Zones (`/api/fields/:fieldId/subzones` + `/api/subzones`)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/fields/:fieldId/subzones` | Yes | List sub-zones with latest metrics |
+| POST | `/api/fields/:fieldId/subzones` | Yes | Create sub-zone (validates boundary containment) |
+| GET | `/api/subzones/:id` | Yes | Get sub-zone detail + metric history |
+| PUT | `/api/subzones/:id` | Yes | Update sub-zone (boundary, status, crop) |
+| DELETE | `/api/subzones/:id` | Yes | Delete sub-zone |
+| GET | `/api/subzones/:id/metrics` | Yes | Get live simulated telemetry (saves to DB) |
+
+### GPS Boundary Walk (`/api/fields/:fieldId/walk`)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/fields/:fieldId/walk/start` | Yes | Start GPS walk session |
+| GET | `/api/fields/:fieldId/walk/:walkId` | Yes | Get walk status + collected points |
+| PATCH | `/api/fields/:fieldId/walk/:walkId/points` | Yes | Append GPS points (bulk) |
+| POST | `/api/fields/:fieldId/walk/:walkId/complete` | Yes | Complete walk → save GeoJSON boundary |
+
+**Frontend Endpoint Constants (`ENDPOINTS.walk`):**
+```js
+walk: {
+  start:    (fieldId) => `/api/fields/${fieldId}/walk/start`,
+  status:   (fieldId, walkId) => `/api/fields/${fieldId}/walk/${walkId}`,
+  points:   (fieldId, walkId) => `/api/fields/${fieldId}/walk/${walkId}/points`,
+  complete: (fieldId, walkId) => `/api/fields/${fieldId}/walk/${walkId}/complete`,
+}
 ```
 
-Recommended boot order locally: **db → backend → ai_core → App**.
+### Epidemic & Disease (`/api/epidemic`)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/epidemic/report` | Yes | Report disease → compute cone → broadcast alerts |
+| POST | `/api/epidemic/simulate` | Yes | Preview simulation with custom wind (no DB writes) |
+| GET | `/api/epidemic/alerts` | Yes | Get user's epidemic alerts |
+| PATCH | `/api/epidemic/alerts/:id/read` | Yes | Mark alert as read |
+| PATCH | `/api/epidemic/reports/:id/resolve` | Yes | Resolve disease report |
+| GET | `/api/epidemic/outbreaks` | Yes | List active outbreaks (station dashboard) |
+| GET | `/api/epidemic/outbreaks/:id` | Yes | Get outbreak detail with affected zones |
 
-## Environment variables (must read)
+### AI Inference (`/api`)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/infer` | Yes | Upload image → YOLO detection |
+| GET | `/api/history` | Yes | Get inference history |
 
-- **`backend/.env`** — `JWT_SECRET` is REQUIRED; backend refuses to start without it. Other required: `DB_USER/PASSWORD/HOST/PORT/NAME`, `PORT`. Optional: `RESEND_API_KEY` (Resend; if missing, email/OTP registration fails but server still boots), `AI_CORE_URL` (default `http://127.0.0.1:8000`), `ADMIN_EMAIL/PASSWORD/FULL_NAME` (default `admin@cropvision.local` / `Admin@123`), `GEMINI_API_KEY` (chat).
-- **Root `.env`** (Docker only) — `POSTGRES_DB/USER/PASSWORD/PORT`, `BACKEND_PORT`, `AI_CORE_PORT`, `JWT_SECRET` all required (compose fails fast otherwise).
-- **`App/.env`** — `EXPO_PUBLIC_API_PROTOCOL/HOST/PORT` or single `EXPO_PUBLIC_API_ORIGIN` override. Use `127.0.0.1` for same-machine dev; LAN IP for device testing.
+### Disease Knowledge (`/api/diseases`)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/diseases/:class` | Yes | Get disease info by YOLO class |
+| GET | `/api/diseases/search` | Yes | Search diseases by keyword |
 
-Generate a strong JWT secret:
-```powershell
-node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+### Weather (`/api/weather`)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/weather` | Yes | Get weather for coordinates |
+
+### Chat (`/api/chat`)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/chat` | Yes | Send message to AI chatbot |
+| GET | `/api/chat/history` | Yes | Get chat history |
+
+### Admin (`/api/admin`)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/admin/users` | Admin | List all users |
+| GET | `/api/admin/stats` | Admin | System statistics |
+| DELETE | `/api/admin/users/:id` | Admin | Delete user |
+
+### Alerts (`/api/alerts`)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/alerts` | Yes | Get active alerts |
+| POST | `/api/alerts` | Admin | Create alert |
+| POST | `/api/alerts/:id/acknowledge` | Yes | Acknowledge alert |
+
+---
+
+## Services
+
+### GeoService (`backend/src/services/geoService.js`)
+- `validateSubZone(outerBoundary, subZoneBoundary)` — Checks if sub-zone polygon is entirely within field boundary using `@turf/boolean-within`. Supports Polygon + MultiPolygon.
+- `validateGeoJsonPolygon(geoJson)` — Validates GeoJSON structure (Polygon or MultiPolygon).
+- `buildTurfGeometry(boundary)` — Builds Turf.js feature from GeoJSON boundary.
+
+### EpidemicService (`backend/src/services/epidemicService.js`)
+- `calculateInfectedCone(epicenter, windDirection, distanceRadius)` — Builds a 45° dispersion cone polygon downwind from the infected epicenter using `@turf/destination`.
+- `scanZonesInDanger(conePolygon, allSubZones)` — Filters zones that intersect the danger cone using `@turf/boolean-intersects`. Supports Polygon + MultiPolygon.
+- `computePolygonCentroid(boundary)` — Computes arithmetic centroid of GeoJSON geometry.
+
+### MockMetricService (`backend/src/services/mockMetricService.js`)
+- `generateMetrics(status)` — Generates sinusoidal diurnal telemetry (HEALTHY/WARNING/INFECTED profiles).
+- `getStationWeatherMock()` — Returns deterministic weather data (SE wind, 5.4 m/s, 29.5°C).
+
+### DiseaseService (`backend/src/services/diseaseService.js`)
+- `getDiseaseByClass(class)` — Lookup disease info by YOLO class name.
+- `getTopDiseases(detections, topK)` — Get top-N diseases from inference results.
+- `buildDiseaseContext(disease)` — Build LLM context string for chatbot.
+
+---
+
+## Geospatial Standards
+
+- **All coordinates follow GeoJSON `[Longitude, Latitude]` convention.**
+- Field boundaries stored as GeoJSON `Polygon` or `MultiPolygon` in JSONB.
+- Sub-zone boundaries stored as GeoJSON `Polygon` in JSONB.
+- Containment validation uses `@turf/boolean-within` (ray-casting algorithm).
+- Cone dispersion uses `@turf/destination` for bearing projection.
+- Intersection checking uses `@turf/boolean-intersects`.
+
+### MultiPolygon Support
+Both `GeoService` and `EpidemicService` accept `Polygon` and `MultiPolygon` for:
+- Field boundaries (outerBoundary)
+- Sub-zone boundaries
+- GPS walk completion can merge new walk into existing MultiPolygon
+
+---
+
+## Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `node run-migration.js` | Run all schema migrations (creates tables + indexes) |
+| `node run-seed.js` | Seed disease knowledge base (treatments, pesticides) |
+| `node run-seed-v2.js` | Extended seed data |
+| `node run-seed-geo.js` | Seed geo-spatial test data (1 field, 3 sub-zones, 15 metrics) |
+| `node run-seed-bulk.js` | Load test: 100 fields, 10K sub-zones, 1M metrics + index benchmark |
+
+---
+
+## Docker Services
+
+| Service | Container | Port | Description |
+|---------|-----------|------|-------------|
+| `db` | `cropvision-db` | 5432 | PostgreSQL 16 |
+| `ai_core` | `cropvision-ai-core` | 8000 | FastAPI + YOLOv8 |
+| `backend` | `cropvision-backend` | 3000 | Express.js API |
+
+---
+
+## Dependencies (Geo-Epidemic Module)
+
+```
+@turf/boolean-within    — Polygon containment check
+@turf/boolean-intersects — Polygon intersection check
+@turf/helpers           — GeoJSON feature builders (polygon, multiPolygon, point)
+@turf/destination       — Point projection by bearing + distance
 ```
 
-## Conventions
+---
 
-- **Backend**: CommonJS (`"type": "commonjs"`); pure-SQL data access in `models/` (no ORM); business rules in `services/`; controllers stay thin. Add new routes by creating `routes/xxxRoutes.js` and mounting in `server.js`.
-- **App**: ES modules + JSX (`.js`/`.jsx`). State via **Zustand stores** colocated under `src/modules/<feature>/store/`. API access goes through `@core/api/apiClient.js` + `endpoints.js` (do not hand-roll fetch/origin logic — it breaks Electron/LAN scenarios).
-- **Theming**: `App/src/modules/@core/context/ThemeContext.jsx` + design tokens in `@core/constants/theme.js`. Station = dark default, AgriVision = light default; both user-overridable.
-- **Routing**: Role-based redirect lives in `App/app/_layout.js`. New farmer screens go in `(agrivision)/`; new admin screens in `(station)/`. `(main)/` is legacy.
-- **Image upload**: Limit 10 MB, types JPEG/PNG/WebP/GIF — validated at both multer route layer AND service layer; keep both in sync.
-- **DB schema for inference**: `crop_samples` carries `field_id`, `source_type` (`mobile`/`drone`/`station`), `batch_id` — preserve these when adding columns (drone-batch readiness per `specs/phase-1-dual-platform/`).
+## Indexes (Performance-Critical)
 
-## Gotchas
+```sql
+idx_zone_metrics_sub_zone_created  -- (sub_zone_id, created_at DESC) for latest metric query
+idx_sub_zones_field_id             -- (field_id) for field→sub-zone joins
+idx_disease_reports_sub_zone_id    -- (sub_zone_id) for zone→disease joins
+idx_zone_alerts_disease_report_id  -- (disease_report_id) for outbreak→alert joins
+idx_gps_walks_field_id             -- (field_id) for walk session lookup
+```
 
-- **Windows shell** — repo paths use `F:\Documents\Khoa Luan 2026\cropvision_db`. Use `copy`/`del`/`move` (or quoted PowerShell). Default shell is bash; commands here assume PowerShell-friendly forms.
-- **Postgres password change requires volume wipe** — `docker compose down -v` before changing `POSTGRES_PASSWORD`, otherwise the existing `postgres_data` volume keeps the old creds.
-- **AI Core schema changes** — restart **both** `ai_core` and `backend`; backend caches no schema but axios payload shape will mismatch.
-- **Android FormData** — multipart upload requires `Platform.OS` check (see recent commit `fix(app): fix FormData multipart formatting on Android`). Don't strip the platform branch in `ImagePickerService` / inference upload code.
-- **Expo Web port** — Playwright `baseURL` is `http://localhost:8081`. If you change the `web` script port, update `App/playwright.config.ts` too.
-- **Generated/local-only dirs (do not commit)**: `backend/uploads/`, `App/dist/`, `App/release/`, `ai_core/venv/`, `App/coverage/`, `App/test-results/`, `.env*`.
-- **Auth debug log** — `backend/src/controllers/authController.js` currently logs raw passwords on login (uncommitted dev aid). Remove before any deploy.
-- **New Architecture disabled** — `app.json` has `"newArchEnabled": false`. Don't flip it without testing all native modules (`react-native-reanimated`, `react-native-gesture-handler`, `react-native-screens`).
-- **OpenWeatherMap** — free tier (1000 calls/day). Always go through `weather_cache` (target 15–30 min cache by rounded lat/lon) — see `weatherService.js`.
+---
 
-## API surface (high-level)
+## Migration Order
 
-| Method | Route | Auth |
-|--------|-------|------|
-| GET | `/api/health` | — |
-| POST | `/api/auth/register` `/verify` `/login` | — |
-| POST | `/api/inference/analyze` | JWT |
-| GET | `/api/inference/samples` | JWT |
-| CRUD | `/api/fields/*` | JWT (farmer) |
-| GET | `/api/weather/*` | JWT |
-| POST | `/api/chat/*` | JWT |
-| GET/DELETE | `/api/admin/*` | JWT + `role=admin` |
+1. `001-init.sql` — users, crop_samples, inference_results (run by Docker init)
+2. `002-chat.sql` — chat_sessions, chat_messages (run by Docker init)
+3. `003-diseases.sql` — disease-related tables (run by Docker init)
+4. `run-migration.js` — All other tables + columns (run manually after Docker)
+5. `005-geo-epidemic.sql` — Reference file only (content already in run-migration.js)

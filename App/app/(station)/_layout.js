@@ -5,11 +5,16 @@
  * Grafana-inspired professional dashboard aesthetic.
  */
 
-import { Tabs } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
 import { useAuthStore } from '../../src/modules/@core/auth/useAuthStore';
-import { Redirect } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { DARK_COLORS, SPACING, FONT_SIZE } from '../../src/modules/@core/constants/theme';
+
+// MapShell — web-only dashboard layout (lazily required to avoid bundling DOM libs on native)
+let MapShell = null;
+if (Platform.OS === 'web') {
+  MapShell = require('../../src/modules/@core/components/MapShell').MapShell;
+}
 
 const C = DARK_COLORS;
 
@@ -25,10 +30,17 @@ function TabIcon({ icon, label, focused }) {
 export default function StationLayout() {
   const token = useAuthStore((s) => s.token);
   const user = useAuthStore((s) => s.user);
+  const { width } = useWindowDimensions();
 
   if (!token) return <Redirect href="/welcome" />;
   if (user?.role !== 'admin') return <Redirect href="/(agrivision)" />;
 
+  // ── Web/Electron: render MapShell (full-screen dashboard) on all web viewports ──
+  if (Platform.OS === 'web' && MapShell) {
+    return <MapShell />;
+  }
+
+  // ── Mobile: Tabs navigator ──
   return (
     <Tabs
       screenOptions={{
@@ -53,6 +65,13 @@ export default function StationLayout() {
         options={{
           headerTitle: '🛰️ CropVision Station',
           tabBarIcon: ({ focused }) => <TabIcon icon="📊" label="Dashboard" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="alerts"
+        options={{
+          headerTitle: '📢 Alert Dispatcher',
+          tabBarIcon: ({ focused }) => <TabIcon icon="📢" label="Alerts" focused={focused} />,
         }}
       />
       <Tabs.Screen

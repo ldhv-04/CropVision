@@ -5,8 +5,14 @@ const resendApiKey = process.env.RESEND_API_KEY;
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 const sendOTP = async (toEmail, otpCode) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+
   if (!resend) {
-    throw new Error('RESEND_API_KEY chua duoc cau hinh.');
+    if (isProduction) {
+      throw new Error('RESEND_API_KEY chua duoc cau hinh.');
+    }
+    console.warn(`\n==================================================\n[DEV ONLY] RESEND_API_KEY is not configured.\nOTP for ${toEmail} is: ${otpCode}\n==================================================\n`);
+    return { id: 'dev-mock-id' };
   }
 
   try {
@@ -30,7 +36,11 @@ const sendOTP = async (toEmail, otpCode) => {
     return data;
   } catch (error) {
     console.error('Loi khi goi API Resend:', error);
-    throw new Error('He thong gui email dang gian doan.');
+    if (isProduction) {
+      throw new Error('He thong gui email dang gian doan.');
+    }
+    console.warn(`\n==================================================\n[DEV FALLBACK] Resend API call failed.\nOTP for ${toEmail} is: ${otpCode}\n==================================================\n`);
+    return { id: 'dev-fallback-id' };
   }
 };
 

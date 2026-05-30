@@ -23,7 +23,7 @@ try {
 export function InferenceActionPanel() {
   const token = useAuthStore((s) => s.token);
   const { isAnalyzing, imageUri, setSelectedAsset, runInference } = useInferenceStore();
-  const { selectedFieldId } = useFieldStore();
+  const { selectedFieldId, fields } = useFieldStore();
 
   /** Mở image picker và lưu asset được chọn vào store */
   const handlePickImage = async () => {
@@ -40,7 +40,17 @@ export function InferenceActionPanel() {
   /** Gọi inference API nếu đã chọn ảnh và đang không phân tích */
   const handleAnalyze = () => {
     if (!imageUri || isAnalyzing) return;
-    runInference(token, selectedFieldId || null);
+
+    // Look up selected field's GPS coordinates to send with the scan
+    let fieldCoords = null;
+    if (selectedFieldId && fields?.length > 0) {
+      const field = fields.find((f) => f.id === selectedFieldId);
+      if (field?.latitude && field?.longitude) {
+        fieldCoords = { latitude: field.latitude, longitude: field.longitude };
+      }
+    }
+
+    runInference(token, selectedFieldId || null, fieldCoords);
   };
 
 

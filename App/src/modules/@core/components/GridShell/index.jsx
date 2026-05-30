@@ -16,11 +16,21 @@ import { useMemo } from 'react';
 import { useLayoutConfig } from './hooks/useLayoutConfig';
 import { ThemeProvider, useTheme } from '../../context/ThemeContext';
 import { SHADOWS } from '../../constants/theme';
+import { useAuthStore } from '../../auth/useAuthStore';
 
 /** Inner shell: reads theme then renders the grid */
 function GridShellInner() {
-  const { layout, widgets } = useLayoutConfig();
+  const { layout, widgets, variantName } = useLayoutConfig();
   const { colors } = useTheme();
+  const user = useAuthStore((s) => s.user);
+
+  const testId = useMemo(() => {
+    if (variantName === 'inference') return 'inference-screen';
+    if (variantName === 'dashboard') {
+      return user?.role === 'admin' ? 'station-dashboard' : 'agrivision-home';
+    }
+    return undefined;
+  }, [variantName, user?.role]);
 
   const templateAreas = useMemo(
     () => layout.areas.map((row) => `"${row.join(' ')}"`).join(' '),
@@ -30,7 +40,9 @@ function GridShellInner() {
   const gridStyle = useMemo(
     () => ({
       width: '100vw',
-      height: '100vh',
+      minHeight: '100vh',
+      height: layout.rows === 'auto' ? 'auto' : '100vh',
+      overflowY: layout.rows === 'auto' ? 'auto' : 'hidden',
       display: 'grid',
       gridTemplateColumns: layout.columns,
       gridTemplateRows: layout.rows === 'auto' ? 'auto' : layout.rows,
@@ -53,14 +65,14 @@ function GridShellInner() {
     boxShadow: SHADOWS.card,
     overflow: 'hidden',
     height: '100%',
-    minHeight: 0,
+    minHeight: layout.rows === 'auto' ? (name === 'Nav' || name === 'User' || name === 'Menu' ? 'auto' : 320) : 0,
     boxSizing: 'border-box',
     gridArea: name,
     transition: 'background-color 0.3s ease, border-color 0.3s ease',
   });
 
   return (
-    <div style={gridStyle}>
+    <div style={gridStyle} data-testid={testId}>
       {widgets.map(({ name, component: Widget }) => (
         <div key={name} style={surfaceStyle(name)}>
           <Widget />

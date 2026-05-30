@@ -67,6 +67,8 @@ const saveResult = async (userId, file, imageUrl, inferenceData, extra = {}) => 
     cropType: 'unknown',
     imageUrl,
     fileSize: file.size,
+    latitude: extra.latitude || null,
+    longitude: extra.longitude || null,
   };
 
   return inferenceModel.saveInferenceTransaction(sampleData, inferenceData.boxes);
