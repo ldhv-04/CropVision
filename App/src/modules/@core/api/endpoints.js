@@ -95,7 +95,7 @@ export const ENDPOINTS = {
     outbreakDetail:     (id) => `/api/epidemic/outbreaks/${id}`,
   },
 
-  // Sub-zones
+  // Sub-zones (legacy)
   subzones: {
     list:       (fieldId) => `/api/fields/${fieldId}/subzones`,
     create:     (fieldId) => `/api/fields/${fieldId}/subzones`,
@@ -107,6 +107,16 @@ export const ENDPOINTS = {
     summary:        (fieldId) => `/api/fields/${fieldId}/zones/summary`,
     timeSeries:     (id, metric, range) => `/api/subzones/${id}/metrics/timeseries?metric=${metric}&range=${range || '7d'}`,
     healthHistory:  (id) => `/api/subzones/${id}/health-history`,
+  },
+
+  // Management Zones (Station/Admin Zone Editor)
+  zones: {
+    list:       (fieldId) => `/api/fields/${fieldId}/zones`,
+    create:     (fieldId) => `/api/fields/${fieldId}/zones`,
+    update:     (fieldId, zoneId) => `/api/fields/${fieldId}/zones/${zoneId}`,
+    delete:     (fieldId, zoneId) => `/api/fields/${fieldId}/zones/${zoneId}`,
+    validate:   (fieldId) => `/api/fields/${fieldId}/zones/validate`,
+    publish:    (fieldId) => `/api/fields/${fieldId}/zones/publish`,
   },
 
   // GPS Boundary Walk (mobile farmer → field perimeter mapping)

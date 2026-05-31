@@ -35,6 +35,7 @@ import FieldDetailPanel from '../components/gis/FieldDetailPanel';
 import CreateFieldDrawer from '../components/gis/CreateFieldDrawer';
 import ConfirmationDialog from '../components/gis/ConfirmationDialog';
 import FieldExplorerPanel from '../components/gis/explorer/FieldExplorerPanel';
+import ZoneEditorPage from './ZoneEditorPage';
 import { extractPolygonCoords, calculateAreaHectares } from '../utils/fieldGeometry';
 import { FIELD_FOCUS_ZOOM, clampZoom } from '../config/mapConfig';
 
@@ -98,6 +99,7 @@ export default function FieldsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [editMetadataField, setEditMetadataField] = useState(null);
+  const [zoneEditorFieldId, setZoneEditorFieldId] = useState(null);
 
   // ── Map ref for imperative flyTo (bridge between explorer and map) ──
   const mapInstanceRef = useRef(null);
@@ -306,11 +308,23 @@ export default function FieldsPage() {
     }
   }, [editState, updateFieldAPI, cancelEditing]);
 
-  // ── Edit Metadata ────────────────────────────────────────────
+  // ── Configure Zones ──────────────────────────────────────────
+  const handleConfigureZones = useCallback(() => {
+    if (!selectedField) return;
+    setZoneEditorFieldId(selectedField.id);
+    closePanel();
+  }, [selectedField, closePanel]);
+
+  const handleBackFromZoneEditor = useCallback(() => {
+    setZoneEditorFieldId(null);
+    // Refresh fields to pick up any zone changes
+    fetchFields();
+  }, [fetchFields]);
+
+  // ── Edit Metadata (deprecated — replaced by Configure Zones) ─
   const handleEditMetadata = useCallback(() => {
     if (!selectedField) return;
-    // For now, just show a toast — full metadata editor can be a future enhancement
-    showToast('Metadata editing coming soon', 'info');
+    showToast('Use Configure Zones instead', 'info');
   }, [selectedField, showToast]);
 
   // ── Delete Field ─────────────────────────────────────────────
@@ -349,6 +363,11 @@ export default function FieldsPage() {
         <Text style={styles.loadingText}>Loading fields...</Text>
       </View>
     );
+  }
+
+  // ── If zone editor is active, render it full-screen ──────────
+  if (zoneEditorFieldId) {
+    return <ZoneEditorPage fieldId={zoneEditorFieldId} onBack={handleBackFromZoneEditor} />;
   }
 
   return (
@@ -461,6 +480,7 @@ export default function FieldsPage() {
             onEdit={handleEditMetadata}
             onDelete={handleDeleteRequest}
             onStartEditing={handleStartEditBoundary}
+            onConfigureZones={handleConfigureZones}
           />
         )}
 

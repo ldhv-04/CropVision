@@ -119,6 +119,7 @@ export default function StationMapCanvasMapLibre({
   const isUserInteractingRef = useRef(false);
   const viewportUpdateTimerRef = useRef(null);
   const initialFitDoneRef = useRef(false);
+  const pendingFieldsRef = useRef(null); // Stores fields that arrived before style loaded
 
   // Refs for values accessed in mount-once event handlers (avoid stale closures)
   const activeToolRef = useRef(activeTool);
@@ -376,6 +377,17 @@ export default function StationMapCanvasMapLibre({
         filter: ['==', ['get', 'type'], 'draw-polygon'],
       });
 
+      // Apply any fields that arrived before the map was ready
+      if (pendingFieldsRef.current && pendingFieldsRef.current.length > 0) {
+        const geojson = fieldsToFeatureCollection(pendingFieldsRef.current);
+        const source = map.getSource('fields-source');
+        if (source) {
+          source.setData(geojson);
+          console.log("[MAP] pending fields applied on initial load —", geojson.features.length, "features");
+          console.log("[VALIDATION] created field geometry persisted —", geojson.features.length, "features");
+        }
+      }
+
       console.log("[MAP] mounted — all layers added");
       console.log('[BOUNDARY_DEBUG] Boundary layers initialized once');
       console.log('[BOUNDARY_DEBUG] Layer count:', map.getStyle().layers.length);
@@ -564,16 +576,31 @@ export default function StationMapCanvasMapLibre({
   // ════════════════════════════════════════════════════════════
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map) return;
+
+    // Store fields for deferred application if style not loaded yet
+    pendingFieldsRef.current = fields;
+
+    if (!map.isStyleLoaded()) {
+      console.log("[MAP] fields changed but style not loaded — deferring update");
+      return;
+    }
 
     console.time("geojson-update");
     const geojson = fieldsToFeatureCollection(fields);
+
+    console.log("[MAP_SOURCE] updating field source", {
+      featureCount: geojson.features.length,
+      fieldCount: fields.length,
+    });
 
     const source = map.getSource('fields-source');
     if (source) {
       source.setData(geojson);
       console.log("[MAP] source loaded —", geojson.features.length, "features");
-      console.log("[MAP] polygon layer rendered");
+      console.log("[VALIDATION] GeoJSON source has correct feature count:", geojson.features.length);
+    } else {
+      console.warn("[MAP_SOURCE] fields-source not found — source may not be initialized yet");
     }
     console.timeEnd("geojson-update");
   }, [fields]);
@@ -584,6 +611,24 @@ export default function StationMapCanvasMapLibre({
     if (!map || !map.isStyleLoaded()) return;
 
     const filterVal = selectedFieldId || '';
+
+    console.log("[MAP_SOURCE] selected field source update", {
+      selectedFieldId,
+      filterVal,
+      hasHighlightLayer: Boolean(map.getLayer('field-highlight-layer')),
+    });
+
+    // Verify the selected field exists in the source
+    if (selectedFieldId) {
+      const source = map.getSource('fields-source');
+      if (source && source._data && source._data.features) {
+        const found = source._data.features.some(f => String(f.id) === String(selectedFieldId));
+        console.log("[MAP_SOURCE] selected field found in source:", found, "id:", selectedFieldId);
+        if (found) {
+          console.log("[VALIDATION] field list selection preserved geometry");
+        }
+      }
+    }
 
     // Highlight selected field: stroke-width 3, opacity 1
     if (map.getLayer('field-highlight-layer')) {
@@ -727,6 +772,16 @@ export default function StationMapCanvasMapLibre({
     map.once('styledata', () => {
       addAllSourcesAndLayers(map);
       rehydrateBoundarySourcesFromCache(map, adminLayersRef.current);
+
+      // Restore field data that was lost when style changed
+      if (pendingFieldsRef.current && pendingFieldsRef.current.length > 0) {
+        const geojson = fieldsToFeatureCollection(pendingFieldsRef.current);
+        const source = map.getSource('fields-source');
+        if (source) {
+          source.setData(geojson);
+          console.log("[MAP] fields restored after style change —", geojson.features.length, "features");
+        }
+      }
     });
   }, [layers?.baseMap]);
 

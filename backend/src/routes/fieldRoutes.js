@@ -22,6 +22,7 @@ const router = express.Router();
 const fieldController = require('../controllers/fieldController');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const { nestedRouter: subZoneNestedRouter } = require('./subZoneRoutes');
+const { nestedRouter: zoneNestedRouter } = require('./zoneRoutes');
 const walkRoutes = require('./walkRoutes');
 
 // Must register /:id paths with explicit method ordering
@@ -34,8 +35,12 @@ router.post('/generate-polygon', authenticateToken, fieldController.generatePoly
 // ── Trash management ──
 router.get('/trash', authenticateToken, fieldController.getTrash);
 
+// ── Management Zone routes (nested under /api/fields/:fieldId/zones) ──
+// [NEW] Zone Editor — Station/Admin spatial management of internal zones
+router.use('/:fieldId/zones', zoneNestedRouter);
+
 // ── Sub-Zone routes (nested under /api/fields/:fieldId/subzones) ──
-// [NEW] Geo-Spatial Mapping module — adds sub-plot management to each field
+// [OLD] Geo-Spatial Mapping module — adds sub-plot management to each field
 router.use('/:fieldId/subzones', subZoneNestedRouter);
 
 // ── GPS Walk routes (nested under /api/fields/:fieldId/walk) ──

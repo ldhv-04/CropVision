@@ -25,7 +25,7 @@ const GROWTH_STAGES = [
   { id: 'dormant', label: 'Dormant', icon: '😴' },
 ];
 
-export default function FieldDetailPanel({ field, onClose, onEdit, onDelete, onStartEditing }) {
+export default function FieldDetailPanel({ field, onClose, onEdit, onDelete, onStartEditing, onConfigureZones }) {
   const coords = useMemo(() => extractPolygonCoords(field.boundary), [field.boundary]);
   const area = useMemo(() => calculateAreaHectares(coords), [coords]);
   const centroid = useMemo(() => calculateCentroid(coords), [coords]);
@@ -134,8 +134,8 @@ export default function FieldDetailPanel({ field, onClose, onEdit, onDelete, onS
         <TouchableOpacity style={styles.editBtn} onPress={onStartEditing}>
           <Text style={styles.editBtnText}>✏️ Edit Boundary</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.metadataBtn} onPress={onEdit}>
-          <Text style={styles.metadataBtnText}>📝 Edit Details</Text>
+        <TouchableOpacity style={styles.zonesBtn} onPress={onConfigureZones}>
+          <Text style={styles.zonesBtnText}>🗺️ Configure Zones</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.deleteBtn} onPress={onDelete}>
           <Text style={styles.deleteBtnText}>🗑️ Delete</Text>
@@ -197,8 +197,8 @@ const styles = StyleSheet.create({
   actions: { padding: 12, borderTopWidth: 1, borderTopColor: '#F0F0F0', gap: 8 },
   editBtn: { backgroundColor: '#1976D2', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
   editBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' },
-  metadataBtn: { backgroundColor: '#F5F5F5', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
-  metadataBtnText: { color: '#333', fontSize: 13, fontWeight: '600' },
+  zonesBtn: { backgroundColor: '#E3F2FD', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
+  zonesBtnText: { color: '#1565C0', fontSize: 13, fontWeight: '600' },
   deleteBtn: { backgroundColor: '#FFEBEE', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
   deleteBtnText: { color: '#C62828', fontSize: 13, fontWeight: '600' },
 });

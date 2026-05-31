@@ -28,9 +28,11 @@ const useFieldGISStore = create((set, get) => ({
 
   setFields: (fields) => set({ fields }),
   setSelectedField: (id) => {
-    console.log('[Explorer] Field selected:', id);
-    console.log('[MapSync] selected field changed:', id);
-    set({ selectedFieldId: id });
+    // Normalize to string for consistent MapLibre filter matching
+    const normalizedId = id != null ? String(id) : null;
+    console.log('[Explorer] Field selected:', normalizedId);
+    console.log('[MapSync] selected field changed:', normalizedId);
+    set({ selectedFieldId: normalizedId });
   },
   setHoveredField: (id) => set({ hoveredFieldId: id }),
   clearSelection: () => set({ selectedFieldId: null, panelState: { isOpen: false, mode: 'detail' } }),
@@ -40,12 +42,12 @@ const useFieldGISStore = create((set, get) => ({
   addField: (field) => set((state) => ({ fields: [field, ...state.fields] })),
   updateField: (id, updates) =>
     set((state) => ({
-      fields: state.fields.map((f) => (f.id === id ? { ...f, ...updates } : f)),
+      fields: state.fields.map((f) => (String(f.id) === String(id) ? { ...f, ...updates } : f)),
     })),
   removeField: (id) =>
     set((state) => ({
-      fields: state.fields.filter((f) => f.id !== id),
-      selectedFieldId: state.selectedFieldId === id ? null : state.selectedFieldId,
+      fields: state.fields.filter((f) => String(f.id) !== String(id)),
+      selectedFieldId: String(state.selectedFieldId) === String(id) ? null : state.selectedFieldId,
     })),
 
   // ── Map Viewport ────────────────────────────────────────────
@@ -246,7 +248,7 @@ const useFieldGISStore = create((set, get) => ({
 
   // ── Layer Visibility ────────────────────────────────────────
   layers: {
-    baseMap: 'osm', // 'osm' | 'satellite' | 'terrain'
+    baseMap: 'satellite', // 'osm' | 'satellite' | 'terrain'
     fields: true,
     zones: false,
     sensors: false,
@@ -344,7 +346,7 @@ const useFieldGISStore = create((set, get) => ({
       filteredFieldIds: [],
       filters: { search: '', cropType: '', status: '', hasAlerts: false },
       layers: {
-        baseMap: 'osm',
+        baseMap: 'satellite',
         fields: true,
         zones: false,
         sensors: false,

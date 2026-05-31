@@ -72,7 +72,7 @@ export function fieldToFeature(field) {
 
   const feature = {
     type: 'Feature',
-    id: field.id,
+    id: String(field.id),
     geometry: {
       type: geo.type,
       coordinates,
