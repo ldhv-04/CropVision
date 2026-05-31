@@ -14,7 +14,7 @@
  * Debug logs prefixed with [MAP], [GEOJSON], [DRAW], [EDIT], [VIEWPORT].
  */
 
-import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react';
+import React, { useRef, useEffect, useCallback, useMemo } from 'react';
 import { View, Platform, StyleSheet } from 'react-native';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -25,8 +25,12 @@ import {
   emptyFeatureCollection,
 } from '../../utils/fieldToGeoJSON';
 import { extractPolygonCoords, calculateBounds, calculateAreaHectares, formatArea } from '../../utils/fieldGeometry';
-import { loadBoundaryGeoJSON } from '../../utils/loadBoundaryGeoJSON';
-import { MAP_MIN_ZOOM, MAP_MAX_ZOOM, SOURCE_MAX_ZOOM, FIELD_FOCUS_ZOOM, clampZoom } from '../../config/mapConfig';
+import {
+  BOUNDARY_LAYER_CONFIG,
+  loadBoundaryGeoJSON,
+  emptyBoundaryCollection,
+  rehydrateBoundarySourcesFromCache,
+} from '../../utils/loadBoundaryGeoJSON';
 
 // ── Tile style URLs ──────────────────────────────────────────
 const TILE_STYLES = {
@@ -34,6 +38,11 @@ const TILE_STYLES = {
   satellite: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
   terrain: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
 };
+
+// Maximum supported zoom for OSM raster tiles
+// OSM tiles are available up to z=19. Beyond that, tiles 404.
+const MAP_MAX_ZOOM = 19;
+const MAP_MIN_ZOOM = 3;
 
 // Fallback: use raster tiles if vector style fails
 function buildRasterStyle(baseMap) {
@@ -47,9 +56,7 @@ function buildRasterStyle(baseMap) {
     satellite: '&copy; Esri',
     terrain: '&copy; OpenTopoMap',
   };
-  console.log("[TILE STYLE] building raster style for:", baseMap,
-    "| source.maxzoom:", SOURCE_MAX_ZOOM,
-    "| map.maxZoom:", MAP_MAX_ZOOM);
+  console.log("[TILE STYLE] building raster style for:", baseMap, "maxzoom:", MAP_MAX_ZOOM);
   return {
     version: 8,
     sources: {
@@ -57,10 +64,7 @@ function buildRasterStyle(baseMap) {
         type: 'raster',
         tiles: [urls[baseMap] || urls.osm],
         tileSize: 256,
-        // Source maxzoom = max tile zoom available from the provider.
-        // This does NOT limit the camera — it only controls which tile
-        // z-level is requested. Set to provider limit (19 for OSM/Esri).
-        maxzoom: SOURCE_MAX_ZOOM,
+        maxzoom: MAP_MAX_ZOOM,
         attribution: attributions[baseMap] || attributions.osm,
       },
     },
@@ -69,10 +73,8 @@ function buildRasterStyle(baseMap) {
         id: 'raster-layer',
         type: 'raster',
         source: 'raster-tiles',
-        // IMPORTANT: Do NOT set minzoom/maxzoom on the layer.
-        // In MapLibre, layer maxzoom is an EXCLUSIVE upper bound —
-        // the layer stops rendering exactly at that zoom, causing
-        // a blank map. The map's minZoom/maxZoom handles camera limits.
+        minzoom: MAP_MIN_ZOOM,
+        maxzoom: MAP_MAX_ZOOM,
       },
     ],
   };
@@ -93,6 +95,7 @@ export default function StationMapCanvasMapLibre({
   drawState,
   editState,
   layers,
+  adminLayers,
   center,
   zoom,
   onFieldSelect,
@@ -116,8 +119,6 @@ export default function StationMapCanvasMapLibre({
   const isUserInteractingRef = useRef(false);
   const viewportUpdateTimerRef = useRef(null);
   const initialFitDoneRef = useRef(false);
-  const [mapReady, setMapReady] = useState(false);
-  const fieldsRef = useRef(fields);
 
   // Refs for values accessed in mount-once event handlers (avoid stale closures)
   const activeToolRef = useRef(activeTool);
@@ -125,14 +126,15 @@ export default function StationMapCanvasMapLibre({
   const onFieldHoverRef = useRef(onFieldHover);
   const onMapClickRef = useRef(onMapClick);
   const onEditVertexDragRef = useRef(onEditVertexDrag);
+  const adminLayersRef = useRef(adminLayers); // For style-reload callback
 
   // Keep refs in sync with props
-  useEffect(() => { fieldsRef.current = fields; }, [fields]);
   useEffect(() => { activeToolRef.current = activeTool; }, [activeTool]);
   useEffect(() => { onFieldSelectRef.current = onFieldSelect; }, [onFieldSelect]);
   useEffect(() => { onFieldHoverRef.current = onFieldHover; }, [onFieldHover]);
   useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);
   useEffect(() => { onEditVertexDragRef.current = onEditVertexDrag; }, [onEditVertexDrag]);
+  useEffect(() => { adminLayersRef.current = adminLayers; }, [adminLayers]);
 
   // ── Tile style (memoized to avoid unnecessary style changes) ──
   const mapStyle = useMemo(() => {
@@ -156,7 +158,7 @@ export default function StationMapCanvasMapLibre({
       container: containerRef.current,
       style: mapStyle,
       center: [center[1], center[0]], // MapLibre: [lng, lat]
-      zoom: clampZoom(zoom), // Clamp initial zoom
+      zoom: Math.min(zoom, MAP_MAX_ZOOM), // Clamp initial zoom
       minZoom: MAP_MIN_ZOOM,
       maxZoom: MAP_MAX_ZOOM,
       attributionControl: true,
@@ -164,12 +166,7 @@ export default function StationMapCanvasMapLibre({
       trackResize: false, // We handle resize ourselves
     });
 
-    console.log("[ZOOM_DEBUG] map initialized", {
-      minZoom: MAP_MIN_ZOOM,
-      maxZoom: MAP_MAX_ZOOM,
-      currentZoom: clampZoom(zoom),
-      center: [center[1], center[0]],
-    });
+    console.log("[MAP INIT]", { center: [center[1], center[0]], zoom: Math.min(zoom, MAP_MAX_ZOOM), maxZoom: MAP_MAX_ZOOM });
 
     // Suppress tile loading errors (CORS/network issues for edge tiles)
     map.on('error', (e) => {
@@ -186,11 +183,12 @@ export default function StationMapCanvasMapLibre({
     map.on('load', () => {
       console.log("[MAP] style loaded");
 
-      // ── Add administrative boundary sources & layers ─────────
-      addBoundarySourcesAndLayers(map, layers || {}, boundariesLoadedRef.current);
-
-      // Mark map as ready (triggers fields source population)
-      setMapReady(true);
+      // ══════════════════════════════════════════════════════════
+      // ADMIN BOUNDARY LAYERS (added BEFORE field layers so fields
+      // render ON TOP of administrative boundaries)
+      // ══════════════════════════════════════════════════════════
+      addAdminBoundarySources(map);
+      addAdminBoundaryLayers(map);
 
       // ── Add field polygons source & layers ──────────────────
       map.addSource('fields-source', {
@@ -379,18 +377,43 @@ export default function StationMapCanvasMapLibre({
       });
 
       console.log("[MAP] mounted — all layers added");
+      console.log('[BOUNDARY_DEBUG] Boundary layers initialized once');
+      console.log('[BOUNDARY_DEBUG] Layer count:', map.getStyle().layers.length);
+      console.log('[BOUNDARY_DEBUG] Map style loaded:', map.isStyleLoaded());
 
-      // ── Populate fields source immediately if fields exist ───
-      // This handles the race condition where fields arrive before map loads
-      const currentFields = fieldsRef.current;
-      if (currentFields && currentFields.length > 0) {
-        const initialGeojson = fieldsToFeatureCollection(currentFields);
-        const fieldsSrc = map.getSource('fields-source');
-        if (fieldsSrc) {
-          fieldsSrc.setData(initialGeojson);
-          console.log("[MAP] initial fields populated —", initialGeojson.features.length, "features");
+      // Trigger initial load of default-enabled boundary layers.
+      // Province starts as true. We load it here because the adminLayers
+      // useEffect runs before isStyleLoaded() is true on first mount.
+      const defaultLayersToLoad = Object.entries(BOUNDARY_LAYER_CONFIG)
+        .filter(([, cfg]) => cfg.defaultVisible)
+        .map(([key]) => key);
+
+      defaultLayersToLoad.forEach(async (layerKey) => {
+        const cfg = BOUNDARY_LAYER_CONFIG[layerKey];
+        try {
+          console.log('[BOUNDARY_DEBUG] Initial load of default boundary layer:', layerKey);
+          const geojson = await loadBoundaryGeoJSON(layerKey);
+          if (!geojson) {
+            console.warn('[BOUNDARY_WARN] Boundary layer skipped due to load failure:', layerKey);
+            return;
+          }
+          const src = map.getSource(cfg.sourceId);
+          if (src && src.setData) {
+            src.setData(geojson);
+            console.log('[BOUNDARY_DEBUG] Boundary source data updated:', layerKey, geojson.features.length, 'features');
+          }
+          if (map.getLayer(cfg.lineLayerId)) {
+            map.setLayoutProperty(cfg.lineLayerId, 'visibility', 'visible');
+            console.log('[BOUNDARY_DEBUG] Set layer visibility:', cfg.lineLayerId, 'visible');
+          }
+          if (map.getLayer(cfg.labelLayerId)) {
+            map.setLayoutProperty(cfg.labelLayerId, 'visibility', 'visible');
+            console.log('[BOUNDARY_DEBUG] Set layer visibility:', cfg.labelLayerId, 'visible');
+          }
+        } catch (err) {
+          console.error('[BOUNDARY_ERROR] Failed to load default boundary layer', { layerKey, error: err.message });
         }
-      }
+      });
     });
 
     // ── Click handler (uses refs to avoid stale closures) ─────
@@ -439,12 +462,6 @@ export default function StationMapCanvasMapLibre({
       if (!isProgrammaticMoveRef.current) {
         isUserInteractingRef.current = true;
       }
-    });
-
-    map.on('zoomend', () => {
-      console.log("[ZOOM_DEBUG] zoom changed", {
-        zoom: map.getZoom(),
-      });
     });
 
     map.on('moveend', () => {
@@ -544,34 +561,22 @@ export default function StationMapCanvasMapLibre({
 
   // ════════════════════════════════════════════════════════════
   // STEP 5: Update field GeoJSON source when fields change
-  // Re-runs when fields change OR when map becomes ready
-  // (fixes race condition where fields arrive before map loads)
   // ════════════════════════════════════════════════════════════
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) {
-      console.log("[MAP_SOURCE] skipping source update — map not ready");
-      return;
-    }
+    if (!map || !map.isStyleLoaded()) return;
 
     console.time("geojson-update");
-    console.log("[FIELD_FLOW] converting fields to FeatureCollection", fields.length);
     const geojson = fieldsToFeatureCollection(fields);
-
-    console.log("[MAP_SOURCE] updating field source", {
-      featureCount: geojson.features.length,
-    });
 
     const source = map.getSource('fields-source');
     if (source) {
       source.setData(geojson);
       console.log("[MAP] source loaded —", geojson.features.length, "features");
       console.log("[MAP] polygon layer rendered");
-    } else {
-      console.warn("[MAP_SOURCE] fields-source not found — layers may not be added yet");
     }
     console.timeEnd("geojson-update");
-  }, [fields, mapReady]);
+  }, [fields]);
 
   // ── Update selected field highlight ─────────────────────────
   useEffect(() => {
@@ -579,21 +584,6 @@ export default function StationMapCanvasMapLibre({
     if (!map || !map.isStyleLoaded()) return;
 
     const filterVal = selectedFieldId || '';
-
-    console.log("[FIELD_FLOW] selected field id", selectedFieldId);
-
-    // Check if the selected field exists in the source
-    if (selectedFieldId) {
-      const source = map.getSource('fields-source');
-      if (source && source._data) {
-        const found = source._data.features?.some(f => f.properties?.id === selectedFieldId);
-        console.log("[MAP_SOURCE] selected field source update", {
-          selectedFieldId,
-          found,
-          featureCount: source._data.features?.length,
-        });
-      }
-    }
 
     // Highlight selected field: stroke-width 3, opacity 1
     if (map.getLayer('field-highlight-layer')) {
@@ -716,13 +706,10 @@ export default function StationMapCanvasMapLibre({
     initialFitDoneRef.current = true;
     isProgrammaticMoveRef.current = true;
 
-    console.log("[ZOOM_DEBUG] fitBounds requested", {
-      bounds: [[west, south], [east, north]],
-      options: { padding: 40, maxZoom: FIELD_FOCUS_ZOOM, duration: 500 },
-    });
+    console.log("[VIEWPORT] fitting to bounds on initial load");
     map.fitBounds(mapBounds, {
       padding: { top: 40, bottom: 40, left: 40, right: 40 },
-      maxZoom: FIELD_FOCUS_ZOOM,
+      maxZoom: 16,
       duration: 500,
     });
   }, [fields]);
@@ -736,39 +723,78 @@ export default function StationMapCanvasMapLibre({
     const newStyle = buildRasterStyle(layers?.baseMap || 'osm');
     map.setStyle(newStyle);
 
-    // After style change, re-add all sources and layers AND re-populate field data
+    // After style change, re-add all sources and layers, then rehydrate boundary caches
     map.once('styledata', () => {
-      // Re-add sources and layers
-      addAllSourcesAndLayers(map, layers || {}, boundariesLoadedRef.current);
-
-      // Re-populate fields source with current field data
-      // (setStyle clears all sources, so we must re-populate)
-      const source = map.getSource('fields-source');
-      if (source && fieldsRef.current) {
-        const geojson = fieldsToFeatureCollection(fieldsRef.current);
-        source.setData(geojson);
-        console.log("[MAP] fields re-populated after style change —", geojson.features.length, "features");
-      }
-
-      // Re-apply selected field highlight
-      const currentSelectedId = selectedFieldId || '';
-      if (map.getLayer('field-highlight-layer')) {
-        map.setFilter('field-highlight-layer', ['==', 'id', currentSelectedId]);
-        map.setPaintProperty('field-highlight-layer', 'fill-opacity', selectedFieldId ? 0.15 : 0.0);
-      }
-      if (map.getLayer('field-highlight-border-layer')) {
-        map.setFilter('field-highlight-border-layer', ['==', 'id', currentSelectedId]);
-        map.setPaintProperty('field-highlight-border-layer', 'line-opacity', selectedFieldId ? 1.0 : 0.0);
-      }
-
-      // Re-apply hover highlight
-      const currentHoveredId = hoveredFieldId || '';
-      if (map.getLayer('field-hover-layer')) {
-        map.setFilter('field-hover-layer', ['==', 'id', currentHoveredId]);
-        map.setPaintProperty('field-hover-layer', 'fill-opacity', hoveredFieldId ? 0.6 : 0.0);
-      }
+      addAllSourcesAndLayers(map);
+      rehydrateBoundarySourcesFromCache(map, adminLayersRef.current);
     });
   }, [layers?.baseMap]);
+
+  // ════════════════════════════════════════════════════════════
+  // Admin Boundary Layer: React to adminLayers visibility toggles
+  // Each toggle either:
+  //   a) Sets MapLibre layer visibility if data already loaded, OR
+  //   b) Lazy-loads the GeoJSON first, then sets data + visibility
+  // ════════════════════════════════════════════════════════════
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+    if (!adminLayers) return;
+
+    const syncBoundaryLayer = async (layerKey) => {
+      const config = BOUNDARY_LAYER_CONFIG[layerKey];
+      const visible = adminLayers[layerKey];
+      const visibility = visible ? 'visible' : 'none';
+
+      // Check if source already has data
+      const source = map.getSource(config.sourceId);
+
+      if (visible) {
+        // Need to ensure data is loaded before showing
+        const sourceHasData = source && source._data &&
+          source._data !== 'undefined' &&
+          typeof source._data === 'object' &&
+          source._data.features &&
+          source._data.features.length > 0;
+
+        if (!sourceHasData) {
+          console.log('[BOUNDARY_DEBUG] Lazy loading layer before enabling:', layerKey);
+          const geojson = await loadBoundaryGeoJSON(layerKey);
+          if (!geojson) {
+            console.warn('[BOUNDARY_WARN] Boundary layer skipped due to load failure:', layerKey);
+            return;
+          }
+          // Update source data
+          const currentSource = map.getSource(config.sourceId);
+          if (currentSource && currentSource.setData) {
+            currentSource.setData(geojson);
+            console.log('[BOUNDARY_DEBUG] Boundary source data updated:', layerKey, geojson.features.length, 'features');
+          }
+        }
+      }
+
+      // Update line layer visibility
+      if (map.getLayer(config.lineLayerId)) {
+        map.setLayoutProperty(config.lineLayerId, 'visibility', visibility);
+        console.log('[BOUNDARY_DEBUG] Set layer visibility:', config.lineLayerId, visibility);
+      }
+
+      // Update label layer visibility
+      if (map.getLayer(config.labelLayerId)) {
+        map.setLayoutProperty(config.labelLayerId, 'visibility', visibility);
+        console.log('[BOUNDARY_DEBUG] Set layer visibility:', config.labelLayerId, visibility);
+      }
+    };
+
+    // Sync all boundary layers
+    Object.keys(BOUNDARY_LAYER_CONFIG).forEach(layerKey => {
+      syncBoundaryLayer(layerKey).catch(err => {
+        console.error('[BOUNDARY_ERROR] Failed to sync boundary layer', { layerKey, error: err.message });
+      });
+    });
+
+    console.log('[BOUNDARY_DEBUG] Boundary layer render complete');
+  }, [adminLayers]);
 
   // ── Update field layer visibility ────────────────────────────
   useEffect(() => {
@@ -782,96 +808,6 @@ export default function StationMapCanvasMapLibre({
       }
     });
   }, [layers?.fields]);
-
-  // ── Load and toggle boundary layers based on state ────────────────
-  const boundariesLoadedRef = useRef({
-    province: null,
-    district: null,
-    ward: null,
-  });
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
-
-    // Toggle Province Layer
-    const provinceVisible = layers?.province !== false;
-    console.log("[BOUNDARY_DEBUG] Set layer visibility:", "admin-province-line", provinceVisible);
-    ['admin-province-line', 'admin-province-label'].forEach((id) => {
-      if (map.getLayer(id)) {
-        map.setLayoutProperty(id, 'visibility', provinceVisible ? 'visible' : 'none');
-      }
-    });
-
-    if (provinceVisible && !boundariesLoadedRef.current.province) {
-      loadBoundaryGeoJSON('province', 'processed/province.boundaries.geojson').then((data) => {
-        if (data && mapRef.current) {
-          boundariesLoadedRef.current.province = data;
-          const source = mapRef.current.getSource('admin-province-source');
-          if (source) {
-            source.setData(data);
-            console.log("[BOUNDARY_DEBUG] Boundary source update skipped: no data change");
-          }
-        }
-      });
-    }
-  }, [layers?.province]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
-
-    // Toggle District Layer
-    const districtVisible = layers?.district === true;
-    console.log("[BOUNDARY_DEBUG] Set layer visibility:", "admin-district-line", districtVisible);
-    ['admin-district-line', 'admin-district-label'].forEach((id) => {
-      if (map.getLayer(id)) {
-        map.setLayoutProperty(id, 'visibility', districtVisible ? 'visible' : 'none');
-      }
-    });
-
-    if (districtVisible && !boundariesLoadedRef.current.district) {
-      console.log("[BOUNDARY_DEBUG] Lazy loading layer before enabling:", 'district');
-      loadBoundaryGeoJSON('district', 'processed/district.boundaries.geojson').then((data) => {
-        if (data && mapRef.current) {
-          boundariesLoadedRef.current.district = data;
-          const source = mapRef.current.getSource('admin-district-source');
-          if (source) {
-            source.setData(data);
-            console.log("[BOUNDARY_DEBUG] Boundary source update skipped: no data change");
-          }
-        }
-      });
-    }
-  }, [layers?.district]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
-
-    // Toggle Ward Layer
-    const wardVisible = layers?.ward === true;
-    console.log("[BOUNDARY_DEBUG] Set layer visibility:", "admin-ward-line", wardVisible);
-    ['admin-ward-line', 'admin-ward-label'].forEach((id) => {
-      if (map.getLayer(id)) {
-        map.setLayoutProperty(id, 'visibility', wardVisible ? 'visible' : 'none');
-      }
-    });
-
-    if (wardVisible && !boundariesLoadedRef.current.ward) {
-      console.log("[BOUNDARY_DEBUG] Lazy loading layer before enabling:", 'ward');
-      loadBoundaryGeoJSON('ward', 'processed/ward.boundaries.simplified.geojson').then((data) => {
-        if (data && mapRef.current) {
-          boundariesLoadedRef.current.ward = data;
-          const source = mapRef.current.getSource('admin-ward-source');
-          if (source) {
-            source.setData(data);
-            console.log("[BOUNDARY_DEBUG] Boundary source update skipped: no data change");
-          }
-        }
-      });
-    }
-  }, [layers?.ward]);
 
   // ── Render ───────────────────────────────────────────────────
   if (Platform.OS !== 'web') {
@@ -917,11 +853,93 @@ export default function StationMapCanvasMapLibre({
 }
 
 /**
+ * Add empty admin boundary sources to the map.
+ * Sources start with empty FeatureCollection — data is lazy-loaded on demand.
+ */
+function addAdminBoundarySources(map) {
+  Object.values(BOUNDARY_LAYER_CONFIG).forEach(config => {
+    if (!map.getSource(config.sourceId)) {
+      map.addSource(config.sourceId, {
+        type: 'geojson',
+        data: emptyBoundaryCollection(),
+      });
+      console.log('[BOUNDARY_DEBUG] Adding source:', config.sourceId);
+      console.log('[BOUNDARY_DEBUG] Source added:', config.sourceId);
+    } else {
+      console.warn('[BOUNDARY_DEBUG] Source already exists:', config.sourceId);
+    }
+  });
+}
+
+/**
+ * Add admin boundary line and label layers to the map.
+ * All boundary layers start as 'none' (hidden) — visibility is controlled
+ * by the adminLayers useEffect after data is loaded.
+ */
+function addAdminBoundaryLayers(map) {
+  Object.values(BOUNDARY_LAYER_CONFIG).forEach(config => {
+    // Line layer
+    if (!map.getLayer(config.lineLayerId)) {
+      map.addLayer({
+        id: config.lineLayerId,
+        type: 'line',
+        source: config.sourceId,
+        minzoom: config.minZoom,
+        maxzoom: config.maxZoom,
+        layout: {
+          'visibility': 'none', // Hidden by default — data not loaded yet
+          'line-join': 'round',
+          'line-cap': 'round',
+        },
+        paint: {
+          'line-color': config.lineColor,
+          'line-width': config.lineWidth,
+          'line-opacity': config.lineOpacity,
+        },
+      });
+      console.log('[BOUNDARY_DEBUG] Adding layer:', config.lineLayerId);
+      console.log('[BOUNDARY_DEBUG] Layer added:', config.lineLayerId);
+    } else {
+      console.warn('[BOUNDARY_DEBUG] Layer already exists:', config.lineLayerId);
+    }
+
+    // Label layer
+    if (!map.getLayer(config.labelLayerId)) {
+      map.addLayer({
+        id: config.labelLayerId,
+        type: 'symbol',
+        source: config.sourceId,
+        minzoom: config.labelMinZoom,
+        maxzoom: config.maxZoom,
+        layout: {
+          'visibility': 'none',
+          'text-field': ['coalesce', ['get', config.labelKey], ''],
+          'text-size': 11,
+          'text-anchor': 'center',
+          'text-max-width': 8,
+          'text-allow-overlap': false,
+        },
+        paint: {
+          'text-color': config.lineColor,
+          'text-halo-color': 'rgba(255, 255, 255, 0.85)',
+          'text-halo-width': 1.5,
+        },
+      });
+      console.log('[BOUNDARY_DEBUG] Adding layer:', config.labelLayerId);
+      console.log('[BOUNDARY_DEBUG] Layer added:', config.labelLayerId);
+    } else {
+      console.warn('[BOUNDARY_DEBUG] Layer already exists:', config.labelLayerId);
+    }
+  });
+}
+
+/**
  * Helper to add all sources and layers after a style change.
  */
-function addAllSourcesAndLayers(map, layersState = {}, boundariesData = {}) {
-  // Re-add administrative boundaries first so they reside underneath field layers
-  addBoundarySourcesAndLayers(map, layersState, boundariesData);
+function addAllSourcesAndLayers(map) {
+  // Re-add admin boundary sources and layers FIRST (so field layers render on top)
+  addAdminBoundarySources(map);
+  addAdminBoundaryLayers(map);
 
   // Re-add fields source
   if (!map.getSource('fields-source')) {
@@ -1084,184 +1102,5 @@ function addAllSourcesAndLayers(map, layersState = {}, boundariesData = {}) {
     });
   }
 
-  console.log("[BOUNDARY_DEBUG] sources and layers re-added after style change");
-}
-
-/**
- * Helper to add all administrative boundary sources and layers.
- */
-function addBoundarySourcesAndLayers(map, layersState, boundariesData) {
-  // Province
-  if (!map.getSource('admin-province-source')) {
-    console.log("[BOUNDARY_DEBUG] Adding source: admin-province-source");
-    map.addSource('admin-province-source', {
-      type: 'geojson',
-      data: boundariesData.province || emptyFeatureCollection(),
-    });
-    console.log("[BOUNDARY_DEBUG] Source added: admin-province-source");
-  } else {
-    console.warn("[BOUNDARY_DEBUG] Source already exists: admin-province-source");
-  }
-
-  if (!map.getLayer('admin-province-line')) {
-    console.log("[BOUNDARY_DEBUG] Adding layer: admin-province-line");
-    map.addLayer({
-      id: 'admin-province-line',
-      type: 'line',
-      source: 'admin-province-source',
-      paint: {
-        'line-color': '#FFFFFF',
-        'line-width': 2.5,
-        'line-opacity': 0.8,
-      },
-      layout: {
-        visibility: layersState.province !== false ? 'visible' : 'none',
-      },
-    });
-    console.log("[BOUNDARY_DEBUG] Layer added: admin-province-line");
-  } else {
-    console.warn("[BOUNDARY_DEBUG] Layer already exists: admin-province-line");
-  }
-
-  if (!map.getLayer('admin-province-label')) {
-    console.log("[BOUNDARY_DEBUG] Adding layer: admin-province-label");
-    map.addLayer({
-      id: 'admin-province-label',
-      type: 'symbol',
-      source: 'admin-province-source',
-      minzoom: 5,
-      layout: {
-        'text-field': ['coalesce', ['get', 'ten_tinh'], ['get', 'name'], ''],
-        'text-size': 13,
-        'text-offset': [0, 0],
-        'text-anchor': 'center',
-        visibility: layersState.province !== false ? 'visible' : 'none',
-      },
-      paint: {
-        'text-color': '#FFFFFF',
-        'text-halo-color': '#000000',
-        'text-halo-width': 1.5,
-      },
-    });
-    console.log("[BOUNDARY_DEBUG] Layer added: admin-province-label");
-  } else {
-    console.warn("[BOUNDARY_DEBUG] Layer already exists: admin-province-label");
-  }
-
-  // District
-  if (!map.getSource('admin-district-source')) {
-    console.log("[BOUNDARY_DEBUG] Adding source: admin-district-source");
-    map.addSource('admin-district-source', {
-      type: 'geojson',
-      data: boundariesData.district || emptyFeatureCollection(),
-    });
-    console.log("[BOUNDARY_DEBUG] Source added: admin-district-source");
-  } else {
-    console.warn("[BOUNDARY_DEBUG] Source already exists: admin-district-source");
-  }
-
-  if (!map.getLayer('admin-district-line')) {
-    console.log("[BOUNDARY_DEBUG] Adding layer: admin-district-line");
-    map.addLayer({
-      id: 'admin-district-line',
-      type: 'line',
-      source: 'admin-district-source',
-      minzoom: 7,
-      paint: {
-        'line-color': '#BDBDBD',
-        'line-width': 1.5,
-        'line-dasharray': [4, 3],
-        'line-opacity': 0.7,
-      },
-      layout: {
-        visibility: layersState.district === true ? 'visible' : 'none',
-      },
-    });
-    console.log("[BOUNDARY_DEBUG] Layer added: admin-district-line");
-  } else {
-    console.warn("[BOUNDARY_DEBUG] Layer already exists: admin-district-line");
-  }
-
-  if (!map.getLayer('admin-district-label')) {
-    console.log("[BOUNDARY_DEBUG] Adding layer: admin-district-label");
-    map.addLayer({
-      id: 'admin-district-label',
-      type: 'symbol',
-      source: 'admin-district-source',
-      minzoom: 8,
-      layout: {
-        'text-field': ['coalesce', ['get', 'ten_quan'], ['get', 'name'], ''],
-        'text-size': 11,
-        'text-offset': [0, 0],
-        'text-anchor': 'center',
-        visibility: layersState.district === true ? 'visible' : 'none',
-      },
-      paint: {
-        'text-color': '#E0E0E0',
-        'text-halo-color': '#000000',
-        'text-halo-width': 1.2,
-      },
-    });
-    console.log("[BOUNDARY_DEBUG] Layer added: admin-district-label");
-  } else {
-    console.warn("[BOUNDARY_DEBUG] Layer already exists: admin-district-label");
-  }
-
-  // Ward
-  if (!map.getSource('admin-ward-source')) {
-    console.log("[BOUNDARY_DEBUG] Adding source: admin-ward-source");
-    map.addSource('admin-ward-source', {
-      type: 'geojson',
-      data: boundariesData.ward || emptyFeatureCollection(),
-    });
-    console.log("[BOUNDARY_DEBUG] Source added: admin-ward-source");
-  } else {
-    console.warn("[BOUNDARY_DEBUG] Source already exists: admin-ward-source");
-  }
-
-  if (!map.getLayer('admin-ward-line')) {
-    console.log("[BOUNDARY_DEBUG] Adding layer: admin-ward-line");
-    map.addLayer({
-      id: 'admin-ward-line',
-      type: 'line',
-      source: 'admin-ward-source',
-      minzoom: 10,
-      paint: {
-        'line-color': '#9E9E9E',
-        'line-width': 1.0,
-        'line-opacity': 0.6,
-      },
-      layout: {
-        visibility: layersState.ward === true ? 'visible' : 'none',
-      },
-    });
-    console.log("[BOUNDARY_DEBUG] Layer added: admin-ward-line");
-  } else {
-    console.warn("[BOUNDARY_DEBUG] Layer already exists: admin-ward-line");
-  }
-
-  if (!map.getLayer('admin-ward-label')) {
-    console.log("[BOUNDARY_DEBUG] Adding layer: admin-ward-label");
-    map.addLayer({
-      id: 'admin-ward-label',
-      type: 'symbol',
-      source: 'admin-ward-source',
-      minzoom: 11,
-      layout: {
-        'text-field': ['coalesce', ['get', 'ten_xa'], ['get', 'name'], ''],
-        'text-size': 10,
-        'text-offset': [0, 0],
-        'text-anchor': 'center',
-        visibility: layersState.ward === true ? 'visible' : 'none',
-      },
-      paint: {
-        'text-color': '#CCCCCC',
-        'text-halo-color': '#000000',
-        'text-halo-width': 1.0,
-      },
-    });
-    console.log("[BOUNDARY_DEBUG] Layer added: admin-ward-label");
-  } else {
-    console.warn("[BOUNDARY_DEBUG] Layer already exists: admin-ward-label");
-  }
+  console.log("[MAP] sources and layers re-added after style change");
 }

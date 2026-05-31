@@ -53,6 +53,7 @@ export default function FieldsPage() {
     editState,
     filters,
     layers,
+    adminLayers,
     panelState,
     toast,
     searchQuery,
@@ -65,6 +66,8 @@ export default function FieldsPage() {
     setViewport,
     setFilter,
     setLayer,
+    toggleAdminLayer,
+    setAdminLayerVisibility,
     openPanel,
     closePanel,
     setCreateMethod,
@@ -394,6 +397,7 @@ export default function FieldsPage() {
             drawState={drawState}
             editState={editState}
             layers={layers}
+            adminLayers={adminLayers}
             center={center}
             zoom={zoom}
             onFieldSelect={handleFieldSelectFromMap}
@@ -406,7 +410,12 @@ export default function FieldsPage() {
 
         {/* Floating Overlays */}
         <MapToolbar activeTool={activeTool} onToolChange={handleToolChange} />
-        <LayerControls layers={layers} onLayerChange={setLayer} />
+        <LayerControls
+          layers={layers}
+          adminLayers={adminLayers}
+          onLayerChange={setLayer}
+          onAdminLayerToggle={toggleAdminLayer}
+        />
         {/* <FilterBar
           filters={filters}
           onFilterChange={setFilter}

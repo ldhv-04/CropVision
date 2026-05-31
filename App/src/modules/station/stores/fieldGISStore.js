@@ -14,7 +14,6 @@
  */
 
 import { create } from 'zustand';
-import { MAP_MIN_ZOOM, MAP_MAX_ZOOM, clampZoom } from '../config/mapConfig';
 
 const INITIAL_CENTER = [10.8231, 106.6297]; // Ho Chi Minh City default
 const INITIAL_ZOOM = 14;
@@ -54,18 +53,19 @@ const useFieldGISStore = create((set, get) => ({
   zoom: INITIAL_ZOOM,
 
   setCenter: (center) => set({ center }),
-  setZoom: (zoom) => set({ zoom: clampZoom(zoom) }),
+  setZoom: (zoom) => set({ zoom }),
   setViewport: (center, zoom) => {
     const { center: prev, zoom: prevZoom } = get();
-    const safeZoom = clampZoom(zoom);
     // Use rounding to avoid float-precision micro-drift triggering re-renders
     const unchanged =
       Math.round(prev[0] * 1e6) === Math.round(center[0] * 1e6) &&
       Math.round(prev[1] * 1e6) === Math.round(center[1] * 1e6) &&
-      prevZoom === safeZoom;
+      prevZoom === zoom;
     if (unchanged) return;
-    set({ center, zoom: safeZoom });
+    set({ center, zoom });
   },
+
+  // ── Active Tool ─────────────────────────────────────────────
   activeTool: 'pan', // 'pan' | 'draw' | 'edit' | 'measure'
 
   setActiveTool: (tool) => {
@@ -246,14 +246,11 @@ const useFieldGISStore = create((set, get) => ({
 
   // ── Layer Visibility ────────────────────────────────────────
   layers: {
-    baseMap: 'satellite', // 'osm' | 'satellite' | 'terrain'
+    baseMap: 'osm', // 'osm' | 'satellite' | 'terrain'
     fields: true,
     zones: false,
     sensors: false,
     heatmap: false,
-    province: true,
-    district: false,
-    ward: false,
     opacity: 0.7,
   },
 
@@ -262,18 +259,32 @@ const useFieldGISStore = create((set, get) => ({
       layers: { ...state.layers, [key]: value },
     })),
 
-  toggleAdminLayer: (layerKey) => {
-    const { layers } = get();
-    const current = !!layers[layerKey];
-    set((state) => ({
-      layers: { ...state.layers, [layerKey]: !current },
-    }));
+  // ── Admin Boundary Layer Visibility ─────────────────────────
+  // Stored separately from 'layers' to avoid conflicts.
+  // Province is true by default — it will be lazy-loaded once the map mounts.
+  // District and ward start false — user must explicitly enable them.
+  adminLayers: {
+    province: true,   // Enabled by default; loaded lazily on map init
+    district: false,  // User-enabled; lazy-loaded on toggle
+    ward: false,      // User-enabled; lazy-loaded on toggle (30MB — use with care)
   },
 
+  toggleAdminLayer: (layerKey) =>
+    set((state) => {
+      const current = state.adminLayers[layerKey];
+      console.log('[BOUNDARY_DEBUG] Toggle layer:', layerKey, !current);
+      return {
+        adminLayers: { ...state.adminLayers, [layerKey]: !current },
+      };
+    }),
+
   setAdminLayerVisibility: (layerKey, visible) =>
-    set((state) => ({
-      layers: { ...state.layers, [layerKey]: visible },
-    })),
+    set((state) => {
+      console.log('[BOUNDARY_DEBUG] Set layer visibility:', layerKey, visible);
+      return {
+        adminLayers: { ...state.adminLayers, [layerKey]: visible },
+      };
+    }),
 
   // ── Panel State ─────────────────────────────────────────────
   panelState: {
@@ -333,15 +344,17 @@ const useFieldGISStore = create((set, get) => ({
       filteredFieldIds: [],
       filters: { search: '', cropType: '', status: '', hasAlerts: false },
       layers: {
-        baseMap: 'satellite',
+        baseMap: 'osm',
         fields: true,
         zones: false,
         sensors: false,
         heatmap: false,
+        opacity: 0.7,
+      },
+      adminLayers: {
         province: true,
         district: false,
         ward: false,
-        opacity: 0.7,
       },
       panelState: { isOpen: false, mode: 'detail', createMethod: 'draw' },
       toast: null,

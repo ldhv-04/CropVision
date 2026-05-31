@@ -2,6 +2,7 @@
  * LayerControls — Floating map layer switcher (top-right).
  *
  * Toggles: Base map (OSM/Satellite/Terrain), overlay layers, opacity.
+ * Also includes Administrative Boundary Layer toggles for province/district/ward.
  */
 
 import React, { useState, useCallback } from 'react';
@@ -20,7 +21,32 @@ const OVERLAYS = [
   { id: 'heatmap', label: 'Heatmap', icon: '🌡️' },
 ];
 
-export default function LayerControls({ layers, onLayerChange }) {
+const ADMIN_LAYERS = [
+  {
+    id: 'province',
+    label: 'Tỉnh/Thành phố',
+    labelEN: 'Province',
+    icon: '🗺️',
+    color: '#E65100',
+  },
+  {
+    id: 'district',
+    label: 'Huyện/Quận',
+    labelEN: 'District',
+    icon: '🔶',
+    color: '#1565C0',
+  },
+  {
+    id: 'ward',
+    label: 'Xã/Phường',
+    labelEN: 'Ward',
+    icon: '🔷',
+    color: '#2E7D32',
+    note: '~30MB',
+  },
+];
+
+export default function LayerControls({ layers, adminLayers, onLayerChange, onAdminLayerToggle }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const toggleExpand = useCallback(() => setIsExpanded((v) => !v), []);
@@ -74,6 +100,33 @@ export default function LayerControls({ layers, onLayerChange }) {
               />
             </View>
           ))}
+
+          {/* Divider */}
+          <View style={styles.divider} />
+
+          {/* Administrative Boundary Layers */}
+          <Text style={styles.sectionTitle}>Ranh giới hành chính</Text>
+          {ADMIN_LAYERS.map((layer) => {
+            const isEnabled = adminLayers?.[layer.id] ?? false;
+            return (
+              <View key={layer.id} style={styles.overlayRow}>
+                <View style={[styles.adminDot, { backgroundColor: layer.color }]} />
+                <View style={styles.adminLabelContainer}>
+                  <Text style={styles.overlayLabel}>{layer.label}</Text>
+                  {layer.note && (
+                    <Text style={styles.adminNote}>{layer.note}</Text>
+                  )}
+                </View>
+                <Switch
+                  value={isEnabled}
+                  onValueChange={() => onAdminLayerToggle && onAdminLayerToggle(layer.id)}
+                  trackColor={{ false: '#ccc', true: `${layer.color}44` }}
+                  thumbColor={isEnabled ? layer.color : '#f4f3f4'}
+                  style={styles.switch}
+                />
+              </View>
+            );
+          })}
         </View>
       )}
     </View>
@@ -108,7 +161,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 10,
     padding: 12,
-    width: 220,
+    width: 240,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
@@ -150,4 +203,20 @@ const styles = StyleSheet.create({
   overlayIcon: { fontSize: 14, marginRight: 8, width: 20, textAlign: 'center' },
   overlayLabel: { flex: 1, fontSize: 13, color: '#444' },
   switch: { transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] },
+  // Admin layer specific
+  adminDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 8,
+  },
+  adminLabelContainer: {
+    flex: 1,
+    flexDirection: 'column',
+  },
+  adminNote: {
+    fontSize: 10,
+    color: '#aaa',
+    marginTop: 1,
+  },
 });
