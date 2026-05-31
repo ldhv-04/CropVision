@@ -69,10 +69,12 @@ function getZoneColor(index) {
 // ════════════════════════════════════════════════════════════════
 const S = {
   root: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
+    position: 'relative',
     display: 'flex',
     flexDirection: 'column',
+    flex: 1,
+    width: '100%',
+    minHeight: 0,
     overflow: 'hidden',
     backgroundColor: '#F8F9FA',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -630,7 +632,7 @@ export default function ZoneEditorPage({ fieldId, onBack }) {
 
         {/* MAP */}
         <div style={S.mapShell}>
-          <div ref={containerRef} style={S.mapContainer} />
+          <div ref={containerRef} style={S.mapContainer} data-zone-editor-map />
 
           {/* Toolbar */}
           <div style={S.floatingToolbar}>
@@ -730,9 +732,9 @@ export default function ZoneEditorPage({ fieldId, onBack }) {
         </div>
       )}
 
-      {/* Target CSS Override for MapLibre Canvas in React Native Web reset */}
+      {/* Target CSS Override for MapLibre Canvas — scoped to zone editor map container only */}
       <style dangerouslySetInnerHTML={{ __html: `
-        .maplibregl-canvas {
+        [data-zone-editor-map] .maplibregl-canvas {
           display: block !important;
           width: 100% !important;
           height: 100% !important;
