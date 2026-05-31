@@ -43,15 +43,20 @@ export const ENDPOINTS = {
     searchDiseases: '/api/chat/diseases/search',                 // Search diseases by keyword
   },
 
-  // Fields (AgriVision)
+  // Fields (AgriVision + Station GIS)
   fields: {
     list:       '/api/fields',
     create:     '/api/fields',
     detail:     (id) => `/api/fields/${id}`,
     update:     (id) => `/api/fields/${id}`,
     delete:     (id) => `/api/fields/${id}`,
+    restore:    (id) => `/api/fields/${id}/restore`,
+    permanent:  (id) => `/api/fields/${id}/permanent`,
+    trash:      '/api/fields/trash',
+    generatePolygon: '/api/fields/generate-polygon',
     activities: (id) => `/api/fields/${id}/activities`,
     addActivity: (id) => `/api/fields/${id}/activities`,
+    zonesSummary: (id) => `/api/fields/${id}/zones/summary`,
   },
 
   // Weather (AgriVision)

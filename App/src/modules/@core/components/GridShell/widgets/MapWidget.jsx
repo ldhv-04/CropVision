@@ -329,7 +329,7 @@ export function MapWidget() {
 
       // OpenStreetMap tiles (clear boundaries)
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18,
+        maxZoom: 17.8,
       }).addTo(map);
 
       // Attribution

@@ -200,6 +200,15 @@ const stmts = [
   )`,
   'CREATE INDEX IF NOT EXISTS idx_zone_health_history_zone ON zone_health_history(sub_zone_id, changed_at DESC)',
   'CREATE INDEX IF NOT EXISTS idx_zone_metrics_latest ON zone_metrics(sub_zone_id, created_at DESC)',
+
+  // ── GIS Field Redesign: Soft delete, status, color, notes, updated_at ──
+  'ALTER TABLE fields ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ',
+  'ALTER TABLE fields ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE',
+  'ALTER TABLE fields ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT \'ACTIVE\'',
+  'ALTER TABLE fields ADD COLUMN IF NOT EXISTS color VARCHAR(7) DEFAULT \'#4CAF50\'',
+  'ALTER TABLE fields ADD COLUMN IF NOT EXISTS notes TEXT',
+  'ALTER TABLE fields ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()',
+  'CREATE INDEX IF NOT EXISTS idx_fields_active ON fields(user_id, is_active) WHERE is_active = TRUE',
 ];
 
 async function run() {

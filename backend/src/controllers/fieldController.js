@@ -8,6 +8,7 @@
  */
 
 const pool = require('../config/db');
+const geoService = require('../services/geoService');
 
 const GROWTH_STAGES = ['germination', 'seedling', 'vegetative', 'flowering', 'fruiting', 'harvest', 'dormant'];
 
@@ -22,14 +23,14 @@ const getFields = async (req, res) => {
         SELECT DISTINCT f.*
         FROM fields f
         JOIN sub_zones sz ON sz.field_id = f.id
-        WHERE f.user_id = $1 AND sz.status = $2
+        WHERE f.user_id = $1 AND sz.status = $2 AND (f.is_active IS NULL OR f.is_active = TRUE)
         ORDER BY f.created_at DESC
       `, [userId, zone_status]);
       return res.json({ success: true, data: result.rows });
     }
 
     const result = await pool.query(
-      'SELECT * FROM fields WHERE user_id = $1 ORDER BY created_at DESC',
+      'SELECT * FROM fields WHERE user_id = $1 AND (is_active IS NULL OR is_active = TRUE) ORDER BY created_at DESC',
       [userId]
     );
     res.json({ success: true, data: result.rows });
@@ -42,20 +43,47 @@ const getFields = async (req, res) => {
 const createField = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { name, crop_type, area, latitude, longitude, boundary, growth_stage, planting_date } = req.body;
+    const { name, crop_type, area, latitude, longitude, boundary, growth_stage, planting_date, color, notes, status } = req.body;
 
-    if (!name || !crop_type || latitude === undefined || longitude === undefined) {
-      return res.status(400).json({ success: false, message: 'Thieu thong tin canh dong bat buoc.' });
+    if (!name || !crop_type) {
+      return res.status(400).json({ success: false, message: 'Thieu thong tin canh dong bat buoc (name, crop_type).' });
+    }
+
+    // If boundary is provided, validate and auto-derive lat/lng/area
+    let finalLat = latitude || null;
+    let finalLng = longitude || null;
+    let finalArea = area || null;
+    let boundaryJson = null;
+
+    if (boundary) {
+      const validation = geoService.validateGeometry(boundary);
+      if (!validation.valid) {
+        return res.status(400).json({ success: false, message: `Loi boundary: ${validation.reason}` });
+      }
+      boundaryJson = JSON.stringify(boundary);
+
+      // Auto-derive centroid
+      const centroid = geoService.calculateBoundaryCentroid(boundary);
+      finalLng = centroid[0];
+      finalLat = centroid[1];
+
+      // Auto-calculate area if not provided
+      if (!finalArea) {
+        finalArea = geoService.calculatePolygonArea(boundary);
+      }
     }
 
     const result = await pool.query(
-      `INSERT INTO fields (user_id, name, crop_type, area, latitude, longitude, boundary, growth_stage, planting_date)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      `INSERT INTO fields (user_id, name, crop_type, area, latitude, longitude, boundary, growth_stage, planting_date, color, notes, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [
-        userId, name, crop_type, area || null, latitude, longitude,
-        boundary ? JSON.stringify(boundary) : null,
+        userId, name, crop_type, finalArea, finalLat, finalLng,
+        boundaryJson,
         growth_stage || 'germination',
         planting_date || null,
+        color || '#4CAF50',
+        notes || null,
+        status || 'ACTIVE',
       ]
     );
 
@@ -100,12 +128,34 @@ const updateField = async (req, res) => {
   try {
     const userId = req.user.userId;
     const fieldId = req.params.id;
-    const { name, crop_type, area, latitude, longitude, boundary, growth_stage, planting_date } = req.body;
+    const { name, crop_type, area, latitude, longitude, boundary, growth_stage, planting_date, color, notes, status } = req.body;
 
     // Verify ownership
     const existing = await pool.query('SELECT id FROM fields WHERE id = $1 AND user_id = $2', [fieldId, userId]);
     if (existing.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Khong tim thay canh dong.' });
+    }
+
+    // If boundary is being updated, validate and auto-derive
+    let boundaryJson = null;
+    let finalLat = latitude || null;
+    let finalLng = longitude || null;
+    let finalArea = area || null;
+
+    if (boundary) {
+      const validation = geoService.validateGeometry(boundary);
+      if (!validation.valid) {
+        return res.status(400).json({ success: false, message: `Loi boundary: ${validation.reason}` });
+      }
+      boundaryJson = JSON.stringify(boundary);
+
+      const centroid = geoService.calculateBoundaryCentroid(boundary);
+      finalLng = centroid[0];
+      finalLat = centroid[1];
+
+      if (!finalArea) {
+        finalArea = geoService.calculatePolygonArea(boundary);
+      }
     }
 
     const result = await pool.query(
@@ -117,15 +167,19 @@ const updateField = async (req, res) => {
         longitude = COALESCE($5, longitude),
         boundary = COALESCE($6, boundary),
         growth_stage = COALESCE($7, growth_stage),
-        planting_date = COALESCE($8, planting_date)
+        planting_date = COALESCE($8, planting_date),
+        color = COALESCE($11, color),
+        notes = COALESCE($12, notes),
+        status = COALESCE($13, status)
        WHERE id = $9 AND user_id = $10
        RETURNING *`,
       [
-        name || null, crop_type || null, area || null,
-        latitude || null, longitude || null,
-        boundary ? JSON.stringify(boundary) : null,
+        name || null, crop_type || null, finalArea,
+        finalLat, finalLng,
+        boundaryJson,
         growth_stage || null, planting_date || null,
         fieldId, userId,
+        color || null, notes || null, status || null,
       ]
     );
 
@@ -141,8 +195,11 @@ const deleteField = async (req, res) => {
     const userId = req.user.userId;
     const fieldId = req.params.id;
 
+    // Soft delete: set deleted_at and is_active = FALSE
     const result = await pool.query(
-      'DELETE FROM fields WHERE id = $1 AND user_id = $2 RETURNING id',
+      `UPDATE fields SET deleted_at = NOW(), is_active = FALSE
+       WHERE id = $1 AND user_id = $2 AND (is_active IS NULL OR is_active = TRUE)
+       RETURNING id`,
       [fieldId, userId]
     );
 
@@ -150,10 +207,113 @@ const deleteField = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Khong tim thay canh dong.' });
     }
 
-    res.json({ success: true, message: 'Da xoa canh dong.' });
+    res.json({ success: true, message: 'Da chuyen canh dong vao thung rac.' });
   } catch (error) {
     console.error('[Field] deleteField error:', error.message);
     res.status(500).json({ success: false, message: 'Loi khi xoa canh dong.' });
+  }
+};
+
+/**
+ * GET /api/fields/trash
+ * Returns soft-deleted fields for the current user.
+ */
+const getTrash = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const result = await pool.query(
+      'SELECT * FROM fields WHERE user_id = $1 AND is_active = FALSE AND deleted_at IS NOT NULL ORDER BY deleted_at DESC',
+      [userId]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error('[Field] getTrash error:', error.message);
+    res.status(500).json({ success: false, message: 'Loi khi lay thung rac.' });
+  }
+};
+
+/**
+ * PATCH /api/fields/:id/restore
+ * Restores a soft-deleted field.
+ */
+const restoreField = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const fieldId = req.params.id;
+
+    const result = await pool.query(
+      `UPDATE fields SET deleted_at = NULL, is_active = TRUE
+       WHERE id = $1 AND user_id = $2 AND is_active = FALSE
+       RETURNING *`,
+      [fieldId, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Khong tim thay canh dong trong thung rac.' });
+    }
+
+    res.json({ success: true, data: result.rows[0], message: 'Da khoi phuc canh dong.' });
+  } catch (error) {
+    console.error('[Field] restoreField error:', error.message);
+    res.status(500).json({ success: false, message: 'Loi khi khoi phuc canh dong.' });
+  }
+};
+
+/**
+ * DELETE /api/fields/:id/permanent
+ * Permanently deletes a field (hard delete, from trash only).
+ */
+const permanentDeleteField = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const fieldId = req.params.id;
+
+    const result = await pool.query(
+      'DELETE FROM fields WHERE id = $1 AND user_id = $2 AND is_active = FALSE RETURNING id',
+      [fieldId, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Khong tim thay canh dong trong thung rac.' });
+    }
+
+    res.json({ success: true, message: 'Da xoa vinh vien canh dong.' });
+  } catch (error) {
+    console.error('[Field] permanentDeleteField error:', error.message);
+    res.status(500).json({ success: false, message: 'Loi khi xoa vinh vien canh dong.' });
+  }
+};
+
+/**
+ * POST /api/fields/generate-polygon
+ * Generates a polygon from center point + radius (convenience tool).
+ * Returns GeoJSON Polygon without saving to database.
+ */
+const generatePolygon = async (req, res) => {
+  try {
+    const { latitude, longitude, radius_meters, vertices } = req.body;
+
+    if (latitude === undefined || longitude === undefined || !radius_meters) {
+      return res.status(400).json({ success: false, message: 'Thieu latitude, longitude, hoac radius_meters.' });
+    }
+
+    if (latitude < -90 || latitude > 90) {
+      return res.status(400).json({ success: false, message: 'Latitude phai tu -90 den 90.' });
+    }
+    if (longitude < -180 || longitude > 180) {
+      return res.status(400).json({ success: false, message: 'Longitude phai tu -180 den 180.' });
+    }
+    if (radius_meters <= 0 || radius_meters > 50000) {
+      return res.status(400).json({ success: false, message: 'Radius phai tu 1 den 50000 met.' });
+    }
+
+    const boundary = geoService.generateCirclePolygon(latitude, longitude, radius_meters, vertices || 32);
+    const area_hectares = geoService.calculatePolygonArea(boundary);
+
+    res.json({ success: true, data: { boundary, area_hectares } });
+  } catch (error) {
+    console.error('[Field] generatePolygon error:', error.message);
+    res.status(500).json({ success: false, message: 'Loi khi tao polygon.' });
   }
 };
 
@@ -234,6 +394,10 @@ module.exports = {
   getFieldById,
   updateField,
   deleteField,
+  getTrash,
+  restoreField,
+  permanentDeleteField,
+  generatePolygon,
   addActivity,
   getActivities,
   getZonesSummary,

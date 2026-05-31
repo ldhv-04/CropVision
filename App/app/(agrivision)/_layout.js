@@ -135,7 +135,7 @@ export default function AgriVisionLayout() {
         <Tabs.Screen
           name="field-map"
           options={{
-            href: null, // Touch comment to trigger Metro rebuild
+            href: null,
             headerShown: false,
           }}
         />

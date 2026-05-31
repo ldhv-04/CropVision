@@ -62,7 +62,7 @@ function LeafletMainMap({ fields, onSelectField }) {
       const map = L.map(mapRef.current, { zoomControl: true, attributionControl: false }).setView(center, 6);
       mapInstanceRef.current = map;
 
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 18 }).addTo(map);
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 17.8 }).addTo(map);
 
       const polygons = [];
 
