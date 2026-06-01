@@ -810,4 +810,4 @@ const ZoneMapCanvas = React.memo(({ containerRef }) => {
       data-zone-editor-map
     />
   );
-});
+});                                                                                                                                                       
