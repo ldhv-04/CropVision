@@ -74,6 +74,7 @@ const S = {
     flexDirection: 'column',
     flex: 1,
     width: '100%',
+    height: '100%',
     minHeight: 0,
     overflow: 'hidden',
     backgroundColor: '#F8F9FA',
@@ -309,6 +310,38 @@ export default function ZoneEditorPage({ fieldId, onBack }) {
     }
   }, [selectedZoneId]);
 
+  useEffect(() => {
+    // Inject style overrides into document.head once on mount to avoid JSX sibling diff issues
+    const styleId = 'zone-editor-map-style-override';
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.innerHTML = `
+        [data-zone-editor-map] {
+          width: 100% !important;
+          height: 100% !important;
+        }
+        [data-zone-editor-map] .maplibregl-canvas-container {
+          width: 100% !important;
+          height: 100% !important;
+        }
+        [data-zone-editor-map] .maplibregl-canvas {
+          display: block !important;
+          width: 100% !important;
+          height: 100% !important;
+          position: absolute !important;
+          left: 0 !important;
+          top: 0 !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    return () => {
+      const style = document.getElementById(styleId);
+      if (style) style.remove();
+    };
+  }, []);
+
   // ════════════════════════════════════════════════════════════
   // MAP INIT — using raw DOM, same pattern as working map
   // ════════════════════════════════════════════════════════════
@@ -385,8 +418,15 @@ export default function ZoneEditorPage({ fieldId, onBack }) {
         if (!currentMap) return;
         currentMap.resize();
         const c = currentMap.getCanvas();
-        if (c) {
-          console.log('[ZoneMap] resize check:', { cw: c.clientWidth, ch: c.clientHeight, loaded: currentMap.loaded() });
+        const container = containerRef.current;
+        if (c && container) {
+          console.log('[ZoneMap] resize check:', {
+            cw: c.clientWidth,
+            ch: c.clientHeight,
+            containerW: container.clientWidth,
+            containerH: container.clientHeight,
+            loaded: currentMap.loaded()
+          });
         }
       }, 300);
     });
@@ -421,6 +461,7 @@ export default function ZoneEditorPage({ fieldId, onBack }) {
     observer.observe(el);
 
     return () => {
+      console.log('[ZoneMap] cleanup called, mapRef:', !!mapRef.current);
       observer.disconnect();
       if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; isMountedRef.current = false; }
     };
@@ -566,10 +607,6 @@ export default function ZoneEditorPage({ fieldId, onBack }) {
     setEditVertices(c); setActiveTool('edit');
   }, [selectedZone]);
 
-  if (isLoading && !parentField) {
-    return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8F9FA' }}><ActivityIndicator size="large" color="#1976D2" /><Text style={S.loadingText}>Loading...</Text></View>;
-  }
-
   // ═══ RENDER ═══
   return (
     <div style={S.root}>
@@ -631,11 +668,11 @@ export default function ZoneEditorPage({ fieldId, onBack }) {
         </div>
 
         {/* MAP */}
-        <div style={S.mapShell}>
-          <div ref={containerRef} style={S.mapContainer} data-zone-editor-map />
+        <div style={S.mapShell} key="zone-map-shell">
+          <ZoneMapCanvas containerRef={containerRef} key="zone-map-canvas" />
 
           {/* Toolbar */}
-          <div style={S.floatingToolbar}>
+          <div style={S.floatingToolbar} key="zone-floating-toolbar">
             <button style={S.toolBtn(activeTool === 'pan')} onClick={() => setActiveTool('pan')}>🖐️</button>
             <button style={S.toolBtn(activeTool === 'draw')} onClick={() => setActiveTool('draw')}>✏️</button>
             {selectedZone && <button style={S.toolBtn(activeTool === 'edit')} onClick={handleStartEdit}>🔧</button>}
@@ -644,19 +681,19 @@ export default function ZoneEditorPage({ fieldId, onBack }) {
           </div>
 
           {activeTool === 'draw' && drawVertices.length >= 3 && (
-            <div style={S.floatingActions}>
+            <div style={S.floatingActions} key="zone-floating-draw-actions">
               <button style={S.cancelAction} onClick={() => { setDrawVertices([]); setActiveTool('pan'); }}>Cancel</button>
               <button style={S.finishAction} onClick={handleDrawZone} disabled={isSaving}>{isSaving ? 'Saving...' : `✓ Create Zone (${drawVertices.length} pts)`}</button>
             </div>
           )}
           {activeTool === 'edit' && editVertices.length >= 3 && (
-            <div style={S.floatingActions}>
+            <div style={S.floatingActions} key="zone-floating-edit-actions">
               <button style={S.cancelAction} onClick={() => { setEditVertices([]); setActiveTool('pan'); }}>Cancel</button>
               <button style={S.finishAction} onClick={handleSaveEditZone} disabled={isSaving}>{isSaving ? 'Saving...' : '✓ Save Changes'}</button>
             </div>
           )}
           {activeTool === 'draw' && (
-            <div style={S.drawHint}>
+            <div style={S.drawHint} key="zone-draw-hint">
               <div style={S.drawHintText}>
                 {drawVertices.length === 0 ? 'Click on the map to draw zone vertices' : drawVertices.length < 3 ? `Click ${3 - drawVertices.length} more point(s)` : 'Click "Create Zone" or add more points'}
               </div>
@@ -732,17 +769,45 @@ export default function ZoneEditorPage({ fieldId, onBack }) {
         </div>
       )}
 
-      {/* Target CSS Override for MapLibre Canvas — scoped to zone editor map container only */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        [data-zone-editor-map] .maplibregl-canvas {
-          display: block !important;
-          width: 100% !important;
-          height: 100% !important;
-          position: absolute !important;
-          left: 0 !important;
-          top: 0 !important;
-        }
-      `}} />
+      {/* HTML LOADER OVERLAY — floats over the main layout instead of destroying the DOM tree */}
+      {isLoading && !parentField && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(248, 249, 250, 0.85)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 9999,
+        }}>
+          <ActivityIndicator size="large" color="#1976D2" />
+          <Text style={{ ...S.loadingText, marginTop: 12 }}>Loading field details...</Text>
+        </div>
+      )}
+
     </div>
   );
 }
+
+const ZoneMapCanvas = React.memo(({ containerRef }) => {
+  console.log('[ZoneMapCanvas] Rendered');
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100%',
+        height: '100%',
+      }}
+      data-zone-editor-map
+    />
+  );
+});

@@ -367,7 +367,11 @@ export default function FieldsPage() {
 
   // ── If zone editor is active, render it full-screen ──────────
   if (zoneEditorFieldId) {
-    return <ZoneEditorPage fieldId={zoneEditorFieldId} onBack={handleBackFromZoneEditor} />;
+    return (
+      <View style={[styles.container, { overflow: 'hidden' }]}>
+        <ZoneEditorPage fieldId={zoneEditorFieldId} onBack={handleBackFromZoneEditor} />
+      </View>
+    );
   }
 
   return (
@@ -397,7 +401,10 @@ export default function FieldsPage() {
           searchQuery={searchQuery}
           explorerCollapsed={explorerCollapsed}
           filters={filters}
-          setSelectedField={setSelectedField}
+          setSelectedField={(id) => {
+            setSelectedField(id);
+            if (id) openPanel('detail');
+          }}
           setHoveredField={setHoveredField}
           setSearchQuery={setSearchQuery}
           toggleExplorer={toggleExplorer}
