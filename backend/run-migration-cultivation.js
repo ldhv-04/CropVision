@@ -42,12 +42,17 @@ const tableMigrations = [
     season_label       VARCHAR(100),
     notes              TEXT,
     started_at         DATE,
+    expected_harvest_date DATE,
     closed_at          DATE,
     created_at         TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at         TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
 
   // ── 2. zone_cultivation_logs ──────────────────────────────────────────────
+  // Phase 01R: reconcile existing installations before log table setup.
+  `ALTER TABLE zone_cultivation_profiles
+   ADD COLUMN IF NOT EXISTS expected_harvest_date DATE`,
+
   `CREATE TABLE IF NOT EXISTS zone_cultivation_logs (
     id                 SERIAL PRIMARY KEY,
     source             VARCHAR(20) NOT NULL DEFAULT 'mobile'
@@ -190,6 +195,8 @@ async function runMigration() {
   console.log('  Tables:');
   console.log('    - zone_cultivation_profiles');
   console.log('    - zone_cultivation_logs');
+  console.log('  Profile reconciliation:');
+  console.log('    - expected_harvest_date DATE');
   console.log('  Indexes:');
   console.log('    - uidx_zcp_one_current_per_zone  (partial unique — one current profile per zone)');
   console.log('    - idx_zcp_owner_field');
