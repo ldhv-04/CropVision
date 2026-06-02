@@ -4,8 +4,19 @@
  * Spatial management of internal zones within a field boundary.
  * Focus: zone geometry, codes, validation, draft/publish workflow.
  *
- * Does NOT handle: crop type, planting date, fertilizer, irrigation, 
+ * Does NOT handle: crop type, planting date, fertilizer, irrigation,
  * crop diary, or user cultivation details.
+ *
+ * TASK 1 — Station-to-Mobile Bridge:
+ * - Publishing creates a versioned snapshot in field_zone_maps.
+ * - Mobile APIs read ONLY from field_zone_maps (status = 'published').
+ * - Previous published versions are archived when a new one is published.
+ * - Publishing requires field.owner_user_id to be set.
+ *
+ * FUTURE DEPENDENCY NOTE:
+ * - Crop/cultivation data (Task 3) should be stored in separate tables.
+ * - If published zone geometry changes after cultivation data exists,
+ *   migration rules will be required for zone_id mapping.
  */
 
 const pool = require('../config/db');
@@ -24,8 +35,9 @@ const getZones = async (req, res) => {
     const fieldId = req.params.fieldId;
 
     // Get the field (select only columns guaranteed to exist)
+    // Task 1: Also select owner_user_id and owner_email_snapshot for station zone editor display.
     const field = await pool.query(
-      'SELECT id, name, boundary, area, user_id FROM fields WHERE id = $1',
+      'SELECT id, name, boundary, area, user_id, owner_user_id, owner_email_snapshot FROM fields WHERE id = $1',
       [fieldId]
     );
 
@@ -67,6 +79,9 @@ const getZones = async (req, res) => {
       area: field.rows[0].area,
       user_id: field.rows[0].user_id,
       zones_published_at: field.rows[0].zones_published_at || null,
+      // Task 1: Owner info for station zone editor display
+      owner_user_id: field.rows[0].owner_user_id || null,
+      owner_email: field.rows[0].owner_email_snapshot || null,
     };
 
     res.json({
@@ -340,8 +355,10 @@ const validateZones = async (req, res) => {
     const warnings = [];
 
     // Get parent field
+    // DEPENDENCY NOTE (Task 1): We now check owner_user_id (the mobile user who owns the field)
+    // instead of user_id (the station admin who created the field).
     const field = await pool.query(
-      'SELECT id, boundary, area, user_id FROM fields WHERE id = $1',
+      'SELECT id, boundary, area, user_id, owner_user_id FROM fields WHERE id = $1',
       [fieldId]
     );
 
@@ -351,11 +368,12 @@ const validateZones = async (req, res) => {
 
     const parentField = field.rows[0];
 
-    // Check if field has assigned user (required for publishing)
-    if (!parentField.user_id) {
+    // Check if field has assigned owner (required for publishing)
+    // owner_user_id is the registered mobile user; user_id is the station creator.
+    if (!parentField.owner_user_id) {
       errors.push({
         type: 'NO_OWNER',
-        message: 'Field must be assigned to a user before publishing.',
+        message: 'Field must be assigned to an owner before publishing. Use POST /api/fields/:id/assign-owner.',
         severity: 'error',
       });
     }
@@ -492,7 +510,7 @@ const validateZones = async (req, res) => {
       }
     }
 
-    const hasFieldOwner = !!parentField.user_id;
+    const hasFieldOwner = !!parentField.owner_user_id;
     const isValid = errors.length === 0 && hasFieldOwner;
 
     res.json({
@@ -539,18 +557,27 @@ const publishZones = async (req, res) => {
 
     const parentField = field.rows[0];
 
-    // Must have assigned user
-    if (!parentField.user_id) {
+    // ── Owner check (Task 1: Station-to-Mobile bridge) ──
+    // DEPENDENCY NOTE: Publishing requires owner_user_id to be set.
+    // Mobile APIs will only expose published maps to the field owner.
+    // The field must have owner_user_id (not just user_id which is the creator).
+    const fieldWithOwner = await pool.query(
+      'SELECT owner_user_id FROM fields WHERE id = $1',
+      [fieldId]
+    );
+    const ownerId = fieldWithOwner.rows[0]?.owner_user_id;
+
+    if (!ownerId) {
       return res.status(400).json({
         success: false,
-        message: 'Field must be assigned to a user before publishing.',
-        errors: [{ type: 'NO_OWNER', message: 'Field has no assigned user.' }],
+        message: 'Field must be assigned to an owner before publishing. Use POST /api/fields/:id/assign-owner first.',
+        errors: [{ type: 'NO_OWNER', message: 'Field has no assigned owner (owner_user_id).' }],
       });
     }
 
     // Must have zones
     const zones = await pool.query(
-      'SELECT id, code, boundary, area FROM sub_zones WHERE field_id = $1',
+      'SELECT id, code, name, boundary, area FROM sub_zones WHERE field_id = $1',
       [fieldId]
     );
 
@@ -620,28 +647,75 @@ const publishZones = async (req, res) => {
       });
     }
 
-    // All validation passed — publish
+    // ── All validation passed — publish with versioning ──
     const now = new Date().toISOString();
+    const publishedBy = req.user.userId;
 
-    // Update all zones to published
+    // 1. Archive any previously published versions
+    await pool.query(
+      `UPDATE field_zone_maps SET status = 'archived', updated_at = $1
+       WHERE field_id = $2 AND status = 'published'`,
+      [now, fieldId]
+    );
+
+    // 2. Get next version number
+    const maxVersionResult = await pool.query(
+      'SELECT COALESCE(MAX(version), 0) + 1 AS next_version FROM field_zone_maps WHERE field_id = $1',
+      [fieldId]
+    );
+    const nextVersion = maxVersionResult.rows[0].next_version;
+
+    // 3. Build zones_data snapshot (lightweight polygon-only for mobile)
+    const zonesSnapshot = zones.rows.map(zone => {
+      const boundary = typeof zone.boundary === 'string' ? JSON.parse(zone.boundary) : zone.boundary;
+      return {
+        id: zone.id,
+        code: zone.code || null,
+        name: zone.name || null,
+        area: zone.area ? parseFloat(zone.area) : calculatePolygonArea(boundary),
+        boundary: boundary,
+      };
+    });
+
+    // 4. Create new published zone map version
+    await pool.query(
+      `INSERT INTO field_zone_maps (field_id, version, status, published_at, published_by, zones_data, boundary_data, zones_count)
+       VALUES ($1, $2, 'published', $3, $4, $5, $6, $7)`,
+      [
+        fieldId,
+        nextVersion,
+        now,
+        publishedBy,
+        JSON.stringify(zonesSnapshot),
+        fieldBoundaryData ? JSON.stringify(fieldBoundaryData) : null,
+        zones.rows.length,
+      ]
+    );
+
+    // 5. Update sub_zones to published status
     await pool.query(
       `UPDATE sub_zones SET zone_status = 'published', published_at = $1, updated_at = $1
        WHERE field_id = $2`,
       [now, fieldId]
     );
 
-    // Update field
+    // 6. Update field metadata
     await pool.query(
-      'UPDATE fields SET zones_published_at = $1 WHERE id = $2',
-      [now, fieldId]
+      'UPDATE fields SET zones_published_at = $1, zone_map_version = $2 WHERE id = $3',
+      [now, nextVersion, fieldId]
     );
+
+    console.log(`[Zone] Published zone map v${nextVersion} for field ${fieldId}: ${zones.rows.length} zones`);
 
     res.json({
       success: true,
       message: 'Zones published successfully.',
       data: {
-        published_at: now,
-        zone_count: zones.rows.length,
+        fieldId: parseInt(fieldId, 10),
+        version: nextVersion,
+        status: 'published',
+        publishedAt: now,
+        zonesCount: zones.rows.length,
       },
     });
   } catch (error) {

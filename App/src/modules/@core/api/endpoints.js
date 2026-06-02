@@ -133,6 +133,15 @@ export const ENDPOINTS = {
     diseases: (limit) => `/api/homepage/diseases?limit=${limit || 8}`,
   },
 
+  // Mobile Field Manager (Task 1/2: Station-to-Mobile bridge)
+  // DEPENDENCY NOTE: Mobile consumes only latest published zone maps.
+  // Draft station zone maps are never exposed here.
+  // No satellite tiles, no MapLibre — polygon-only GeoJSON.
+  mobile: {
+    fields:         '/api/mobile/fields',
+    fieldZoneMap:   (fieldId) => `/api/mobile/fields/${fieldId}/zone-map`,
+  },
+
   // Health
   health: '/api/health',
 };

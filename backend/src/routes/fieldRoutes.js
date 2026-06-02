@@ -15,12 +15,13 @@
  * DELETE /api/fields/:id/permanent      — Permanently delete (from trash)
  * POST   /api/fields/:id/activities     — Add activity to field
  * GET    /api/fields/:id/activities     — List activities for field
+ * POST   /api/fields/:id/assign-owner   — Assign field owner by email (admin only)
  */
 
 const express = require('express');
 const router = express.Router();
 const fieldController = require('../controllers/fieldController');
-const { authenticateToken } = require('../middleware/authMiddleware');
+const { authenticateToken, requireAdmin } = require('../middleware/authMiddleware');
 const { nestedRouter: subZoneNestedRouter } = require('./subZoneRoutes');
 const { nestedRouter: zoneNestedRouter } = require('./zoneRoutes');
 const walkRoutes = require('./walkRoutes');
@@ -52,6 +53,12 @@ router.get('/:id/zones/summary', authenticateToken, fieldController.getZonesSumm
 
 router.get('/:id/activities', authenticateToken, fieldController.getActivities);
 router.post('/:id/activities', authenticateToken, fieldController.addActivity);
+
+// ── Owner Assignment (Task 1: Station-to-Mobile bridge) ──
+// POST /api/fields/:id/assign-owner — Assign field owner by registered email (admin only)
+// DEPENDENCY NOTE: Publishing a zone map requires field.owner_user_id to be set.
+router.post('/:id/assign-owner', authenticateToken, requireAdmin, fieldController.assignOwner);
+
 router.get('/:id', authenticateToken, fieldController.getFieldById);
 router.put('/:id', authenticateToken, fieldController.updateField);
 router.delete('/:id', authenticateToken, fieldController.deleteField);

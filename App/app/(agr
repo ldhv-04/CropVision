@@ -1,0 +1,8 @@
+/**
+ * Route: /(agrivision)/field-detail/[fieldId]
+ * Mobile Field Manager — Detail view with polygon-only zone map.
+ * Hidden route — navigated to programmatically from my-fields.
+ */
+import MobileFieldDetailScreen from '../../../src/modules/agrivision/screens/MobileFieldDetailScreen';
+
+export default MobileFieldDetailScreen;

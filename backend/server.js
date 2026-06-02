@@ -15,6 +15,8 @@ const alertRoutes = require('./src/routes/alertRoutes');
 const { topLevelRouter: subZoneTopRouter } = require('./src/routes/subZoneRoutes');
 const epidemicRoutes = require('./src/routes/epidemicRoutes');
 const homepageRoutes = require('./src/routes/homepageRoutes');
+// [NEW] Task 1: Station-to-Mobile bridge — mobile field/zone map APIs
+const mobileRoutes = require('./src/routes/mobileRoutes');
 const { ensureFixedAdminAccount } = require('./src/services/adminService');
 
 const app = express();
@@ -41,6 +43,10 @@ app.use('/api/alerts', alertRoutes);
 app.use('/api/subzones', subZoneTopRouter);       // /api/subzones/:id, /api/subzones/:id/metrics
 app.use('/api/epidemic', epidemicRoutes);          // /api/epidemic/report, /api/epidemic/alerts
 app.use('/api/homepage', homepageRoutes);          // /api/homepage/summary, /api/homepage/diseases
+// [NEW] Task 1: Station-to-Mobile bridge — mobile field & zone map APIs
+// Mobile user fetches assigned fields and published polygon-only zone maps.
+// No satellite tiles, no MapLibre, no draft zones exposed.
+app.use('/api/mobile', mobileRoutes);              // /api/mobile/fields, /api/mobile/fields/:fieldId/zone-map
 
 // Khoi dong server sau khi dam bao tai khoan admin co dinh da duoc tao trong DB.
 const startServer = async () => {

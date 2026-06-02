@@ -153,6 +153,21 @@ export default function AgriVisionLayout() {
             headerShown: false,
           }}
         />
+        {/* Task 2: Mobile Field Manager — hidden routes */}
+        <Tabs.Screen
+          name="my-fields"
+          options={{
+            href: null,
+            headerShown: false,
+          }}
+        />
+        <Tabs.Screen
+          name="field-detail"
+          options={{
+            href: null,
+            headerShown: false,
+          }}
+        />
       </Tabs>
 
       <CameraModal visible={modalVisible} onClose={() => setModalVisible(false)} />

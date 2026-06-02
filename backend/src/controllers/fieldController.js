@@ -5,6 +5,12 @@
  * - CRUD with polygon boundary (GeoJSON)
  * - Growth stage tracking
  * - Field activity timeline
+ * - Owner assignment by email (Task 1: Station-to-Mobile bridge)
+ *
+ * DEPENDENCY NOTE (station → mobile):
+ * - Field owner assignment uses user.email for lookup but stores user.id as owner_user_id.
+ * - Publishing a zone map (in zoneController) requires field.owner_user_id to be set.
+ * - Mobile APIs expose only published maps owned by the authenticated user.
  */
 
 const pool = require('../config/db');
@@ -388,6 +394,108 @@ const getZonesSummary = async (req, res) => {
   }
 };
 
+// ─── Field Owner Assignment (Task 1: Station-to-Mobile bridge) ────
+
+/**
+ * POST /api/fields/:id/assign-owner
+ *
+ * Assigns a field to a mobile user by looking up their registered Gmail/email.
+ * Station/Admin only.
+ *
+ * Flow:
+ * 1. Validate email is provided
+ * 2. Look up user by email in users table
+ * 3. If not found, return 404 with clear message
+ * 4. If found, set field.owner_user_id = user.id
+ * 5. Set field.owner_email_snapshot = email (for display/debug only)
+ * 6. Return updated field
+ *
+ * DEPENDENCY NOTE:
+ * - Email is used ONLY for lookup, NOT as the primary relationship key.
+ * - The actual relationship is owner_user_id (INTEGER FK → users.id).
+ * - owner_email_snapshot is stored for display/debug only, not for joins/lookups.
+ * - Publishing a zone map requires owner_user_id to be set.
+ */
+const assignOwner = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const fieldId = req.params.id;
+    const { email } = req.body;
+
+    // 1. Validate email
+    if (!email || typeof email !== 'string' || !email.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required.',
+      });
+    }
+
+    const trimmedEmail = email.trim().toLowerCase();
+
+    // Basic email format check
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid email format.',
+      });
+    }
+
+    // 2. Verify field exists (admin can assign any field)
+    const fieldResult = await pool.query(
+      'SELECT id, name, code, owner_user_id FROM fields WHERE id = $1',
+      [fieldId]
+    );
+
+    if (fieldResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Field not found.' });
+    }
+
+    // 3. Look up user by email
+    const userResult = await pool.query(
+      'SELECT id, full_name, email FROM users WHERE LOWER(email) = $1',
+      [trimmedEmail]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No registered user found with this email. The user must register first.',
+      });
+    }
+
+    const targetUser = userResult.rows[0];
+
+    // 4. Update field with owner
+    const updateResult = await pool.query(
+      `UPDATE fields SET
+        owner_user_id = $1,
+        owner_email_snapshot = $2
+       WHERE id = $3
+       RETURNING id, name, code, owner_user_id, owner_email_snapshot`,
+      [targetUser.id, trimmedEmail, fieldId]
+    );
+
+    const updatedField = updateResult.rows[0];
+
+    console.log(`[Field] Owner assigned: field ${fieldId} → user ${targetUser.id} (${trimmedEmail})`);
+
+    res.json({
+      success: true,
+      field: {
+        id: updatedField.id,
+        name: updatedField.name,
+        code: updatedField.code || null,
+        ownerUserId: updatedField.owner_user_id,
+        ownerEmail: updatedField.owner_email_snapshot,
+      },
+    });
+  } catch (error) {
+    console.error('[Field] assignOwner error:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to assign field owner.' });
+  }
+};
+
 module.exports = {
   getFields,
   createField,
@@ -401,4 +509,5 @@ module.exports = {
   addActivity,
   getActivities,
   getZonesSummary,
+  assignOwner,
 };
