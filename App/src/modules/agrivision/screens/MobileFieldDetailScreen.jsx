@@ -53,6 +53,11 @@ export default function MobileFieldDetailScreen() {
     if (fieldId) fetchZoneMap(fieldId);
   };
 
+  const handleOpenCultivation = useCallback(() => {
+    if (!fieldId || !selectedZone?.id) return;
+    router.push(`/(agrivision)/field-detail/${fieldId}/cultivation/${selectedZone.id}`);
+  }, [fieldId, router, selectedZone?.id]);
+
   // Loading
   if (isLoadingMap) {
     return (
@@ -85,7 +90,7 @@ export default function MobileFieldDetailScreen() {
   const zones = map?.zones || [];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView testID="mobile-field-detail-screen" style={styles.container} contentContainerStyle={styles.content}>
       {/* Back */}
       <TouchableOpacity style={styles.backRow} onPress={() => router.back()}>
         <Text style={styles.backText}>← Back</Text>
@@ -123,6 +128,13 @@ export default function MobileFieldDetailScreen() {
           {selectedZone.area != null ? (
             <Text style={styles.zoneMeta}>Area: {typeof selectedZone.area === 'number' ? selectedZone.area.toFixed(4) : selectedZone.area} ha</Text>
           ) : null}
+          <TouchableOpacity
+            testID="btn-zone-cultivation"
+            style={styles.cultivationBtn}
+            onPress={handleOpenCultivation}
+          >
+            <Text style={styles.cultivationBtnText}>Manage cultivation</Text>
+          </TouchableOpacity>
           <Text style={styles.zoneMeta}>
             Geometry: {selectedZone.geometry ? '✓ Available' : '✗ Missing'}
           </Text>
@@ -139,6 +151,7 @@ export default function MobileFieldDetailScreen() {
             const isSelected = selectedZone?.id === zone.id;
             return (
               <TouchableOpacity
+                testID={`mobile-zone-row-${zone.id}`}
                 key={zone.id || index}
                 style={[styles.zoneRow, isSelected && styles.zoneRowSelected]}
                 onPress={() => handleZoneRowPress(zone)}
@@ -183,6 +196,8 @@ const styles = StyleSheet.create({
   zoneName: { fontSize: 20, fontWeight: 'bold', color: '#212121' },
   zoneSubtitle: { fontSize: 14, color: '#616161', marginTop: 2 },
   zoneMeta: { fontSize: 14, color: '#757575', marginTop: 4 },
+  cultivationBtn: { backgroundColor: '#2C5E43', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, alignItems: 'center', marginTop: 12 },
+  cultivationBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   zoneListSection: { paddingHorizontal: 16, marginBottom: 16 },
   emptyZones: { fontSize: 14, color: '#9E9E9E', textAlign: 'center', paddingVertical: 16 },
   zoneRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 12, borderRadius: 8, marginBottom: 6, borderWidth: 1, borderColor: '#E0E0E0' },

@@ -91,7 +91,7 @@ export default function MobileFieldsScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View testID="fields-screen" style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Fields</Text>
         <Text style={styles.headerSubtitle}>View fields assigned to you</Text>
@@ -100,7 +100,12 @@ export default function MobileFieldsScreen() {
         data={fields}
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.card} onPress={() => handleFieldPress(item)} activeOpacity={0.7}>
+          <TouchableOpacity
+            testID={`mobile-field-card-${item.id}`}
+            style={styles.card}
+            onPress={() => handleFieldPress(item)}
+            activeOpacity={0.7}
+          >
             <View style={styles.cardRow}>
               <Text style={styles.fieldName}>{item.name || 'Unnamed Field'}</Text>
               {item.code ? <View style={styles.badge}><Text style={styles.badgeText}>{item.code}</Text></View> : null}

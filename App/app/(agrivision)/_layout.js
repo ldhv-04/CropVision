@@ -168,6 +168,13 @@ export default function AgriVisionLayout() {
             headerShown: false,
           }}
         />
+        <Tabs.Screen
+          name="field-detail/[fieldId]/cultivation/[zoneId]"
+          options={{
+            href: null,
+            headerShown: false,
+          }}
+        />
       </Tabs>
 
       <CameraModal visible={modalVisible} onClose={() => setModalVisible(false)} />

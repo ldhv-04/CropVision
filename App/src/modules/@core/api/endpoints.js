@@ -140,6 +140,19 @@ export const ENDPOINTS = {
   mobile: {
     fields:         '/api/mobile/fields',
     fieldZoneMap:   (fieldId) => `/api/mobile/fields/${fieldId}/zone-map`,
+    cultivation:    (fieldId, zoneId) => `/api/mobile/fields/${fieldId}/zones/${zoneId}/cultivation`,
+    cultivationLogs: (fieldId, zoneId, params = {}) => {
+      const query = [];
+      if (params.limit !== undefined) query.push(`limit=${encodeURIComponent(params.limit)}`);
+      if (params.offset !== undefined) query.push(`offset=${encodeURIComponent(params.offset)}`);
+      const qs = query.join('&');
+      return `/api/mobile/fields/${fieldId}/zones/${zoneId}/cultivation/logs${qs ? `?${qs}` : ''}`;
+    },
+    cultivationProfile: (fieldId, zoneId) => `/api/mobile/fields/${fieldId}/zones/${zoneId}/cultivation/profile`,
+    cultivationLog: (fieldId, zoneId, logId) => `/api/mobile/fields/${fieldId}/zones/${zoneId}/cultivation/logs/${logId}`,
+    cultivationLogDelete: (fieldId, zoneId, logId, publicationVersion) => (
+      `/api/mobile/fields/${fieldId}/zones/${zoneId}/cultivation/logs/${logId}?publicationVersion=${encodeURIComponent(publicationVersion)}`
+    ),
   },
 
   // Health
