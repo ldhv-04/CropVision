@@ -25,12 +25,59 @@
 const express = require('express');
 const router = express.Router();
 const mobileController = require('../controllers/mobileController');
+const mobileCultivationController = require('../controllers/mobileCultivationController');
 const { authenticateToken } = require('../middleware/authMiddleware');
+
+const authenticateCultivationToken = (req, res, next) => {
+  const json = res.json;
+  res.json = function sendCultivationAuthError(body) {
+    if (res.statusCode === 401 && body?.success === false && !body.code) {
+      return json.call(this, { ...body, code: 'UNAUTHENTICATED' });
+    }
+    return json.call(this, body);
+  };
+  authenticateToken(req, res, () => {
+    res.json = json;
+    next();
+  });
+};
 
 // GET /api/mobile/fields — List fields assigned to the authenticated user
 router.get('/fields', authenticateToken, mobileController.getMyFields);
 
 // GET /api/mobile/fields/:fieldId/zone-map — Get latest published polygon-only zone map
 router.get('/fields/:fieldId/zone-map', authenticateToken, mobileController.getFieldZoneMap);
+
+// Mobile-owned cultivation data for stable zones in the latest published map.
+router.get(
+  '/fields/:fieldId/zones/:zoneId/cultivation',
+  authenticateCultivationToken,
+  mobileCultivationController.getCultivation
+);
+router.get(
+  '/fields/:fieldId/zones/:zoneId/cultivation/logs',
+  authenticateCultivationToken,
+  mobileCultivationController.getCultivationLogs
+);
+router.put(
+  '/fields/:fieldId/zones/:zoneId/cultivation/profile',
+  authenticateCultivationToken,
+  mobileCultivationController.putCultivationProfile
+);
+router.post(
+  '/fields/:fieldId/zones/:zoneId/cultivation/logs',
+  authenticateCultivationToken,
+  mobileCultivationController.postCultivationLog
+);
+router.patch(
+  '/fields/:fieldId/zones/:zoneId/cultivation/logs/:logId',
+  authenticateCultivationToken,
+  mobileCultivationController.patchCultivationLog
+);
+router.delete(
+  '/fields/:fieldId/zones/:zoneId/cultivation/logs/:logId',
+  authenticateCultivationToken,
+  mobileCultivationController.deleteCultivationLog
+);
 
 module.exports = router;
