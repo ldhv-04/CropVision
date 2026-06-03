@@ -41,6 +41,7 @@ const ZONE_STROKE_COLORS = [
 
 const SELECTED_COLOR = 'rgba(255, 193, 7, 0.5)';
 const SELECTED_STROKE = '#FF8F00';
+const shouldLogMobileFieldReview = process.env.EXPO_PUBLIC_MOBILE_FIELD_REVIEW === '1';
 
 export default function PolygonFieldMap({
   boundary,
@@ -54,9 +55,29 @@ export default function PolygonFieldMap({
 
   // Memoize SVG geometry computation
   const svgData = useMemo(() => {
+    if (shouldLogMobileFieldReview) {
+      console.log('[MobileFieldReview] polygon render input', {
+        hasBoundary: Boolean(boundary),
+        zonesCount: zones?.length,
+        selectedZoneId,
+      });
+    }
+
     if (!boundary && (!zones || zones.length === 0)) return null;
-    return buildFieldMapSvg(zones, boundary, svgWidth, svgHeight, 20);
-  }, [boundary, zones, svgWidth, svgHeight]);
+    const data = buildFieldMapSvg(zones, boundary, svgWidth, svgHeight, 20);
+
+    if (shouldLogMobileFieldReview) {
+      const pathCount = (data?.zoneSvgs || []).reduce((count, zone) => count + (zone.paths?.length || 0), 0);
+      const labelCount = (data?.zoneSvgs || []).filter((zone) => zone.centroid && zone.code).length;
+      console.log('[MobileFieldReview] polygon render output', {
+        pathCount,
+        labelCount,
+        validGeometry: Boolean(data?.valid),
+      });
+    }
+
+    return data;
+  }, [boundary, zones, selectedZoneId, svgWidth, svgHeight]);
 
   if (!svgData || !svgData.valid) {
     return (

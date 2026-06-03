@@ -162,7 +162,7 @@ export default function AgriVisionLayout() {
           }}
         />
         <Tabs.Screen
-          name="field-detail"
+          name="field-detail/[fieldId]"
           options={{
             href: null,
             headerShown: false,

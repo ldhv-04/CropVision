@@ -23,6 +23,8 @@ import {
 import { useRouter } from 'expo-router';
 import { useMobileFieldStore } from '../store/useMobileFieldStore';
 
+const shouldLogMobileFieldReview = process.env.EXPO_PUBLIC_MOBILE_FIELD_REVIEW === '1';
+
 export default function MobileFieldsScreen() {
   const router = useRouter();
   const {
@@ -37,9 +39,27 @@ export default function MobileFieldsScreen() {
     fetchFields();
   }, []);
 
+  useEffect(() => {
+    if (!shouldLogMobileFieldReview) return;
+    console.log('[MobileFieldReview] fields loaded', {
+      count: fields?.length,
+      firstFieldId: fields?.[0]?.id,
+      firstFieldName: fields?.[0]?.name,
+    });
+  }, [fields]);
+
   const handleFieldPress = (field) => {
+    const href = `/(agrivision)/field-detail/${field?.id}`;
+    if (shouldLogMobileFieldReview) {
+      console.log('[MobileFieldReview] open field detail', {
+        fieldId: field?.id,
+        href,
+      });
+    }
+
+    if (!field?.id) return;
     selectField(field.id);
-    router.push(`/(agrivision)/field-detail/${field.id}`);
+    router.push(href);
   };
 
   const formatDate = (dateStr) => {

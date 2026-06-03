@@ -23,8 +23,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMobileFieldStore } from '../store/useMobileFieldStore';
 import PolygonFieldMap from '../components/PolygonFieldMap';
 
+const shouldLogMobileFieldReview = process.env.EXPO_PUBLIC_MOBILE_FIELD_REVIEW === '1';
+
 export default function MobileFieldDetailScreen() {
-  const { fieldId } = useLocalSearchParams();
+  const params = useLocalSearchParams();
+  const rawFieldId = params.fieldId;
+  const fieldId = Array.isArray(rawFieldId) ? rawFieldId[0] : rawFieldId;
   const router = useRouter();
   const [selectedZone, setSelectedZone] = useState(null);
 
@@ -37,9 +41,25 @@ export default function MobileFieldDetailScreen() {
   } = useMobileFieldStore();
 
   useEffect(() => {
+    if (shouldLogMobileFieldReview) {
+      console.log('[MobileFieldReview] detail screen mounted', {
+        fieldId,
+      });
+    }
     if (fieldId) fetchZoneMap(fieldId);
     return () => clearZoneMap();
   }, [fieldId]);
+
+  useEffect(() => {
+    if (!shouldLogMobileFieldReview || !zoneMap) return;
+    console.log('[MobileFieldReview] zone map loaded', {
+      hasField: Boolean(zoneMap?.field),
+      hasMap: Boolean(zoneMap?.map),
+      boundaryType: zoneMap?.map?.boundary?.type,
+      zonesCount: zoneMap?.map?.zones?.length,
+      version: zoneMap?.map?.version,
+    });
+  }, [zoneMap]);
 
   const handleZonePress = useCallback((zone) => {
     setSelectedZone((prev) => (prev?.id === zone.id ? null : zone));
@@ -57,6 +77,18 @@ export default function MobileFieldDetailScreen() {
     if (!fieldId || !selectedZone?.id) return;
     router.push(`/(agrivision)/field-detail/${fieldId}/cultivation/${selectedZone.id}`);
   }, [fieldId, router, selectedZone?.id]);
+
+  if (!fieldId) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorIcon}>!</Text>
+        <Text style={styles.errorText}>Cannot load field detail because fieldId is missing.</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <Text style={styles.backBtnText}>Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   // Loading
   if (isLoadingMap) {
@@ -84,7 +116,16 @@ export default function MobileFieldDetailScreen() {
     );
   }
 
-  if (!zoneMap) return null;
+  if (!zoneMap) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.emptyZones}>No published map data loaded for this field.</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={handleRetry}>
+          <Text style={styles.retryBtnText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   const { field, map } = zoneMap;
   const zones = map?.zones || [];
