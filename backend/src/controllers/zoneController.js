@@ -711,7 +711,7 @@ const publishZones = async (req, res) => {
       success: true,
       message: 'Zones published successfully.',
       data: {
-        fieldId: parseInt(fieldId, 10),
+        fieldId,
         version: nextVersion,
         status: 'published',
         publishedAt: now,

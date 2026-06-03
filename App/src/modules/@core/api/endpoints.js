@@ -56,6 +56,7 @@ export const ENDPOINTS = {
     generatePolygon: '/api/fields/generate-polygon',
     activities: (id) => `/api/fields/${id}/activities`,
     addActivity: (id) => `/api/fields/${id}/activities`,
+    assignOwner: (id) => `/api/fields/${id}/assign-owner`,
     zonesSummary: (id) => `/api/fields/${id}/zones/summary`,
   },
 

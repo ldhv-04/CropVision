@@ -9,6 +9,25 @@ import { useState, useCallback } from 'react';
 import api from '../../@core/api/apiClient';
 import { ENDPOINTS } from '../../@core/api/endpoints';
 
+const OWNER_REQUIRED_MESSAGE = 'Field must be assigned to an owner before publishing.';
+const FIELD_OWNER_DEBUG = process.env.EXPO_PUBLIC_FIELD_OWNER_DEBUG === '1';
+
+const logFieldOwnerDebug = (event, details = {}) => {
+  if (FIELD_OWNER_DEBUG) {
+    console.debug('[FieldOwnerDebug]', event, details);
+  }
+};
+
+const getOwnerUserId = (field) => field?.owner_user_id || field?.ownerUserId || null;
+const getOwnerEmail = (field) => (
+  field?.owner_email ||
+  field?.ownerEmail ||
+  field?.owner_email_snapshot ||
+  null
+);
+
+const getErrorPayload = (err) => err?.data || err?.response?.data || err;
+
 export default function useZoneEditor(fieldId) {
   const [zones, setZones] = useState([]);
   const [parentField, setParentField] = useState(null);
@@ -33,6 +52,11 @@ export default function useZoneEditor(fieldId) {
       const zoneList = Array.isArray(payload?.zones) ? payload.zones : [];
 
       setParentField(field);
+      logFieldOwnerDebug('selected field loaded', {
+        fieldId,
+        ownerUserId: getOwnerUserId(field),
+        ownerEmail: getOwnerEmail(field),
+      });
       setZones(zoneList);
       setHasUnsavedChanges(false);
       return { field, zones: zoneList };
@@ -102,29 +126,98 @@ export default function useZoneEditor(fieldId) {
     } catch (err) {
       console.error('[ZoneEditor] validateZones error:', err.message);
       // Extract validation errors from 400 response
-      if (err.response?.data) {
-        return err.response.data;
+      if (err.data || err.response?.data) {
+        return getErrorPayload(err);
       }
       throw err;
     }
   }, [fieldId]);
 
+  // Assign registered mobile owner by email. Email is lookup-only; backend stores owner_user_id.
+  const assignFieldOwner = useCallback(async (email) => {
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+    if (!normalizedEmail) {
+      throw { message: 'Enter a registered user email.' };
+    }
+
+    if (!fieldId) {
+      throw { message: 'Field id is required before assigning an owner.' };
+    }
+
+    logFieldOwnerDebug('assign owner request', { fieldId, email: normalizedEmail });
+
+    try {
+      const res = await api.post(ENDPOINTS.fields.assignOwner(fieldId), { email: normalizedEmail });
+      const payload = res?.field || res?.data?.field || res?.data || res;
+      const ownerUserId = payload?.owner_user_id || payload?.ownerUserId || null;
+      const ownerEmail = payload?.owner_email || payload?.ownerEmail || payload?.owner_email_snapshot || normalizedEmail;
+
+      const updatedField = {
+        ...(parentField || {}),
+        id: payload?.id || parentField?.id || fieldId,
+        name: payload?.name || parentField?.name || null,
+        code: payload?.code ?? parentField?.code ?? null,
+        owner_user_id: ownerUserId,
+        ownerUserId,
+        owner_email: ownerEmail,
+        ownerEmail,
+        owner_email_snapshot: ownerEmail,
+      };
+
+      setParentField(updatedField);
+      logFieldOwnerDebug('assign owner success', {
+        fieldId,
+        ownerUserId,
+        ownerEmail,
+      });
+      return updatedField;
+    } catch (err) {
+      const payload = getErrorPayload(err);
+      logFieldOwnerDebug('assign owner failed', {
+        fieldId,
+        status: err?.status,
+        message: payload?.message || err?.message,
+      });
+      throw payload;
+    }
+  }, [fieldId, parentField]);
+
   // Publish zone map
   const publishZones = useCallback(async () => {
+    const ownerUserId = getOwnerUserId(parentField);
+    logFieldOwnerDebug('publish precheck', {
+      fieldId,
+      ownerUserId,
+      ownerEmail: getOwnerEmail(parentField),
+      zonesCount: zones.length,
+    });
+
+    if (!ownerUserId) {
+      throw {
+        message: OWNER_REQUIRED_MESSAGE,
+        errors: [{ type: 'NO_OWNER', message: OWNER_REQUIRED_MESSAGE }],
+      };
+    }
+
     try {
       const res = await api.post(ENDPOINTS.zones.publish(fieldId));
+      const payload = res?.data || res;
       setHasUnsavedChanges(false);
       // Update zone statuses locally
       setZones((prev) => prev.map((z) => ({ ...z, zone_status: 'published' })));
-      return res.data;
+      setParentField((prev) => prev ? {
+        ...prev,
+        zones_published_at: payload?.publishedAt || payload?.published_at || prev.zones_published_at,
+        zone_map_version: payload?.version || prev.zone_map_version,
+      } : prev);
+      return payload;
     } catch (err) {
-      console.error('[ZoneEditor] publishZones error:', err.message);
-      if (err.response?.data) {
-        throw err.response.data;
-      }
-      throw err;
+      const payload = getErrorPayload(err);
+      console.error('[ZoneEditor] publishZones error:', payload?.message || err.message);
+      throw payload;
     }
-  }, [fieldId]);
+  }, [fieldId, parentField, zones.length]);
 
   // Auto-generate next zone code
   const getNextZoneCode = useCallback(() => {
@@ -153,6 +246,7 @@ export default function useZoneEditor(fieldId) {
     updateZone,
     deleteZone,
     validateZones,
+    assignFieldOwner,
     publishZones,
     getNextZoneCode,
   };

@@ -412,7 +412,7 @@ const getZonesSummary = async (req, res) => {
  *
  * DEPENDENCY NOTE:
  * - Email is used ONLY for lookup, NOT as the primary relationship key.
- * - The actual relationship is owner_user_id (INTEGER FK → users.id).
+ * - The actual relationship is owner_user_id (UUID FK -> users.id).
  * - owner_email_snapshot is stored for display/debug only, not for joins/lookups.
  * - Publishing a zone map requires owner_user_id to be set.
  */

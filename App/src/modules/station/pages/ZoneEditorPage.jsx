@@ -67,6 +67,28 @@ function getZoneColor(index) {
 // ════════════════════════════════════════════════════════════════
 // INLINE STYLES — all in JS for maximum control
 // ════════════════════════════════════════════════════════════════
+const OWNER_REQUIRED_MESSAGE = 'Field must be assigned to an owner before publishing.';
+const FIELD_OWNER_DEBUG = process.env.EXPO_PUBLIC_FIELD_OWNER_DEBUG === '1';
+
+function getFieldOwnerUserId(field) {
+  return field?.owner_user_id || field?.ownerUserId || null;
+}
+
+function getFieldOwnerEmail(field) {
+  return field?.owner_email || field?.ownerEmail || field?.owner_email_snapshot || null;
+}
+
+function formatErrorMessage(err, fallback = 'Failed') {
+  if (!err) return fallback;
+  if (Array.isArray(err.errors) && err.errors.length > 0) {
+    const messages = err.errors
+      .map((entry) => (typeof entry === 'string' ? entry : entry?.message))
+      .filter(Boolean);
+    if (messages.length > 0) return messages.join(', ');
+  }
+  return err.message || fallback;
+}
+
 const S = {
   root: {
     position: 'relative',
@@ -93,6 +115,54 @@ const S = {
   },
   headerLeft: { display: 'flex', alignItems: 'center', gap: 16 },
   headerRight: { display: 'flex', alignItems: 'center', gap: 8 },
+  ownerPanel: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+    padding: '6px 8px',
+    borderRadius: 8,
+    backgroundColor: '#F8F9FA',
+    border: '1px solid #E0E0E0',
+    minWidth: 260,
+  },
+  ownerStatusRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  ownerLabel: { color: '#666', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
+  ownerBadge: (hasOwner) => ({
+    padding: '2px 6px',
+    borderRadius: 8,
+    backgroundColor: hasOwner ? '#E8F5E9' : '#FFEBEE',
+    color: hasOwner ? '#2E7D32' : '#C62828',
+    fontSize: 11,
+    fontWeight: '700',
+  }),
+  ownerControls: { display: 'flex', alignItems: 'center', gap: 6 },
+  ownerInput: {
+    flex: 1,
+    minWidth: 0,
+    padding: '6px 8px',
+    borderRadius: 6,
+    border: '1px solid #D5DDE5',
+    color: '#1a1a1a',
+    fontSize: 12,
+    backgroundColor: '#fff',
+  },
+  ownerAssignBtn: {
+    padding: '6px 10px',
+    borderRadius: 6,
+    backgroundColor: '#1976D2',
+    border: 'none',
+    cursor: 'pointer',
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+    whiteSpace: 'nowrap',
+  },
+  disabledBtn: { opacity: 0.6, cursor: 'not-allowed' },
+  ownerFeedback: (type) => ({
+    color: type === 'success' ? '#2E7D32' : '#C62828',
+    fontSize: 11,
+    lineHeight: '15px',
+  }),
   headerTitle: { color: '#1a1a1a', fontSize: 16, fontWeight: '700', margin: 0 },
   headerMeta: { color: '#888', fontSize: 12, marginTop: 2 },
   backBtn: { padding: '6px 12px', borderRadius: 6, backgroundColor: '#F5F5F5', border: 'none', cursor: 'pointer', color: '#1976D2', fontSize: 13, fontWeight: '600' },
@@ -269,7 +339,7 @@ const S = {
 export default function ZoneEditorPage({ fieldId, onBack }) {
   const {
     zones, parentField, isLoading, hasUnsavedChanges, validationResult,
-    fetchZones, createZone, updateZone, deleteZone, validateZones, publishZones, getNextZoneCode,
+    fetchZones, createZone, updateZone, deleteZone, validateZones, assignFieldOwner, publishZones, getNextZoneCode,
   } = useZoneEditor(fieldId);
 
   const [selectedZoneId, setSelectedZoneId] = useState(null);
@@ -278,6 +348,9 @@ export default function ZoneEditorPage({ fieldId, onBack }) {
   const [editVertices, setEditVertices] = useState([]);
   const [toast, setToast] = useState(null);
   const [showPublishModal, setShowPublishModal] = useState(false);
+  const [ownerEmailInput, setOwnerEmailInput] = useState('');
+  const [ownerFeedback, setOwnerFeedback] = useState(null);
+  const [isAssigningOwner, setIsAssigningOwner] = useState(false);
   const [editZoneName, setEditZoneName] = useState('');
   const [editZoneCode, setEditZoneCode] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -293,6 +366,9 @@ export default function ZoneEditorPage({ fieldId, onBack }) {
   const fieldArea = useMemo(() => parentField?.area ? parseFloat(parentField.area) : calculateAreaHectares(fieldCoords), [parentField?.area, fieldCoords]);
   const totalZoneArea = useMemo(() => zones.reduce((sum, z) => sum + (z.area ? parseFloat(z.area) : 0), 0), [zones]);
   const coverage = fieldArea > 0 ? ((totalZoneArea / fieldArea) * 100).toFixed(0) : '0';
+  const ownerUserId = useMemo(() => getFieldOwnerUserId(parentField), [parentField]);
+  const ownerEmail = useMemo(() => getFieldOwnerEmail(parentField), [parentField]);
+  const hasOwner = !!ownerUserId;
 
   const showToastMsg = useCallback((message, type = 'info') => {
     setToast({ message, type, id: Date.now() });
@@ -302,6 +378,15 @@ export default function ZoneEditorPage({ fieldId, onBack }) {
   useEffect(() => {
     if (fieldId) fetchZones();
   }, [fieldId]);
+
+  useEffect(() => {
+    if (!parentField || !FIELD_OWNER_DEBUG) return;
+    console.debug('[FieldOwnerDebug] selected field state', {
+      fieldId: parentField.id || fieldId,
+      ownerUserId,
+      ownerEmail,
+    });
+  }, [fieldId, parentField?.id, ownerUserId, ownerEmail]);
 
   useEffect(() => {
     if (selectedZone) {
@@ -570,13 +655,58 @@ export default function ZoneEditorPage({ fieldId, onBack }) {
     try { await updateZone(selectedZone.id, { code: editZoneCode || undefined, name: editZoneName || undefined }); showToastMsg('Saved', 'success'); } catch (err) { showToastMsg(err.message || 'Failed', 'error'); }
   }, [selectedZone, editZoneCode, editZoneName, updateZone, showToastMsg]);
 
+  const handleAssignOwner = useCallback(async () => {
+    const email = ownerEmailInput.trim();
+    if (!email) {
+      const message = 'Enter a registered user email.';
+      setOwnerFeedback({ type: 'error', message });
+      showToastMsg(message, 'error');
+      return;
+    }
+
+    setIsAssigningOwner(true);
+    setOwnerFeedback(null);
+    try {
+      const updatedField = await assignFieldOwner(email);
+      const assignedEmail = getFieldOwnerEmail(updatedField) || email;
+      const message = `Owner assigned: ${assignedEmail}`;
+      setOwnerEmailInput('');
+      setOwnerFeedback({ type: 'success', message });
+      showToastMsg(message, 'success');
+    } catch (err) {
+      const message = formatErrorMessage(err, 'Failed to assign owner.');
+      setOwnerFeedback({ type: 'error', message });
+      showToastMsg(message, 'error');
+    } finally {
+      setIsAssigningOwner(false);
+    }
+  }, [ownerEmailInput, assignFieldOwner, showToastMsg]);
+
   const handleValidate = useCallback(async () => {
     try { const r = await validateZones(); showToastMsg(r.valid ? 'All zones valid' : `${r.errors?.length || 0} error(s)`, r.valid ? 'success' : 'error'); } catch (err) { showToastMsg('Validation failed', 'error'); }
   }, [validateZones, showToastMsg]);
 
+  const handleOpenPublishModal = useCallback(() => {
+    if (!hasOwner) {
+      setOwnerFeedback({ type: 'error', message: OWNER_REQUIRED_MESSAGE });
+      showToastMsg(OWNER_REQUIRED_MESSAGE, 'error');
+      return;
+    }
+    setShowPublishModal(true);
+  }, [hasOwner, showToastMsg]);
+
   const handlePublish = useCallback(async () => {
     setShowPublishModal(false);
-    try { await publishZones(); showToastMsg('Published!', 'success'); } catch (err) { showToastMsg(err.errors?.join(', ') || 'Failed', 'error'); }
+    try {
+      await publishZones();
+      showToastMsg('Published!', 'success');
+    } catch (err) {
+      const message = formatErrorMessage(err, 'Failed');
+      if (Array.isArray(err?.errors) && err.errors.some((entry) => entry?.type === 'NO_OWNER')) {
+        setOwnerFeedback({ type: 'error', message });
+      }
+      showToastMsg(message, 'error');
+    }
   }, [publishZones, showToastMsg]);
 
   const handleZoomToZone = useCallback((zone) => {
@@ -620,10 +750,34 @@ export default function ZoneEditorPage({ fieldId, onBack }) {
           </div>
         </div>
         <div style={S.headerRight}>
+          <div style={S.ownerPanel}>
+            <div style={S.ownerStatusRow}>
+              <span style={S.ownerLabel}>Field Owner</span>
+              <span style={S.ownerBadge(hasOwner)}>{hasOwner ? (ownerEmail || 'Assigned') : 'Unassigned'}</span>
+            </div>
+            <div style={S.ownerControls}>
+              <input
+                style={S.ownerInput}
+                value={ownerEmailInput}
+                onChange={(e) => setOwnerEmailInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !isAssigningOwner) handleAssignOwner(); }}
+                placeholder={hasOwner ? 'Reassign by registered email' : 'owner@gmail.com'}
+                aria-label="Registered owner email"
+              />
+              <button
+                style={{ ...S.ownerAssignBtn, ...(isAssigningOwner ? S.disabledBtn : {}) }}
+                onClick={handleAssignOwner}
+                disabled={isAssigningOwner}
+              >
+                {isAssigningOwner ? 'Assigning...' : 'Assign'}
+              </button>
+            </div>
+            {ownerFeedback && <div style={S.ownerFeedback(ownerFeedback.type)}>{ownerFeedback.message}</div>}
+          </div>
           {hasUnsavedChanges && <span style={S.unsavedBadge}>● Unsaved</span>}
           {parentField?.zones_published_at && <span style={S.publishedBadge}>✓ Published</span>}
           <button style={S.validateBtn} onClick={handleValidate}>✓ Validate</button>
-          <button style={S.publishBtn} onClick={() => setShowPublishModal(true)}>🚀 Publish</button>
+          <button style={S.publishBtn} onClick={handleOpenPublishModal}>🚀 Publish</button>
         </div>
       </div>
 
@@ -760,7 +914,11 @@ export default function ZoneEditorPage({ fieldId, onBack }) {
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000 }}>
           <div style={{ backgroundColor: '#fff', borderRadius: 12, padding: 24, width: 400, maxWidth: '90%', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
             <div style={{ color: '#1a1a1a', fontSize: 18, fontWeight: '700', marginBottom: 12 }}>🚀 Publish Management Zones?</div>
-            <div style={{ color: '#666', fontSize: 13, lineHeight: '20px', marginBottom: 20 }}>This will make the current zone map available for future user-side field interaction.{'\n\n'}You can still edit and republish later.</div>
+            <div style={{ color: '#666', fontSize: 13, lineHeight: '20px', marginBottom: 20 }}>
+              This will make the current zone map available for the assigned field owner.
+              {'\n\n'}Owner: {ownerEmail || ownerUserId}
+              {'\n\n'}You can still edit and republish later.
+            </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
               <button style={{ padding: '10px 20px', borderRadius: 8, backgroundColor: '#F5F5F5', border: 'none', cursor: 'pointer', color: '#666', fontSize: 13, fontWeight: '600' }} onClick={() => setShowPublishModal(false)}>Cancel</button>
               <button style={{ padding: '10px 20px', borderRadius: 8, backgroundColor: '#1976D2', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: '700' }} onClick={handlePublish}>Publish</button>
@@ -810,4 +968,4 @@ const ZoneMapCanvas = React.memo(({ containerRef }) => {
       data-zone-editor-map
     />
   );
-});                                                                                                                                                       
+});
