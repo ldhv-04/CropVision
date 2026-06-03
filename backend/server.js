@@ -48,7 +48,6 @@ app.use('/api/homepage', homepageRoutes);          // /api/homepage/summary, /ap
 // No satellite tiles, no MapLibre, no draft zones exposed.
 app.use('/api/mobile', mobileRoutes);              // /api/mobile/fields, /api/mobile/fields/:fieldId/zone-map
 
-// Khoi dong server sau khi dam bao tai khoan admin co dinh da duoc tao trong DB.
 const startServer = async () => {
   try {
     const adminUser = await ensureFixedAdminAccount();
@@ -63,4 +62,10 @@ const startServer = async () => {
   }
 };
 
-startServer();
+if (require.main === module) {
+  // Khoi dong server sau khi dam bao tai khoan admin co dinh da duoc tao trong DB.
+  startServer();
+}
+
+module.exports = app;
+module.exports.startServer = startServer;

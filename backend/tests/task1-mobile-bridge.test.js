@@ -16,6 +16,8 @@ let adminToken = null;
 let userToken = null;
 let testUserId = null;
 let testFieldId = null;
+let testEmail = null;
+let otherEmail = null;
 
 function req(method, path, body, token) {
   return new Promise((resolve, reject) => {
@@ -75,7 +77,7 @@ async function main() {
 
   // ── Step 2: Register a test mobile user ──────────
   console.log('\n── Step 2: Register test mobile user ──');
-  const testEmail = `testmobile_${Date.now()}@gmail.com`;
+  testEmail = `testmobile_${Date.now()}@gmail.com`;
   const regRes = await req('POST', '/api/auth/register', {
     fullName: 'Test Mobile User',
     email: testEmail,
@@ -104,25 +106,16 @@ async function main() {
 
   // ── Step 3: Get or create a test field ───────────
   console.log('\n── Step 3: Get or create a test field ──');
-  const fieldsRes = await req('GET', '/api/fields', null, adminToken);
-  console.log(`  Admin fields: ${fieldsRes.status}, count: ${fieldsRes.body?.data?.length || 0}`);
-
-  if (fieldsRes.body?.data?.length > 0) {
-    testFieldId = fieldsRes.body.data[0].id;
-    console.log(`  Using existing field: ${testFieldId}`);
-  } else {
-    // Create a test field
-    const createRes = await req('POST', '/api/fields', {
-      name: 'Test Field',
-      crop_type: 'rice',
-      boundary: {
-        type: 'Polygon',
-        coordinates: [[[106.6, 10.8], [106.7, 10.8], [106.7, 10.9], [106.6, 10.9], [106.6, 10.8]]],
-      },
-    }, adminToken);
-    testFieldId = createRes.body?.data?.id;
-    console.log(`  Created field: ${testFieldId}`);
-  }
+  const createRes = await req('POST', '/api/fields', {
+    name: `Task 1 Mobile Bridge ${Date.now()}`,
+    crop_type: 'rice',
+    boundary: {
+      type: 'Polygon',
+      coordinates: [[[106.6, 10.8], [106.7, 10.8], [106.7, 10.9], [106.6, 10.9], [106.6, 10.8]]],
+    },
+  }, adminToken);
+  testFieldId = createRes.body?.data?.id;
+  console.log(`  Created disposable field: ${testFieldId}`);
   assert(!!testFieldId, `Test field ID: ${testFieldId}`);
 
   // ── Step 4: Assign owner by email ────────────────
@@ -250,7 +243,7 @@ async function main() {
   console.log('\n── Step 8: Cross-user authorization ──');
 
   // Register another user who should NOT see the field
-  const otherEmail = `other_${Date.now()}@gmail.com`;
+  otherEmail = `other_${Date.now()}@gmail.com`;
   await req('POST', '/api/auth/register', {
     fullName: 'Other User',
     email: otherEmail,
@@ -275,10 +268,14 @@ async function main() {
 
   // ── Cleanup ──────────────────────────────────────
   console.log('\n── Cleanup ──');
-  // Clean up test data
+  // Clean up exact disposable test data.
+  await pool.query('DELETE FROM zone_cultivation_logs WHERE field_id = $1', [testFieldId]);
+  await pool.query('DELETE FROM zone_cultivation_profiles WHERE field_id = $1', [testFieldId]);
   await pool.query('DELETE FROM field_zone_maps WHERE field_id = $1', [testFieldId]);
-  // Don't delete the field or user - they may be needed for further testing
-  console.log(`  Cleaned up zone maps for field ${testFieldId}`);
+  await pool.query('DELETE FROM sub_zones WHERE field_id = $1', [testFieldId]);
+  await pool.query('DELETE FROM fields WHERE id = $1', [testFieldId]);
+  await pool.query('DELETE FROM users WHERE email = ANY($1::text[])', [[testEmail, otherEmail].filter(Boolean)]);
+  console.log(`  Cleaned up disposable field ${testFieldId}`);
   await pool.end();
 
   // ── Summary ──────────────────────────────────────
