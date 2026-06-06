@@ -1,35 +1,14 @@
 /**
- * MenuWidget — Sidebar navigation with smart farming sections.
+ * MenuWidget — legacy GridShell sidebar compatibility renderer.
  *
- * Sections:
- *   PHÂN TÍCH  — Agrivision inference compatibility, Dashboard overview
- *   QUẢN LÝ   — Sample history, Admin
- *
+ * Route data lives in ../compat/menuRoutes so mixed owner links are explicit.
  * Uses useTheme() for dynamic dark/light mode color resolution.
  */
 
 import { router, usePathname } from 'expo-router';
 import { useAuthStore } from '../../../auth/useAuthStore';
 import { useTheme } from '../../../context/ThemeContext';
-
-const NAV_SECTIONS = [
-  {
-    label: 'Phân tích',
-    items: [
-      { label: 'Tổng quan',     href: '/(agrivision)', key: 'dashboard', icon: '📊' },
-      { label: 'Phân tích ảnh', href: '/(agrivision)/inference', key: 'analysis', icon: '🔬' },
-    ],
-  },
-  {
-    label: 'Quản lý',
-    items: [
-      { label: 'Cánh đồng',   href: '/fields',  key: 'fields',  icon: '🌾' },
-      { label: 'Lịch sử mẫu', href: '/history', key: 'history', icon: '📋' },
-      { label: 'Cảnh báo',    href: '/alerts',  key: 'alerts',  icon: '🚨', adminOnly: true },
-      { label: 'Quản trị',    href: '/system',  key: 'system',  icon: '⚙️', adminOnly: true },
-    ],
-  },
-];
+import { COMPAT_MENU_SECTIONS } from '../compat/menuRoutes';
 
 export function MenuWidget() {
   const pathname   = usePathname();
@@ -38,7 +17,7 @@ export function MenuWidget() {
   const isAdmin    = user?.role === 'admin';
   const { colors } = useTheme();
 
-  const activeKey = NAV_SECTIONS.flatMap((s) => s.items)
+  const activeKey = COMPAT_MENU_SECTIONS.flatMap((s) => s.items)
     .find((i) => pathname.includes(i.key) || (i.key === 'analysis' && pathname.includes('inference')))?.key ?? 'dashboard';
 
   const menuWidgetStyle = {
@@ -80,7 +59,7 @@ export function MenuWidget() {
     <div style={menuWidgetStyle}>
       {/* Navigation sections */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {NAV_SECTIONS.map((section) => {
+        {COMPAT_MENU_SECTIONS.map((section) => {
           const visibleItems = section.items.filter((i) => !i.adminOnly || isAdmin);
           if (!visibleItems.length) return null;
           return (
