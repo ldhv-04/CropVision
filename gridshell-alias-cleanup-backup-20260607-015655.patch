@@ -1,0 +1,86 @@
+﻿diff --git a/App/e2e/test_nav.spec.ts b/App/e2e/test_nav.spec.ts
+index c0e1a42..34981e5 100644
+--- a/App/e2e/test_nav.spec.ts
++++ b/App/e2e/test_nav.spec.ts
+@@ -2,18 +2,33 @@ import { test, expect } from '@playwright/test';
+ 
+ const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL || 'admin@cropvision.local';
+ const ADMIN_PASS = process.env.TEST_ADMIN_PASS || 'Admin@123';
++const API_ORIGIN = process.env.TEST_API_ORIGIN || process.env.EXPO_PUBLIC_API_ORIGIN || 'http://127.0.0.1:3000';
++
++test('admin navigation stays within Station ownership', async ({ page, request }) => {
++  const health = await request.get(`${API_ORIGIN}/api/health`, { timeout: 5000 }).catch((error) => {
++    throw new Error(`Backend unavailable at ${API_ORIGIN}. Start backend before Playwright. Cause: ${error.message}`);
++  });
++  expect(health.ok(), `Backend health check failed at ${API_ORIGIN}/api/health with ${health.status()}`).toBeTruthy();
+ 
+-test('admin navigation stays within Station ownership', async ({ page }) => {
+   await page.goto('/login');
+ 
+-  await page.getByPlaceholder('Nhap email').or(page.getByPlaceholder('Nhập email')).click();
+-  await page.getByPlaceholder('Nhap email').or(page.getByPlaceholder('Nhập email')).pressSequentially(ADMIN_EMAIL);
+-  await page.getByPlaceholder('Nhap mat khau').or(page.getByPlaceholder('Nhập mật khẩu')).click();
+-  await page.getByPlaceholder('Nhap mat khau').or(page.getByPlaceholder('Nhập mật khẩu')).pressSequentially(ADMIN_PASS);
++  await page.locator('#login-email').click();
++  await page.locator('#login-email').pressSequentially(ADMIN_EMAIL);
++  await page.locator('#login-password').click();
++  await page.locator('#login-password').pressSequentially(ADMIN_PASS);
++
++  await page.getByTestId('login-submit').click();
++  await expect(page).not.toHaveURL(/\/login/, { timeout: 30000 });
+ 
+-  await page.locator('text=Đăng nhập').or(page.locator('text=Dang nhap')).last().click();
+-  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 25000 });
++  const stationShell = page
++    .getByTestId('soilzepro-shell')
++    .or(page.getByTestId('soilzepro-content'))
++    .or(page.getByTestId('station-dashboard-map-shell'))
++    .or(page.getByTestId('station-dashboard'))
++    .filter({ visible: true })
++    .first();
++  await expect(stationShell).toBeVisible({ timeout: 30000 });
+ 
+   await expect(page).not.toHaveURL(/analysis/);
+-  await expect(page.locator('button:has-text("Phân tích ảnh")')).toHaveCount(0);
++  await expect(page.getByText(/Ph.n t.ch .nh/i)).toHaveCount(0);
+ });
+diff --git a/App/playwright.config.ts b/App/playwright.config.ts
+index 916c20a..e44a91f 100644
+--- a/App/playwright.config.ts
++++ b/App/playwright.config.ts
+@@ -1,13 +1,14 @@
+ import { defineConfig } from '@playwright/test';
+ 
++const E2E_PORT = Number(process.env.PLAYWRIGHT_PORT || 8082);
++const API_ORIGIN = process.env.EXPO_PUBLIC_API_ORIGIN || 'http://127.0.0.1:3000';
++
+ export default defineConfig({
+   testDir: './e2e',
+   fullyParallel: false,
+   reporter: 'list',
+   use: {
+-    // [M4] Expo Web dev server runs on port 8081 by default (not 3000).
+-    //       Update this if you change the port in package.json "web" script.
+-    baseURL: 'http://localhost:8081',
++    baseURL: `http://localhost:${E2E_PORT}`,
+     trace: 'on-first-retry',
+     // Give each test enough time for API calls + Expo render
+     actionTimeout: 15000,
+@@ -15,12 +16,11 @@ export default defineConfig({
+   },
+   timeout: 60000,
+   webServer: {
+-    // [M4] Start Expo Web dev server for E2E tests.
+-    //       Uses port 8081 to match the baseURL above.
+-    //       NODE_OPTIONS bumped to 4 GB to avoid OOM during Metro bundling.
+-    command: 'cross-env NODE_OPTIONS="--max_old_space_size=4096" npx expo start --web --port 8081',
+-    port: 8081,
+-    reuseExistingServer: true,
++    // Force localhost API origin so Android emulator .env values do not leak
++    // into desktop browser tests.
++    command: `cross-env NODE_OPTIONS="--max_old_space_size=4096" EXPO_PUBLIC_API_ORIGIN=${API_ORIGIN} npx expo start --web --port ${E2E_PORT}`,
++    port: E2E_PORT,
++    reuseExistingServer: false,
+     timeout: 120000,
+   },
+ });

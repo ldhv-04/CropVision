@@ -163,15 +163,13 @@ export const LAYOUT_VARIANTS = {
 // ─── Route → Variant Mapping ────────────────────────────────────────────────
 
 export const ROUTE_VARIANT_MAP = [
-  { pattern: '/dashboard', variant: 'dashboard' },
   { pattern: '/(station)', variant: 'dashboard' },
   { pattern: '/(agrivision)/inference', variant: 'inference' },
-  // Legacy alias kept for route-addressable compatibility during cleanup.
-  { pattern: '/analysis', variant: 'inference' },
+  // Legacy inference URL retained for direct /inference compatibility only.
   { pattern: '/inference', variant: 'inference' },
+  // Legacy admin/content aliases retained until owner routes replace these screens.
   { pattern: '/system', variant: 'admin' },
   { pattern: '/history', variant: 'admin' },
-  { pattern: '/admin', variant: 'admin' },
   { pattern: '/alerts', variant: 'admin' },
   { pattern: '/fields', variant: 'admin' },
   // Default → dashboard (defined below)

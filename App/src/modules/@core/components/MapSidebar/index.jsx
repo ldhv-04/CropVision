@@ -7,7 +7,7 @@ const NAV_SECTIONS = [
   {
     label: 'Phân tích',
     items: [
-      { label: 'Tổng quan',     href: '/dashboard', key: 'dashboard', icon: '📊' },
+      { label: 'Tổng quan',     href: '/(station)', key: 'dashboard', icon: '📊' },
     ],
   },
   {

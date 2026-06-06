@@ -16,7 +16,7 @@ const NAV_SECTIONS = [
   {
     label: 'Phân tích',
     items: [
-      { label: 'Tổng quan',     href: '/dashboard', key: 'dashboard', icon: '📊' },
+      { label: 'Tổng quan',     href: '/(agrivision)', key: 'dashboard', icon: '📊' },
       { label: 'Phân tích ảnh', href: '/(agrivision)/inference', key: 'analysis', icon: '🔬' },
     ],
   },
