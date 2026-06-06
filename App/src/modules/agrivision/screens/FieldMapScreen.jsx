@@ -6,6 +6,7 @@ import FieldMapCanvas from '../components/map/FieldMapCanvas';
 import MapColorLegend from '../components/map/MapColorLegend';
 import TopBar from '../components/controls/TopBar';
 import BottomDrawer from '../components/panels/BottomDrawer';
+import FieldsLegacyScreen from './FieldsLegacyScreen';
 
 /**
  * FieldMapScreen — Primary map-first field management screen.
@@ -47,15 +48,7 @@ export default function FieldMapScreen() {
     statusCounts,
   } = useFieldSelector();
 
-  // Lazy-load legacy fields screen for list view
-  let LegacyFieldsScreen = null;
-  if (viewMode === 'list') {
-    try {
-      LegacyFieldsScreen = require('../../../app/(agrivision)/fieldsLegacy').default;
-    } catch {
-      // Legacy screen not available, stay in map mode
-    }
-  }
+  const LegacyFieldsScreen = FieldsLegacyScreen;
 
   // Auto-select first field if none selected
   useEffect(() => {
