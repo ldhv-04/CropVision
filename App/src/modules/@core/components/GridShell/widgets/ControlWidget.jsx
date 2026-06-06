@@ -1,28 +1,7 @@
 /**
- * ControlWidget — Upload + Analyze action panel
+ * Compatibility export.
  *
- * Hiển thị 2 nút: "Chọn ảnh" và "Phân tích ngay" từ InferenceActionPanel.
- * Được căn giữa trong vùng Control của inference layout.
+ * ControlWidget is Agrivision/inference-owned and now lives under src/modules/agrivision.
  */
 
-import { InferenceActionPanel } from '../../../../inference/components/InferenceActionPanel';
-import { ws } from '../styles';
-import { useTheme } from '../../../context/ThemeContext';
-
-export function ControlWidget() {
-  const { colors } = useTheme();
-  
-  return (
-    <div style={{
-      ...ws.fill,
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '12px 16px',
-      backgroundColor: colors.surfaceAlt,
-      borderRadius: 8,
-      borderTop: `1px solid ${colors.border}`,
-    }}>
-      <InferenceActionPanel />
-    </div>
-  );
-}
+export { ControlWidget, default } from '../../../../agrivision/widgets/GridShell/ControlWidget';
