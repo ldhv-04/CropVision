@@ -45,7 +45,7 @@ export function InferenceActionPanel() {
     let fieldCoords = null;
     if (selectedFieldId && fields?.length > 0) {
       const field = fields.find((f) => f.id === selectedFieldId);
-      if (field?.latitude && field?.longitude) {
+      if (field?.latitude != null && field?.longitude != null) {
         fieldCoords = { latitude: field.latitude, longitude: field.longitude };
       }
     }

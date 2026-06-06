@@ -142,29 +142,36 @@ const useInferenceStore = create((set, get) => ({
     const { selectedAsset } = get();
     if (!selectedAsset?.uri) return;
 
+    const totalStart = getNowMs();
     set({ isAnalyzing: true, error: null });
 
     try {
       // [M2] Delegate FormData construction to helper (reduces cognitive load here)
+      const prepStart = getNowMs();
       const formData = await get()._buildImageFormData(selectedAsset);
+      const imagePrepMs = getNowMs() - prepStart;
 
       // [AgriVision] Inject field context if provided
       if (fieldId) formData.append('field_id', fieldId);
 
       // [GPS] Capture location — prefer field coords, fallback to device GPS
-      let coords = fieldCoords;
+      const contextStart = getNowMs();
+      let coords = normalizeCoordinates(fieldCoords);
       if (!coords) {
-        coords = await get()._captureGPS();
+        coords = normalizeCoordinates(await get()._captureGPS());
       }
       if (coords) {
         formData.append('latitude', String(coords[0]));
         formData.append('longitude', String(coords[1]));
       }
+      const contextMs = getNowMs() - contextStart;
 
+      const uploadStart = getNowMs();
       const data = await apiRequest(ENDPOINTS.inference.analyze, {
         method: 'POST',
         body:   formData,
       }, token);
+      const uploadMs = getNowMs() - uploadStart;
 
       if (data.success) {
         set({
@@ -179,13 +186,31 @@ const useInferenceStore = create((set, get) => ({
           focusMode:              'all',
           isAnalyzing:            false,
         });
+        logInferenceTiming('client-runInference', {
+          imagePrepMs,
+          contextMs,
+          uploadMs,
+          totalMs: getNowMs() - totalStart,
+          boxes: data.data?.boxes?.length ?? 0,
+          hasFieldContext: Boolean(fieldId),
+        });
       } else {
         set({ error: data.message, isAnalyzing: false });
+        logInferenceTiming('client-runInference-unsuccessful', {
+          imagePrepMs,
+          contextMs,
+          uploadMs,
+          totalMs: getNowMs() - totalStart,
+        });
       }
     } catch (err) {
       set({
         error: 'Không thể kết nối đến máy chủ. Hãy chắc chắn backend và AI Core đang chạy.',
         isAnalyzing: false,
+      });
+      logInferenceTiming('client-runInference-error', {
+        totalMs: getNowMs() - totalStart,
+        message: err?.message,
       });
     }
   },
@@ -216,5 +241,44 @@ const useInferenceStore = create((set, get) => ({
   clearSelection:   ()       => set({ selectedDetectionIndex: null, hoveredDetectionIndex: null }),
   clearError:       ()       => set({ error: null }),
 }));
+
+function normalizeCoordinates(coords) {
+  if (!coords) return null;
+
+  const latitude = Array.isArray(coords)
+    ? coords[0]
+    : coords.latitude ?? coords.lat;
+  const longitude = Array.isArray(coords)
+    ? coords[1]
+    : coords.longitude ?? coords.lng ?? coords.lon;
+
+  const lat = Number(latitude);
+  const lon = Number(longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+
+  return [lat, lon];
+}
+
+function getNowMs() {
+  return typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now()
+    : Date.now();
+}
+
+function isDevRuntime() {
+  if (typeof __DEV__ !== 'undefined') return Boolean(__DEV__);
+  return process.env.NODE_ENV !== 'production';
+}
+
+function logInferenceTiming(label, metrics) {
+  if (!isDevRuntime()) return;
+  const rounded = Object.fromEntries(
+    Object.entries(metrics).map(([key, value]) => [
+      key,
+      typeof value === 'number' ? Math.round(value) : value,
+    ])
+  );
+  console.info(`[InferenceTiming] ${label}`, rounded);
+}
 
 export { useInferenceStore };

@@ -11,3 +11,4 @@ export { default as RecommendationsPage } from './RecommendationsPage';
 export { default as InterventionsPage } from './InterventionsPage';
 export { default as ReportsPage } from './ReportsPage';
 export { default as SettingsPage } from './SettingsPage';
+export { default as SystemPage } from './SystemPage';

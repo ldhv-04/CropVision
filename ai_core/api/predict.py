@@ -1,5 +1,7 @@
 import base64
 import io
+import os
+import time
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from PIL import Image, ImageOps
@@ -26,6 +28,7 @@ def healthcheck():
 
 @router.post("/predict", response_model=PredictionResult)
 async def predict(file: UploadFile = File(...)):
+    total_start = time.perf_counter()
     # Validate MIME type truoc khi doc noi dung.
     if file.content_type not in ALLOWED_CONTENT_TYPES:
         raise HTTPException(
@@ -38,6 +41,7 @@ async def predict(file: UploadFile = File(...)):
     total = 0
     chunk_size = 1024 * 64  # 64 KB
 
+    read_start = time.perf_counter()
     while True:
         chunk = await file.read(chunk_size)
         if not chunk:
@@ -46,17 +50,25 @@ async def predict(file: UploadFile = File(...)):
         if total > MAX_FILE_SIZE_BYTES:
             raise HTTPException(status_code=413, detail="Kich thuoc file vuot qua gioi han 10 MB.")
         buffer.write(chunk)
+    read_ms = (time.perf_counter() - read_start) * 1000
 
+    decode_start = time.perf_counter()
     buffer.seek(0)
     image = Image.open(buffer).convert("RGB")
     image = ImageOps.exif_transpose(image)
+    decode_ms = (time.perf_counter() - decode_start) * 1000
 
+    predict_start = time.perf_counter()
     results = model.predict(source=image, conf=0.25)
+    predict_ms = (time.perf_counter() - predict_start) * 1000
 
+    encode_start = time.perf_counter()
     img_buffer = io.BytesIO()
     image.save(img_buffer, format="JPEG")
     img_base64_str = base64.b64encode(img_buffer.getvalue()).decode("utf-8")
+    encode_ms = (time.perf_counter() - encode_start) * 1000
 
+    postprocess_start = time.perf_counter()
     extracted_boxes = []
     for box in results[0].boxes:
         coords = box.xyxy[0].tolist()
@@ -74,6 +86,23 @@ async def predict(file: UploadFile = File(...)):
                 "class_name": class_name,
             }
         )
+    postprocess_ms = (time.perf_counter() - postprocess_start) * 1000
+
+    log_inference_timing(
+        "ai-core-predict",
+        {
+            "readMs": round(read_ms),
+            "decodeMs": round(decode_ms),
+            "predictMs": round(predict_ms),
+            "encodeMs": round(encode_ms),
+            "postprocessMs": round(postprocess_ms),
+            "totalMs": round((time.perf_counter() - total_start) * 1000),
+            "bytes": total,
+            "boxes": len(extracted_boxes),
+            "width": image.width,
+            "height": image.height,
+        },
+    )
 
     return {
         "success": True,
@@ -83,3 +112,9 @@ async def predict(file: UploadFile = File(...)):
         "image_width": image.width,
         "image_height": image.height,
     }
+
+
+def log_inference_timing(label: str, metrics: dict):
+    if os.getenv("ENV") == "production" or os.getenv("INFERENCE_TIMING_LOGS") != "1":
+        return
+    print(f"[InferenceTiming] {label} {metrics}")

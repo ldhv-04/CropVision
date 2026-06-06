@@ -49,16 +49,31 @@ export default function DiagnosisResultScreen() {
   }, [detections]);
 
   const fetchDiseaseInfo = async (className) => {
+    const detailStart = getNowMs();
     setLoadingDetails(true);
     try {
       const res = await apiRequest(`/api/chat/diseases/class/${className}`, {}, token);
       if (res.success) {
         setDiseaseDetails(res.data);
+        logDiagnosisTiming('disease-detail-fetch', {
+          totalMs: getNowMs() - detailStart,
+          className,
+          hasDetails: Boolean(res.data),
+        });
       } else {
         console.warn('[DiagnosisResult] Fetch disease info unsuccessful:', res.message);
+        logDiagnosisTiming('disease-detail-fetch-unsuccessful', {
+          totalMs: getNowMs() - detailStart,
+          className,
+        });
       }
     } catch (err) {
       console.warn('[DiagnosisResult] Fetch disease info failed:', err.message);
+      logDiagnosisTiming('disease-detail-fetch-error', {
+        totalMs: getNowMs() - detailStart,
+        className,
+        message: err?.message,
+      });
     } finally {
       setLoadingDetails(false);
     }
@@ -729,3 +744,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
+function getNowMs() {
+  return typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now()
+    : Date.now();
+}
+
+function isDevRuntime() {
+  if (typeof __DEV__ !== 'undefined') return Boolean(__DEV__);
+  return process.env.NODE_ENV !== 'production';
+}
+
+function logDiagnosisTiming(label, metrics) {
+  if (!isDevRuntime()) return;
+  const rounded = Object.fromEntries(
+    Object.entries(metrics).map(([key, value]) => [
+      key,
+      typeof value === 'number' ? Math.round(value) : value,
+    ])
+  );
+  console.info(`[InferenceTiming] ${label}`, rounded);
+}

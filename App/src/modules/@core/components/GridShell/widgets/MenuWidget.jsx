@@ -2,7 +2,7 @@
  * MenuWidget — Sidebar navigation with smart farming sections.
  *
  * Sections:
- *   PHÂN TÍCH  — Inference analysis, Dashboard overview
+ *   PHÂN TÍCH  — Agrivision inference compatibility, Dashboard overview
  *   QUẢN LÝ   — Sample history, Admin
  *
  * Uses useTheme() for dynamic dark/light mode color resolution.
@@ -17,7 +17,7 @@ const NAV_SECTIONS = [
     label: 'Phân tích',
     items: [
       { label: 'Tổng quan',     href: '/dashboard', key: 'dashboard', icon: '📊' },
-      { label: 'Phân tích ảnh', href: '/analysis', key: 'analysis', icon: '🔬' },
+      { label: 'Phân tích ảnh', href: '/(agrivision)/inference', key: 'analysis', icon: '🔬' },
     ],
   },
   {

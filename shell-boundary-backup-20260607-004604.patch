@@ -1,0 +1,1028 @@
+﻿diff --git a/App/app/(agrivision)/diagnosis-result.js b/App/app/(agrivision)/diagnosis-result.js
+index 65bb4fa..66c5041 100644
+--- a/App/app/(agrivision)/diagnosis-result.js
++++ b/App/app/(agrivision)/diagnosis-result.js
+@@ -49,16 +49,31 @@ export default function DiagnosisResultScreen() {
+   }, [detections]);
+ 
+   const fetchDiseaseInfo = async (className) => {
++    const detailStart = getNowMs();
+     setLoadingDetails(true);
+     try {
+       const res = await apiRequest(`/api/chat/diseases/class/${className}`, {}, token);
+       if (res.success) {
+         setDiseaseDetails(res.data);
++        logDiagnosisTiming('disease-detail-fetch', {
++          totalMs: getNowMs() - detailStart,
++          className,
++          hasDetails: Boolean(res.data),
++        });
+       } else {
+         console.warn('[DiagnosisResult] Fetch disease info unsuccessful:', res.message);
++        logDiagnosisTiming('disease-detail-fetch-unsuccessful', {
++          totalMs: getNowMs() - detailStart,
++          className,
++        });
+       }
+     } catch (err) {
+       console.warn('[DiagnosisResult] Fetch disease info failed:', err.message);
++      logDiagnosisTiming('disease-detail-fetch-error', {
++        totalMs: getNowMs() - detailStart,
++        className,
++        message: err?.message,
++      });
+     } finally {
+       setLoadingDetails(false);
+     }
+@@ -729,3 +744,25 @@ const styles = StyleSheet.create({
+     fontWeight: '700',
+   },
+ });
++
++function getNowMs() {
++  return typeof performance !== 'undefined' && typeof performance.now === 'function'
++    ? performance.now()
++    : Date.now();
++}
++
++function isDevRuntime() {
++  if (typeof __DEV__ !== 'undefined') return Boolean(__DEV__);
++  return process.env.NODE_ENV !== 'production';
++}
++
++function logDiagnosisTiming(label, metrics) {
++  if (!isDevRuntime()) return;
++  const rounded = Object.fromEntries(
++    Object.entries(metrics).map(([key, value]) => [
++      key,
++      typeof value === 'number' ? Math.round(value) : value,
++    ])
++  );
++  console.info(`[InferenceTiming] ${label}`, rounded);
++}
+diff --git a/App/app/(main)/_layout.js b/App/app/(main)/_layout.js
+index 447ab1d..efb67f0 100644
+--- a/App/app/(main)/_layout.js
++++ b/App/app/(main)/_layout.js
+@@ -1,4 +1,4 @@
+-import { Slot, Redirect } from 'expo-router';
++import { Slot, Redirect, usePathname } from 'expo-router';
+ import { Platform } from 'react-native';
+ import { useAuthStore } from '../../src/modules/@core/auth/useAuthStore';
+ import { AppShell } from '../../src/modules/@core/components/AppShell';
+@@ -14,7 +14,14 @@ if (Platform.OS === 'web') {
+ }
+ 
+ /**
+- * Main group layout.
++ * Legacy Main group layout.
++ *
++ * Current product ownership is split between:
++ * - Station/Admin: `/(station)`
++ * - Agrivision/User: `/(agrivision)`
++ *
++ * Keep this route group as a compatibility surface until legacy URLs and tests
++ * are migrated. New feature work should not target `/(main)`.
+  *
+  * On web/Electron: renders the full GridStack dashboard (Phase 1).
+  *   Widgets: NavWidget | MenuWidget | UserWidget | CanvasWidget |
+@@ -24,11 +31,21 @@ if (Platform.OS === 'web') {
+  */
+ export default function MainLayout() {
+   const token = useAuthStore((s) => s.token);
++  const user = useAuthStore((s) => s.user);
++  const pathname = usePathname();
+ 
+   if (!Boolean(token)) {
+     return <Redirect href="/welcome" />;
+   }
+ 
++  if (pathname.includes('/analysis')) {
++    return <Redirect href="/(agrivision)/inference" />;
++  }
++
++  if (pathname.includes('/admin') || pathname.includes('/dashboard')) {
++    return <Redirect href={user?.role === 'admin' ? '/(station)' : '/(agrivision)'} />;
++  }
++
+   // ── Web/Electron: GridStack layout ──
+   if (Platform.OS === 'web' && GridShell) {
+     // GridShell manages its own content via usePathname — no <Slot /> needed
+diff --git a/App/app/(main)/admin.js b/App/app/(main)/admin.js
+index c986945..6d6638d 100644
+--- a/App/app/(main)/admin.js
++++ b/App/app/(main)/admin.js
+@@ -1,14 +1,8 @@
+ import { Redirect } from 'expo-router';
+ import { useAuthStore } from '../../src/modules/@core/auth/useAuthStore';
+-import { AdminLayout } from '../../src/modules/admin/components/AdminLayout';
+ 
+ export default function AdminScreen() {
+   const user = useAuthStore((s) => s.user);
+ 
+-  // Route-level role gating
+-  if (user?.role !== 'admin') {
+-    return <Redirect href="/inference" />;
+-  }
+-
+-  return <AdminLayout />;
++  return <Redirect href={user?.role === 'admin' ? '/(station)' : '/(agrivision)'} />;
+ }
+diff --git a/App/app/(main)/alerts.js b/App/app/(main)/alerts.js
+index 4d95ab8..6faa9a5 100644
+--- a/App/app/(main)/alerts.js
++++ b/App/app/(main)/alerts.js
+@@ -1,6 +1,6 @@
+ /**
+- * Alert Management — Expo Route
+- * Re-exports the shared module component for Expo Router.
++ * Legacy alert management route.
++ * Kept for compatibility until Station route migration is fully verified.
+  */
+ 
+-export { default } from '../../src/modules/admin/components/AlertsAdminScreen';
+\ No newline at end of file
++export { default } from '../../src/modules/admin/components/AlertsAdminScreen';
+diff --git a/App/app/(main)/analysis.js b/App/app/(main)/analysis.js
+index d0a1e0b..1baa19e 100644
+--- a/App/app/(main)/analysis.js
++++ b/App/app/(main)/analysis.js
+@@ -1,5 +1,5 @@
+-import { InferenceLayout } from '../../src/modules/inference/components/InferenceLayout';
++import { Redirect } from 'expo-router';
+ 
+ export default function AnalysisScreen() {
+-  return <InferenceLayout />;
++  return <Redirect href="/(agrivision)/inference" />;
+ }
+diff --git a/App/app/(main)/dashboard.js b/App/app/(main)/dashboard.js
+index 011afcb..ca853a8 100644
+--- a/App/app/(main)/dashboard.js
++++ b/App/app/(main)/dashboard.js
+@@ -1,10 +1,7 @@
+-/**
+- * Dashboard page — Smart Farming Overview
+- * Uses the GridShell 'dashboard' layout variant which renders:
+- *   OverviewStats, Map, SensorGrid, AlertsFeed, Nav, Menu, User
+- */
+-import { GridShell } from '../../src/modules/@core/components/GridShell';
++import { Redirect } from 'expo-router';
++import { useAuthStore } from '../../src/modules/@core/auth/useAuthStore';
+ 
+ export default function DashboardScreen() {
+-  return <GridShell />;
++  const user = useAuthStore((s) => s.user);
++  return <Redirect href={user?.role === 'admin' ? '/(station)' : '/(agrivision)'} />;
+ }
+diff --git a/App/app/(main)/history.js b/App/app/(main)/history.js
+index ce67825..193e3b4 100644
+--- a/App/app/(main)/history.js
++++ b/App/app/(main)/history.js
+@@ -1,6 +1,7 @@
+ import { useAuthStore } from '../../src/modules/@core/auth/useAuthStore';
+ import SampleList from '../../src/modules/history/components/SampleList';
+ 
++// Legacy sample-history route. Keep until owner-specific history routes exist.
+ export default function HistoryScreen() {
+   const token = useAuthStore((s) => s.token);
+   const user = useAuthStore((s) => s.user);
+diff --git a/App/app/(station)/system.js b/App/app/(station)/system.js
+index e7a3def..5f137b4 100644
+--- a/App/app/(station)/system.js
++++ b/App/app/(station)/system.js
+@@ -1,213 +1 @@
+-/**
+- * CropVision Station — System Manager
+- *
+- * Admin management panel with:
+- * - Users table: view, change role, delete
+- * - Samples table: view detections, delete
+- * Theme-aware: uses useTheme() for light/dark mode support.
+- */
+-
+-import { useEffect, useState } from 'react';
+-import {
+-  View, Text, ScrollView, Pressable,
+-  ActivityIndicator, Alert, RefreshControl, TextInput,
+-  Platform,
+-} from 'react-native';
+-import { useAuthStore } from '../../src/modules/@core/auth/useAuthStore';
+-import { useAdminStore } from '../../src/modules/admin/store/useAdminStore';
+-import { SPACING, RADIUS, FONT_SIZE } from '../../src/modules/@core/constants/theme';
+-import { useTheme } from '../../src/modules/@core/context/ThemeContext';
+-
+-/** Cross-platform confirm */
+-function crossPlatformConfirm(title, message, onConfirm) {
+-  if (Platform.OS === 'web') {
+-    if (window.confirm(`${title}\n${message}`)) onConfirm();
+-  } else {
+-    Alert.alert(title, message, [
+-      { text: 'Hủy', style: 'cancel' },
+-      { text: 'Xác nhận', style: 'destructive', onPress: onConfirm },
+-    ]);
+-  }
+-}
+-
+-function getStyles(C) {
+-  return {
+-    root: { flex: 1, backgroundColor: C.background },
+-    tabBar: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.surface },
+-    tab: { flex: 1, paddingVertical: SPACING.md, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+-    tabActive: { borderBottomColor: C.primaryGlow },
+-    tabText: { color: C.textSecondary, fontSize: FONT_SIZE.sm, fontWeight: '600' },
+-    tabTextActive: { color: C.primaryGlow },
+-    searchWrap: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm },
+-    search: { backgroundColor: C.surface, color: C.textPrimary, borderWidth: 1, borderColor: C.border, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT_SIZE.sm },
+-    errorBanner: { margin: SPACING.md, padding: SPACING.sm, backgroundColor: C.dangerBg, borderRadius: RADIUS.md, borderWidth: 1, borderColor: C.dangerBorder },
+-    errorText: { color: C.danger, fontSize: FONT_SIZE.sm },
+-    loadingCenter: { alignItems: 'center', paddingVertical: SPACING.xxl, gap: SPACING.md },
+-    loadingText: { color: C.textMuted, fontSize: FONT_SIZE.sm },
+-    listContent: { paddingHorizontal: SPACING.md, paddingBottom: SPACING.xxl },
+-    row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: SPACING.md, borderBottomWidth: 1, borderBottomColor: C.border, gap: SPACING.sm },
+-    rowLeft: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, flex: 1 },
+-    rowActions: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+-    userAvatar: { width: 40, height: 40, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center' },
+-    sampleIcon: { width: 40, height: 40, borderRadius: RADIUS.md, backgroundColor: `${C.info}15`, alignItems: 'center', justifyContent: 'center' },
+-    userInfo: { flex: 1 },
+-    userName: { color: C.textPrimary, fontSize: FONT_SIZE.sm, fontWeight: '600' },
+-    userEmail: { color: C.textSecondary, fontSize: FONT_SIZE.xs, marginTop: 2 },
+-    userDate: { color: C.textMuted, fontSize: FONT_SIZE.xs, marginTop: 1 },
+-    badge: { paddingHorizontal: SPACING.sm, paddingVertical: 3, borderRadius: RADIUS.full, borderWidth: 1 },
+-    badgeText: { fontSize: FONT_SIZE.xs, fontWeight: '700' },
+-    actionBtns: { flexDirection: 'row', gap: 6 },
+-    smallBtn: { width: 30, height: 30, borderRadius: RADIUS.md, backgroundColor: C.surfaceAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.border },
+-    dangerBtn: { borderColor: `${C.danger}30` },
+-    smallBtnText: { fontSize: 14, color: C.textSecondary, fontWeight: '700' },
+-    emptyText: { color: C.textMuted, fontSize: FONT_SIZE.sm, textAlign: 'center', paddingVertical: SPACING.xl },
+-  };
+-}
+-
+-function Badge({ label, color, badgeStyle, badgeTextStyle }) {
+-  return (
+-    <View style={[badgeStyle, { backgroundColor: `${color}20`, borderColor: `${color}40` }]}>
+-      <Text style={[badgeTextStyle, { color }]}>{label}</Text>
+-    </View>
+-  );
+-}
+-
+-function UserRow({ user, actionKey, onToggleRole, onDelete, C, styles }) {
+-  const isAdmin = user.role === 'admin';
+-  const isActing = actionKey === `role-${user.id}` || actionKey === `delete-user-${user.id}`;
+-
+-  const confirmDelete = () => crossPlatformConfirm(
+-    'Xác nhận xóa', `Bạn chắc chắn muốn xóa user "${user.email}"?`, () => onDelete(user.id)
+-  );
+-
+-  const confirmToggle = () => crossPlatformConfirm(
+-    'Thay đổi quyền', `Đổi "${user.email}" thành ${isAdmin ? 'User' : 'Admin'}?`, () => onToggleRole(user)
+-  );
+-
+-  return (
+-    <View style={styles.row}>
+-      <View style={styles.rowLeft}>
+-        <View style={[styles.userAvatar, { backgroundColor: isAdmin ? `${C.warning}20` : `${C.info}20` }]}>
+-          <Text style={{ fontSize: 16 }}>{isAdmin ? '👑' : '👤'}</Text>
+-        </View>
+-        <View style={styles.userInfo}>
+-          <Text style={styles.userName}>{user.full_name || 'Chưa đặt tên'}</Text>
+-          <Text style={styles.userEmail}>{user.email}</Text>
+-          <Text style={styles.userDate}>Tham gia: {new Date(user.created_at).toLocaleDateString('vi-VN')}</Text>
+-        </View>
+-      </View>
+-      <View style={styles.rowActions}>
+-        <Badge label={isAdmin ? 'Admin' : 'User'} color={isAdmin ? C.warning : C.info} badgeStyle={styles.badge} badgeTextStyle={styles.badgeText} />
+-        {isActing ? (
+-          <ActivityIndicator size="small" color={C.primary} style={{ marginLeft: SPACING.sm }} />
+-        ) : (
+-          <View style={styles.actionBtns}>
+-            <Pressable style={styles.smallBtn} onPress={confirmToggle}>
+-              <Text style={styles.smallBtnText}>⇄</Text>
+-            </Pressable>
+-            <Pressable style={[styles.smallBtn, styles.dangerBtn]} onPress={confirmDelete}>
+-              <Text style={[styles.smallBtnText, { color: C.danger }]}>✕</Text>
+-            </Pressable>
+-          </View>
+-        )}
+-      </View>
+-    </View>
+-  );
+-}
+-
+-function SampleRow({ sample, actionKey, onDelete, C, styles }) {
+-  const topDisease = sample.detections?.[0];
+-  const conf = topDisease ? Math.round(topDisease.confidence * 100) : null;
+-  const confColor = conf >= 70 ? C.danger : conf >= 40 ? C.warning : C.success;
+-  const isActing = actionKey === `delete-sample-${sample.id}`;
+-
+-  const confirmDelete = () => crossPlatformConfirm(
+-    'Xác nhận xóa', `Xóa mẫu "${sample.sample_name}"?`, () => onDelete(sample.id)
+-  );
+-
+-  return (
+-    <View style={styles.row}>
+-      <View style={styles.rowLeft}>
+-        <View style={styles.sampleIcon}>
+-          <Text style={{ fontSize: 18 }}>🔬</Text>
+-        </View>
+-        <View style={styles.userInfo}>
+-          <Text style={styles.userName} numberOfLines={1}>{sample.sample_name}</Text>
+-          <Text style={styles.userEmail}>{topDisease?.disease_class?.replace(/_/g, ' ') || 'Không phát hiện bệnh'}</Text>
+-          <Text style={styles.userDate}>{sample.owner_email} · {new Date(sample.created_at).toLocaleDateString('vi-VN')}</Text>
+-        </View>
+-      </View>
+-      <View style={styles.rowActions}>
+-        {conf && <Badge label={`${conf}%`} color={confColor} badgeStyle={styles.badge} badgeTextStyle={styles.badgeText} />}
+-        {isActing ? (
+-          <ActivityIndicator size="small" color={C.danger} />
+-        ) : (
+-          <Pressable style={[styles.smallBtn, styles.dangerBtn]} onPress={confirmDelete}>
+-            <Text style={[styles.smallBtnText, { color: C.danger }]}>✕</Text>
+-          </Pressable>
+-        )}
+-      </View>
+-    </View>
+-  );
+-}
+-
+-export default function StationSystem() {
+-  const token = useAuthStore((s) => s.token);
+-  const { colors } = useTheme();
+-  const C = colors;
+-  const styles = getStyles(C);
+-  const { users, samples, isLoading, isRefreshing, actionKey, error, loadAdminData, toggleUserRole, deleteUser, deleteSample } = useAdminStore();
+-  const [activeTab, setActiveTab] = useState('users');
+-  const [search, setSearch] = useState('');
+-
+-  useEffect(() => { loadAdminData(token); }, []);
+-
+-  const filteredUsers = users.filter(u =>
+-    u.email?.toLowerCase().includes(search.toLowerCase()) ||
+-    u.full_name?.toLowerCase().includes(search.toLowerCase())
+-  );
+-  const filteredSamples = samples.filter(s =>
+-    s.sample_name?.toLowerCase().includes(search.toLowerCase()) ||
+-    s.owner_email?.toLowerCase().includes(search.toLowerCase())
+-  );
+-
+-  const handleToggleRole = async (user) => { try { await toggleUserRole(token, user); } catch {} };
+-  const handleDeleteUser = async (userId) => { try { await deleteUser(token, userId); } catch {} };
+-  const handleDeleteSample = async (sampleId) => { try { await deleteSample(token, sampleId); } catch {} };
+-
+-  return (
+-    <View testID="station-system" style={styles.root}>
+-      <View style={styles.tabBar}>
+-        <Pressable testID="tab-users" style={[styles.tab, activeTab === 'users' && styles.tabActive]} onPress={() => setActiveTab('users')}>
+-          <Text style={[styles.tabText, activeTab === 'users' && styles.tabTextActive]}>👥 Users ({users.length})</Text>
+-        </Pressable>
+-        <Pressable testID="tab-samples" style={[styles.tab, activeTab === 'samples' && styles.tabActive]} onPress={() => setActiveTab('samples')}>
+-          <Text style={[styles.tabText, activeTab === 'samples' && styles.tabTextActive]}>🔬 Samples ({samples.length})</Text>
+-        </Pressable>
+-      </View>
+-
+-      <View style={styles.searchWrap}>
+-        <TextInput testID="system-search" style={styles.search} placeholder={`Tìm kiếm ${activeTab === 'users' ? 'người dùng' : 'mẫu vật'}...`} placeholderTextColor={C.textMuted} value={search} onChangeText={setSearch} clearButtonMode="while-editing" />
+-      </View>
+-
+-      {error && <View style={styles.errorBanner}><Text style={styles.errorText}>⚠️ {error}</Text></View>}
+-
+-      {isLoading && users.length === 0 ? (
+-        <View style={styles.loadingCenter}>
+-          <ActivityIndicator color={C.primaryGlow} />
+-          <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
+-        </View>
+-      ) : (
+-        <ScrollView contentContainerStyle={styles.listContent} refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => loadAdminData(token, true)} tintColor={C.primary} />}>
+-          {activeTab === 'users' ? (
+-            filteredUsers.length === 0 ? <Text style={styles.emptyText}>Không tìm thấy người dùng</Text> :
+-            filteredUsers.map(u => <UserRow key={u.id} user={u} actionKey={actionKey} onToggleRole={handleToggleRole} onDelete={handleDeleteUser} C={C} styles={styles} />)
+-          ) : (
+-            filteredSamples.length === 0 ? <Text style={styles.emptyText}>Không tìm thấy mẫu phân tích</Text> :
+-            filteredSamples.map(s => <SampleRow key={s.id} sample={s} actionKey={actionKey} onDelete={handleDeleteSample} C={C} styles={styles} />)
+-          )}
+-        </ScrollView>
+-      )}
+-    </View>
+-  );
+-}
+\ No newline at end of file
++export { default } from '../../src/modules/station/pages/SystemPage';
+diff --git a/App/app/index.js b/App/app/index.js
+index 1533d32..3ce10a0 100644
+--- a/App/app/index.js
++++ b/App/app/index.js
+@@ -4,7 +4,8 @@ import { useAuthStore } from '../src/modules/@core/auth/useAuthStore';
+ /**
+  * Root index route.
+  * Redirects to the appropriate section based on auth state.
+- * - Authenticated → (main)/inference
++ * - Authenticated farmer → (agrivision)
++ * - Authenticated admin → (station)
+  * - Unauthenticated → (auth)/welcome
+  */
+ export default function Index() {
+diff --git a/App/e2e/test_nav.spec.ts b/App/e2e/test_nav.spec.ts
+index a51b886..c0e1a42 100644
+--- a/App/e2e/test_nav.spec.ts
++++ b/App/e2e/test_nav.spec.ts
+@@ -1,56 +1,19 @@
+ import { test, expect } from '@playwright/test';
+ 
+-const ADMIN_EMAIL = 'admin@cropvision.local';
+-const ADMIN_PASS  = 'Admin@123';
++const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL || 'admin@cropvision.local';
++const ADMIN_PASS = process.env.TEST_ADMIN_PASS || 'Admin@123';
+ 
+-test('verify admin login and sidebar navigation', async ({ page }) => {
+-  // 1. Go to login
++test('admin navigation stays within Station ownership', async ({ page }) => {
+   await page.goto('/login');
+-  
+-  // 2. Fill credentials
+-  await page.getByPlaceholder('Nhập email').click();
+-  await page.getByPlaceholder('Nhập email').pressSequentially(ADMIN_EMAIL);
+-  await page.getByPlaceholder('Nhập mật khẩu').click();
+-  await page.getByPlaceholder('Nhập mật khẩu').pressSequentially(ADMIN_PASS);
+-  
+-  // 3. Click Login
+-  console.log('Submitting login form...');
+-  await page.locator('text=Đăng nhập').last().click();
+-  
+-  // 4. Wait for redirect
+-  console.log('Waiting for URL redirect...');
++
++  await page.getByPlaceholder('Nhap email').or(page.getByPlaceholder('Nhập email')).click();
++  await page.getByPlaceholder('Nhap email').or(page.getByPlaceholder('Nhập email')).pressSequentially(ADMIN_EMAIL);
++  await page.getByPlaceholder('Nhap mat khau').or(page.getByPlaceholder('Nhập mật khẩu')).click();
++  await page.getByPlaceholder('Nhap mat khau').or(page.getByPlaceholder('Nhập mật khẩu')).pressSequentially(ADMIN_PASS);
++
++  await page.locator('text=Đăng nhập').or(page.locator('text=Dang nhap')).last().click();
+   await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 25000 });
+-  console.log('Current URL after login redirect:', page.url());
+-  expect(page.url()).not.toContain('/login');
+-  
+-  // 5. Try to click "Phân tích ảnh" (now links to /analysis)
+-  console.log('Clicking "Phân tích ảnh" menu button...');
+-  // Use a more specific selector to avoid matching hidden menus if any
+-  await page.locator('button:has-text("Phân tích ảnh")').filter({ visible: true }).first().click();
+-  
+-  // 6. Wait and verify URL is /analysis
+-  await page.waitForURL((url) => url.pathname.includes('/analysis'), { timeout: 10000 });
+-  console.log('Current URL after clicking Phân tích ảnh:', page.url());
+-  expect(page.url()).toContain('/analysis');
+ 
+-  // Verify the inference layout components are visible
+-  await expect(page.locator('text=Tải ảnh lên để bắt đầu phân tích').filter({ visible: true }).first()).toBeVisible({ timeout: 5000 });
+-  
+-  // 7. Click "Lịch sử mẫu" (links to /history)
+-  console.log('Clicking "Lịch sử mẫu" menu button...');
+-  await page.locator('button:has-text("Lịch sử mẫu")').filter({ visible: true }).first().click();
+-  
+-  // Wait and verify URL is /history
+-  await page.waitForURL((url) => url.pathname.includes('/history'), { timeout: 10000 });
+-  console.log('Current URL after clicking Lịch sử mẫu:', page.url());
+-  expect(page.url()).toContain('/history');
+-  
+-  // 8. Click "Phân tích ảnh" again
+-  console.log('Clicking "Phân tích ảnh" again...');
+-  await page.locator('button:has-text("Phân tích ảnh")').filter({ visible: true }).first().click();
+-  
+-  // Wait and verify URL is /analysis again
+-  await page.waitForURL((url) => url.pathname.includes('/analysis'), { timeout: 10000 });
+-  console.log('Current URL after clicking Phân tích ảnh again:', page.url());
+-  expect(page.url()).toContain('/analysis');
++  await expect(page).not.toHaveURL(/analysis/);
++  await expect(page.locator('button:has-text("Phân tích ảnh")')).toHaveCount(0);
+ });
+diff --git a/App/src/components/AdminPanel/index.js b/App/src/components/AdminPanel/index.js
+index 492f64f..cccc711 100644
+--- a/App/src/components/AdminPanel/index.js
++++ b/App/src/components/AdminPanel/index.js
+@@ -1,4 +1,4 @@
+-// [H3] DEAD CODE — This component has been replaced by src/modules/admin/components/
+-// All admin UI now lives in the modular architecture.
++// [H3] DEPRECATED COMPATIBILITY STUB — replaced by Station/Admin modules.
++// Active admin UI lives under App/src/modules/station and App/src/modules/admin.
+ // This file is kept empty to avoid breaking any stale imports during cleanup.
+ // TODO: Delete this file and the AdminPanel/ directory entirely.
+diff --git a/App/src/components/AdminPanel/styles.js b/App/src/components/AdminPanel/styles.js
+index a33ba9a..1d1a54d 100644
+--- a/App/src/components/AdminPanel/styles.js
++++ b/App/src/components/AdminPanel/styles.js
+@@ -1,3 +1,3 @@
+-// [H3] DEAD CODE — Styles for the removed AdminPanel component.
+-// Replaced by src/modules/admin/components/ styles.
++// [H3] DEPRECATED COMPATIBILITY STUB — styles for the removed AdminPanel component.
++// Replaced by Station/Admin module styles.
+ // TODO: Delete this file.
+diff --git a/App/src/config/api.js b/App/src/config/api.js
+index 72cb8a0..0ff4698 100644
+--- a/App/src/config/api.js
++++ b/App/src/config/api.js
+@@ -1,3 +1,3 @@
+-// DEAD CODE — Legacy API config replaced by src/modules/@core/api/apiClient.js
++// DEPRECATED COMPATIBILITY STUB — legacy API config replaced by src/modules/@core/api/apiClient.js
+ // This file is kept as an empty stub to prevent import errors during cleanup.
+ // TODO: Delete this file and src/config/ directory entirely.
+diff --git a/App/src/modules/@core/components/AppShell.js b/App/src/modules/@core/components/AppShell.js
+index 388bf26..f07f5c8 100644
+--- a/App/src/modules/@core/components/AppShell.js
++++ b/App/src/modules/@core/components/AppShell.js
+@@ -16,9 +16,9 @@ import { useLayoutMode } from '../../platform/hooks/useLayoutMode';
+ import { COLORS, SPACING, FONT_SIZE, RADIUS } from '../constants/theme';
+ 
+ const NAV_ITEMS = [
+-  { label: 'Phân tích ảnh',    href: '/inference', key: 'inference' },
++  { label: 'Phân tích ảnh',    href: '/(agrivision)/inference', key: 'inference' },
+   { label: 'Lịch sử mẫu vật',  href: '/history',   key: 'history'   },
+-  { label: 'Quản trị hệ thống', href: '/admin',     key: 'admin',  adminOnly: true },
++  { label: 'Quản trị hệ thống', href: '/(station)', key: 'admin',  adminOnly: true },
+ ];
+ 
+ function NavItem({ item, isActive, compact = false }) {
+diff --git a/App/src/modules/@core/components/GridShell/layoutConfig.js b/App/src/modules/@core/components/GridShell/layoutConfig.js
+index 3d859c6..99735e5 100644
+--- a/App/src/modules/@core/components/GridShell/layoutConfig.js
++++ b/App/src/modules/@core/components/GridShell/layoutConfig.js
+@@ -6,7 +6,7 @@
+  * Control, Content, Chat, OverviewStats, Map, SensorGrid, AlertsFeed
+  *
+  * Layout variants:
+- *   inference  — Inference / AI analysis page (4-col layout)
++ *   inference  — Agrivision-owned inference compatibility page (4-col layout)
+  *   dashboard  — Smart farming overview (3-col layout)
+  *   admin      — Admin / History pages (3-col layout)
+  */
+@@ -165,6 +165,8 @@ export const LAYOUT_VARIANTS = {
+ export const ROUTE_VARIANT_MAP = [
+   { pattern: '/dashboard', variant: 'dashboard' },
+   { pattern: '/(station)', variant: 'dashboard' },
++  { pattern: '/(agrivision)/inference', variant: 'inference' },
++  // Legacy alias kept for route-addressable compatibility during cleanup.
+   { pattern: '/analysis', variant: 'inference' },
+   { pattern: '/inference', variant: 'inference' },
+   { pattern: '/system', variant: 'admin' },
+diff --git a/App/src/modules/@core/components/GridShell/widgets/ContentWidget.jsx b/App/src/modules/@core/components/GridShell/widgets/ContentWidget.jsx
+index a6686df..ddbdb25 100644
+--- a/App/src/modules/@core/components/GridShell/widgets/ContentWidget.jsx
++++ b/App/src/modules/@core/components/GridShell/widgets/ContentWidget.jsx
+@@ -1,6 +1,8 @@
+ /**
+- * ContentWidget — Full-width content area for History / Admin routes
++ * ContentWidget — legacy compatibility content area for History / Admin routes
+  * Uses useSegments() for exact route matching.
++ * Owner-specific imports here are migration debt; keep behavior stable until
++ * GridShell is split into owner-specific shells.
+  */
+ 
+ import { useSegments } from 'expo-router';
+@@ -8,8 +10,8 @@ import { useAuthStore } from '../../../auth/useAuthStore';
+ import { AdminLayout } from '../../../../admin/components/AdminLayout';
+ import SampleList from '../../../../history/components/SampleList';
+ import AlertsAdminScreen from '../../../../admin/components/AlertsAdminScreen';
+-import FieldsScreen from '../../../../../../app/(agrivision)/fields';
+-import StationSystem from '../../../../../../app/(station)/system';
++import MobileFieldsScreen from '../../../../agrivision/screens/MobileFieldsScreen';
++import StationSystem from '../../../../station/pages/SystemPage';
+ import { ws } from '../styles';
+ 
+ export function ContentWidget() {
+@@ -19,7 +21,7 @@ export function ContentWidget() {
+   const route = segments[segments.length - 1] ?? '';
+ 
+   if (route === 'fields') {
+-    return <div style={ws.fill}><FieldsScreen /></div>;
++    return <div style={ws.fill}><MobileFieldsScreen /></div>;
+   }
+   if (route === 'system') {
+     return <div style={ws.fill}><StationSystem /></div>;
+diff --git a/App/src/modules/@core/components/GridShell/widgets/MenuWidget.jsx b/App/src/modules/@core/components/GridShell/widgets/MenuWidget.jsx
+index 72d9d13..871fa71 100644
+--- a/App/src/modules/@core/components/GridShell/widgets/MenuWidget.jsx
++++ b/App/src/modules/@core/components/GridShell/widgets/MenuWidget.jsx
+@@ -2,7 +2,7 @@
+  * MenuWidget — Sidebar navigation with smart farming sections.
+  *
+  * Sections:
+- *   PHÂN TÍCH  — Inference analysis, Dashboard overview
++ *   PHÂN TÍCH  — Agrivision inference compatibility, Dashboard overview
+  *   QUẢN LÝ   — Sample history, Admin
+  *
+  * Uses useTheme() for dynamic dark/light mode color resolution.
+@@ -17,7 +17,7 @@ const NAV_SECTIONS = [
+     label: 'Phân tích',
+     items: [
+       { label: 'Tổng quan',     href: '/dashboard', key: 'dashboard', icon: '📊' },
+-      { label: 'Phân tích ảnh', href: '/analysis', key: 'analysis', icon: '🔬' },
++      { label: 'Phân tích ảnh', href: '/(agrivision)/inference', key: 'analysis', icon: '🔬' },
+     ],
+   },
+   {
+diff --git a/App/src/modules/@core/components/MapSidebar/index.jsx b/App/src/modules/@core/components/MapSidebar/index.jsx
+index cd64a3b..bf88d93 100644
+--- a/App/src/modules/@core/components/MapSidebar/index.jsx
++++ b/App/src/modules/@core/components/MapSidebar/index.jsx
+@@ -8,7 +8,6 @@ const NAV_SECTIONS = [
+     label: 'Phân tích',
+     items: [
+       { label: 'Tổng quan',     href: '/dashboard', key: 'dashboard', icon: '📊' },
+-      { label: 'Phân tích ảnh', href: '/analysis', key: 'analysis', icon: '🔬' },
+     ],
+   },
+   {
+@@ -39,7 +38,7 @@ export function MapSidebar() {
+   const toggleLayer = useMapStore((state) => state.toggleLayer);
+ 
+   const activeKey = NAV_SECTIONS.flatMap((s) => s.items)
+-    .find((i) => pathname.includes(i.key) || (i.key === 'analysis' && pathname.includes('inference')))?.key ?? 'dashboard';
++    .find((i) => pathname.includes(i.key))?.key ?? 'dashboard';
+ 
+   const menuWidgetStyle = {
+     padding: 12,
+diff --git a/App/src/modules/admin/components/AlertsAdminScreen.jsx b/App/src/modules/admin/components/AlertsAdminScreen.jsx
+index a605a17..fe677e6 100644
+--- a/App/src/modules/admin/components/AlertsAdminScreen.jsx
++++ b/App/src/modules/admin/components/AlertsAdminScreen.jsx
+@@ -1,7 +1,8 @@
+ /**
+  * AlertsAdminScreen — Shared module component for alert management.
+- * Used by both the Expo Router route (App/app/(main)/alerts.js)
+- * and the GridShell ContentWidget.
++ * Station/Admin-owned alert management screen.
++ * Legacy `(main)/alerts` and GridShell ContentWidget may still reach this
++ * during route cleanup; new navigation should enter through Station.
+  * Theme-aware: uses useTheme() for light/dark mode support.
+  * Web-compatible: uses window.confirm for web, RNAlert for native.
+  */
+@@ -518,4 +519,4 @@ export default function AlertsAdminScreen() {
+       <MetricsModal alertId={metricsAlertId} visible={showMetrics} onClose={() => { setShowMetrics(false); setMetricsAlertId(null); }} token={token} C={C} styles={styles} />
+     </View>
+   );
+-}
+\ No newline at end of file
++}
+diff --git a/App/src/modules/admin/store/useAdminStore.js b/App/src/modules/admin/store/useAdminStore.js
+index d5a0536..9dec4e9 100644
+--- a/App/src/modules/admin/store/useAdminStore.js
++++ b/App/src/modules/admin/store/useAdminStore.js
+@@ -1,7 +1,8 @@
+ /**
+  * useAdminStore — Admin Module / Layer 1: Core
+  *
+- * Zustand store replacing local state and inline fetch calls in the old AdminPanel.
++ * Station/Admin support store replacing local state and inline fetch calls in
++ * the old AdminPanel.
+  */
+ 
+ import { create } from 'zustand';
+diff --git a/App/src/modules/inference/components/InferenceActionPanel.js b/App/src/modules/inference/components/InferenceActionPanel.js
+index 78c7661..fc561dc 100644
+--- a/App/src/modules/inference/components/InferenceActionPanel.js
++++ b/App/src/modules/inference/components/InferenceActionPanel.js
+@@ -45,7 +45,7 @@ export function InferenceActionPanel() {
+     let fieldCoords = null;
+     if (selectedFieldId && fields?.length > 0) {
+       const field = fields.find((f) => f.id === selectedFieldId);
+-      if (field?.latitude && field?.longitude) {
++      if (field?.latitude != null && field?.longitude != null) {
+         fieldCoords = { latitude: field.latitude, longitude: field.longitude };
+       }
+     }
+diff --git a/App/src/modules/inference/store/useInferenceStore.js b/App/src/modules/inference/store/useInferenceStore.js
+index 232e59b..a1ebded 100644
+--- a/App/src/modules/inference/store/useInferenceStore.js
++++ b/App/src/modules/inference/store/useInferenceStore.js
+@@ -142,29 +142,36 @@ const useInferenceStore = create((set, get) => ({
+     const { selectedAsset } = get();
+     if (!selectedAsset?.uri) return;
+ 
++    const totalStart = getNowMs();
+     set({ isAnalyzing: true, error: null });
+ 
+     try {
+       // [M2] Delegate FormData construction to helper (reduces cognitive load here)
++      const prepStart = getNowMs();
+       const formData = await get()._buildImageFormData(selectedAsset);
++      const imagePrepMs = getNowMs() - prepStart;
+ 
+       // [AgriVision] Inject field context if provided
+       if (fieldId) formData.append('field_id', fieldId);
+ 
+       // [GPS] Capture location — prefer field coords, fallback to device GPS
+-      let coords = fieldCoords;
++      const contextStart = getNowMs();
++      let coords = normalizeCoordinates(fieldCoords);
+       if (!coords) {
+-        coords = await get()._captureGPS();
++        coords = normalizeCoordinates(await get()._captureGPS());
+       }
+       if (coords) {
+         formData.append('latitude', String(coords[0]));
+         formData.append('longitude', String(coords[1]));
+       }
++      const contextMs = getNowMs() - contextStart;
+ 
++      const uploadStart = getNowMs();
+       const data = await apiRequest(ENDPOINTS.inference.analyze, {
+         method: 'POST',
+         body:   formData,
+       }, token);
++      const uploadMs = getNowMs() - uploadStart;
+ 
+       if (data.success) {
+         set({
+@@ -179,14 +186,32 @@ const useInferenceStore = create((set, get) => ({
+           focusMode:              'all',
+           isAnalyzing:            false,
+         });
++        logInferenceTiming('client-runInference', {
++          imagePrepMs,
++          contextMs,
++          uploadMs,
++          totalMs: getNowMs() - totalStart,
++          boxes: data.data?.boxes?.length ?? 0,
++          hasFieldContext: Boolean(fieldId),
++        });
+       } else {
+         set({ error: data.message, isAnalyzing: false });
++        logInferenceTiming('client-runInference-unsuccessful', {
++          imagePrepMs,
++          contextMs,
++          uploadMs,
++          totalMs: getNowMs() - totalStart,
++        });
+       }
+     } catch (err) {
+       set({
+         error: 'Không thể kết nối đến máy chủ. Hãy chắc chắn backend và AI Core đang chạy.',
+         isAnalyzing: false,
+       });
++      logInferenceTiming('client-runInference-error', {
++        totalMs: getNowMs() - totalStart,
++        message: err?.message,
++      });
+     }
+   },
+ 
+@@ -217,4 +242,43 @@ const useInferenceStore = create((set, get) => ({
+   clearError:       ()       => set({ error: null }),
+ }));
+ 
++function normalizeCoordinates(coords) {
++  if (!coords) return null;
++
++  const latitude = Array.isArray(coords)
++    ? coords[0]
++    : coords.latitude ?? coords.lat;
++  const longitude = Array.isArray(coords)
++    ? coords[1]
++    : coords.longitude ?? coords.lng ?? coords.lon;
++
++  const lat = Number(latitude);
++  const lon = Number(longitude);
++  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
++
++  return [lat, lon];
++}
++
++function getNowMs() {
++  return typeof performance !== 'undefined' && typeof performance.now === 'function'
++    ? performance.now()
++    : Date.now();
++}
++
++function isDevRuntime() {
++  if (typeof __DEV__ !== 'undefined') return Boolean(__DEV__);
++  return process.env.NODE_ENV !== 'production';
++}
++
++function logInferenceTiming(label, metrics) {
++  if (!isDevRuntime()) return;
++  const rounded = Object.fromEntries(
++    Object.entries(metrics).map(([key, value]) => [
++      key,
++      typeof value === 'number' ? Math.round(value) : value,
++    ])
++  );
++  console.info(`[InferenceTiming] ${label}`, rounded);
++}
++
+ export { useInferenceStore };
+diff --git a/App/src/modules/station/pages/index.js b/App/src/modules/station/pages/index.js
+index 45d3bda..7309ff2 100644
+--- a/App/src/modules/station/pages/index.js
++++ b/App/src/modules/station/pages/index.js
+@@ -9,5 +9,6 @@ export { default as SensorsPage } from './SensorsPage';
+ export { default as MicrobiomePage } from './MicrobiomePage';
+ export { default as RecommendationsPage } from './RecommendationsPage';
+ export { default as InterventionsPage } from './InterventionsPage';
+-export { default as ReportsPage } from './ReportsPage';
+-export { default as SettingsPage } from './SettingsPage';
+\ No newline at end of file
++export { default as ReportsPage } from './ReportsPage';
++export { default as SettingsPage } from './SettingsPage';
++export { default as SystemPage } from './SystemPage';
+diff --git a/README.md b/README.md
+index 8ac0f76..4dcc318 100644
+--- a/README.md
++++ b/README.md
+@@ -50,7 +50,9 @@ cropvision_db/
+ ├── App/                  # Frontend tri-platform (Web, Desktop, Mobile)
+ │   ├── app/              # Expo Router (File-based Routing)
+ │   │   ├── (auth)/       # Luồng xác thực (Welcome, Login, Register, Verify)
+-│   │   ├── (main)/       # Luồng chính (Inference, History, Admin)
++│   │   ├── (agrivision)/ # Luồng nông dân/mobile
++│   │   ├── (station)/    # Luồng admin/station
++│   │   ├── (main)/       # Legacy compatibility routes
+ │   │   └── _layout.js    # Root Layout & Global State provider
+ │   ├── src/
+ │   │   ├── modules/      # Three-Layer Module Pattern (Core, Adaptive, Feature)
+diff --git a/ai_core/api/predict.py b/ai_core/api/predict.py
+index 476358f..9243081 100644
+--- a/ai_core/api/predict.py
++++ b/ai_core/api/predict.py
+@@ -1,5 +1,7 @@
+ import base64
+ import io
++import os
++import time
+ 
+ from fastapi import APIRouter, File, HTTPException, UploadFile
+ from PIL import Image, ImageOps
+@@ -26,6 +28,7 @@ def healthcheck():
+ 
+ @router.post("/predict", response_model=PredictionResult)
+ async def predict(file: UploadFile = File(...)):
++    total_start = time.perf_counter()
+     # Validate MIME type truoc khi doc noi dung.
+     if file.content_type not in ALLOWED_CONTENT_TYPES:
+         raise HTTPException(
+@@ -38,6 +41,7 @@ async def predict(file: UploadFile = File(...)):
+     total = 0
+     chunk_size = 1024 * 64  # 64 KB
+ 
++    read_start = time.perf_counter()
+     while True:
+         chunk = await file.read(chunk_size)
+         if not chunk:
+@@ -46,17 +50,25 @@ async def predict(file: UploadFile = File(...)):
+         if total > MAX_FILE_SIZE_BYTES:
+             raise HTTPException(status_code=413, detail="Kich thuoc file vuot qua gioi han 10 MB.")
+         buffer.write(chunk)
++    read_ms = (time.perf_counter() - read_start) * 1000
+ 
++    decode_start = time.perf_counter()
+     buffer.seek(0)
+     image = Image.open(buffer).convert("RGB")
+     image = ImageOps.exif_transpose(image)
++    decode_ms = (time.perf_counter() - decode_start) * 1000
+ 
++    predict_start = time.perf_counter()
+     results = model.predict(source=image, conf=0.25)
++    predict_ms = (time.perf_counter() - predict_start) * 1000
+ 
++    encode_start = time.perf_counter()
+     img_buffer = io.BytesIO()
+     image.save(img_buffer, format="JPEG")
+     img_base64_str = base64.b64encode(img_buffer.getvalue()).decode("utf-8")
++    encode_ms = (time.perf_counter() - encode_start) * 1000
+ 
++    postprocess_start = time.perf_counter()
+     extracted_boxes = []
+     for box in results[0].boxes:
+         coords = box.xyxy[0].tolist()
+@@ -74,6 +86,23 @@ async def predict(file: UploadFile = File(...)):
+                 "class_name": class_name,
+             }
+         )
++    postprocess_ms = (time.perf_counter() - postprocess_start) * 1000
++
++    log_inference_timing(
++        "ai-core-predict",
++        {
++            "readMs": round(read_ms),
++            "decodeMs": round(decode_ms),
++            "predictMs": round(predict_ms),
++            "encodeMs": round(encode_ms),
++            "postprocessMs": round(postprocess_ms),
++            "totalMs": round((time.perf_counter() - total_start) * 1000),
++            "bytes": total,
++            "boxes": len(extracted_boxes),
++            "width": image.width,
++            "height": image.height,
++        },
++    )
+ 
+     return {
+         "success": True,
+@@ -83,3 +112,9 @@ async def predict(file: UploadFile = File(...)):
+         "image_width": image.width,
+         "image_height": image.height,
+     }
++
++
++def log_inference_timing(label: str, metrics: dict):
++    if os.getenv("ENV") == "production" or os.getenv("INFERENCE_TIMING_LOGS") != "1":
++        return
++    print(f"[InferenceTiming] {label} {metrics}")
+diff --git a/backend/src/controllers/inferenceController.js b/backend/src/controllers/inferenceController.js
+index 9366fc2..1701c47 100644
+--- a/backend/src/controllers/inferenceController.js
++++ b/backend/src/controllers/inferenceController.js
+@@ -21,6 +21,12 @@ const inferenceModel = require('../models/inferenceModel');
+  * - sample_id: Database ID for linking to chat consultation (nullable if save fails)
+  */
+ const analyzeImage = async (req, res) => {
++  const totalStart = getNowMs();
++  const receivedAt = new Date().toISOString();
++  let aiCoreMs = null;
++  let persistMs = null;
++  let saveMs = null;
++
+   try {
+     if (!req.user?.userId) {
+       return res.status(401).json({ success: false, message: 'Ban can dang nhap de phan tich anh.' });
+@@ -31,14 +37,18 @@ const analyzeImage = async (req, res) => {
+     }
+ 
+     // Gọi AI Core để phân tích ảnh
++    const aiCoreStart = getNowMs();
+     const inferenceData = await inferenceService.callAiCore(
+       req.file.buffer,
+       req.file.originalname,
+       req.file.mimetype
+     );
++    aiCoreMs = getNowMs() - aiCoreStart;
+ 
+     // Lưu file ảnh vào thư mục uploads
++    const persistStart = getNowMs();
+     const { imageUrl } = await inferenceService.persistUpload(req.file.buffer, req.file.originalname);
++    persistMs = getNowMs() - persistStart;
+ 
+     // Extract new fields for Phase 1, Drone integration, and GPS
+     const { field_id, source_type, batch_id, latitude, longitude } = req.body;
+@@ -46,6 +56,7 @@ const analyzeImage = async (req, res) => {
+     // Lưu kết quả vào database nếu phân tích thành công
+     let sampleId = null;
+     if (inferenceData.success) {
++      const saveStart = getNowMs();
+       sampleId = await inferenceService.saveResult(req.user.userId, req.file, imageUrl, inferenceData, {
+         fieldId: field_id || null,
+         sourceType: source_type || 'mobile',
+@@ -53,10 +64,23 @@ const analyzeImage = async (req, res) => {
+         latitude: latitude ? parseFloat(latitude) : null,
+         longitude: longitude ? parseFloat(longitude) : null,
+       });
++      saveMs = getNowMs() - saveStart;
+       console.info(`[Inference] Sample saved → DB id=${sampleId} user=${req.user.userId}`);
+     }
+ 
+     // Trả về kết quả cho frontend, bao gồm image_name và sample_id
++    logInferenceTiming('backend-analyze', {
++      receivedAt,
++      aiCoreMs,
++      persistMs,
++      saveMs,
++      totalMs: getNowMs() - totalStart,
++      fileSizeBytes: req.file.size,
++      boxes: inferenceData.boxes?.length ?? 0,
++      hasFieldContext: Boolean(field_id),
++      hasLocation: Boolean(latitude && longitude),
++    });
++
+     res.json({
+       success: true,
+       message: 'Phan tich va luu tru thanh cong',
+@@ -68,6 +92,14 @@ const analyzeImage = async (req, res) => {
+     });
+   } catch (error) {
+     console.error(`[Inference] analyzeImage error user=${req.user?.userId}:`, error.message);
++    logInferenceTiming('backend-analyze-error', {
++      receivedAt,
++      aiCoreMs,
++      persistMs,
++      saveMs,
++      totalMs: getNowMs() - totalStart,
++      message: error.message,
++    });
+     res.status(500).json({ success: false, message: 'Loi he thong may chu.' });
+   }
+ };
+@@ -99,3 +131,18 @@ module.exports = {
+   analyzeImage,
+   getHistory,
+ };
++
++function getNowMs() {
++  return Number(process.hrtime.bigint()) / 1e6;
++}
++
++function logInferenceTiming(label, metrics) {
++  if (process.env.NODE_ENV === 'production' || process.env.INFERENCE_TIMING_LOGS !== '1') return;
++  const rounded = Object.fromEntries(
++    Object.entries(metrics).map(([key, value]) => [
++      key,
++      typeof value === 'number' ? Math.round(value) : value,
++    ])
++  );
++  console.info(`[InferenceTiming] ${label}`, rounded);
++}

@@ -1,6 +1,8 @@
 /**
- * ContentWidget — Full-width content area for History / Admin routes
+ * ContentWidget — legacy compatibility content area for History / Admin routes
  * Uses useSegments() for exact route matching.
+ * Owner-specific imports here are migration debt; keep behavior stable until
+ * GridShell is split into owner-specific shells.
  */
 
 import { useSegments } from 'expo-router';
@@ -8,8 +10,8 @@ import { useAuthStore } from '../../../auth/useAuthStore';
 import { AdminLayout } from '../../../../admin/components/AdminLayout';
 import SampleList from '../../../../history/components/SampleList';
 import AlertsAdminScreen from '../../../../admin/components/AlertsAdminScreen';
-import FieldsScreen from '../../../../../../app/(agrivision)/fields';
-import StationSystem from '../../../../../../app/(station)/system';
+import MobileFieldsScreen from '../../../../agrivision/screens/MobileFieldsScreen';
+import StationSystem from '../../../../station/pages/SystemPage';
 import { ws } from '../styles';
 
 export function ContentWidget() {
@@ -19,7 +21,7 @@ export function ContentWidget() {
   const route = segments[segments.length - 1] ?? '';
 
   if (route === 'fields') {
-    return <div style={ws.fill}><FieldsScreen /></div>;
+    return <div style={ws.fill}><MobileFieldsScreen /></div>;
   }
   if (route === 'system') {
     return <div style={ws.fill}><StationSystem /></div>;

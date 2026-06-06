@@ -50,7 +50,9 @@ cropvision_db/
 ├── App/                  # Frontend tri-platform (Web, Desktop, Mobile)
 │   ├── app/              # Expo Router (File-based Routing)
 │   │   ├── (auth)/       # Luồng xác thực (Welcome, Login, Register, Verify)
-│   │   ├── (main)/       # Luồng chính (Inference, History, Admin)
+│   │   ├── (agrivision)/ # Luồng nông dân/mobile
+│   │   ├── (station)/    # Luồng admin/station
+│   │   ├── (main)/       # Legacy compatibility routes
 │   │   └── _layout.js    # Root Layout & Global State provider
 │   ├── src/
 │   │   ├── modules/      # Three-Layer Module Pattern (Core, Adaptive, Feature)
@@ -82,6 +84,10 @@ cropvision_db/
 ├── docker-compose.yml    # Orchestration (DB + Backend + AI)
 └── README.md
 ```
+
+Shell ownership note: desktop/web route groups now enter through owner shell
+adapters (`StationShell`, `AgrivisionShell`) while the existing `GridShell`
+remains a compatibility surface. See `docs/architecture/shell-boundaries.md`.
 
 ---
 

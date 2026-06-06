@@ -6,7 +6,7 @@
  * Control, Content, Chat, OverviewStats, Map, SensorGrid, AlertsFeed
  *
  * Layout variants:
- *   inference  — Inference / AI analysis page (4-col layout)
+ *   inference  — Agrivision-owned inference compatibility page (4-col layout)
  *   dashboard  — Smart farming overview (3-col layout)
  *   admin      — Admin / History pages (3-col layout)
  */
@@ -165,6 +165,8 @@ export const LAYOUT_VARIANTS = {
 export const ROUTE_VARIANT_MAP = [
   { pattern: '/dashboard', variant: 'dashboard' },
   { pattern: '/(station)', variant: 'dashboard' },
+  { pattern: '/(agrivision)/inference', variant: 'inference' },
+  // Legacy alias kept for route-addressable compatibility during cleanup.
   { pattern: '/analysis', variant: 'inference' },
   { pattern: '/inference', variant: 'inference' },
   { pattern: '/system', variant: 'admin' },

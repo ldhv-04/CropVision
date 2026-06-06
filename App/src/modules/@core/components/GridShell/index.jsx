@@ -1,8 +1,12 @@
 /**
- * GridShell — Configuration-Driven CSS Grid Layout
+ * GridShell — Compatibility CSS Grid Layout
  *
- * Pure renderer: reads layout config → renders CSS Grid.
+ * Compatibility-heavy renderer: reads layout config → renders CSS Grid.
  * Wrapped in ThemeProvider so all child widgets can call useTheme().
+ * Current widgets are mixed Station/Agrivision ownership. New route entry
+ * points should prefer owner shell adapters:
+ * - src/modules/station/shell/StationShell.jsx
+ * - src/modules/agrivision/shell/AgrivisionShell.jsx
  *
  * To add a new widget:
  *   1. Create component in widgets/ folder

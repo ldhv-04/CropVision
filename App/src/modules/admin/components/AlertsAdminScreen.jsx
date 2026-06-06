@@ -1,7 +1,8 @@
 /**
  * AlertsAdminScreen — Shared module component for alert management.
- * Used by both the Expo Router route (App/app/(main)/alerts.js)
- * and the GridShell ContentWidget.
+ * Station/Admin-owned alert management screen.
+ * Legacy `(main)/alerts` and GridShell ContentWidget may still reach this
+ * during route cleanup; new navigation should enter through Station.
  * Theme-aware: uses useTheme() for light/dark mode support.
  * Web-compatible: uses window.confirm for web, RNAlert for native.
  */

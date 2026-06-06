@@ -21,6 +21,12 @@ const inferenceModel = require('../models/inferenceModel');
  * - sample_id: Database ID for linking to chat consultation (nullable if save fails)
  */
 const analyzeImage = async (req, res) => {
+  const totalStart = getNowMs();
+  const receivedAt = new Date().toISOString();
+  let aiCoreMs = null;
+  let persistMs = null;
+  let saveMs = null;
+
   try {
     if (!req.user?.userId) {
       return res.status(401).json({ success: false, message: 'Ban can dang nhap de phan tich anh.' });
@@ -31,14 +37,18 @@ const analyzeImage = async (req, res) => {
     }
 
     // Gọi AI Core để phân tích ảnh
+    const aiCoreStart = getNowMs();
     const inferenceData = await inferenceService.callAiCore(
       req.file.buffer,
       req.file.originalname,
       req.file.mimetype
     );
+    aiCoreMs = getNowMs() - aiCoreStart;
 
     // Lưu file ảnh vào thư mục uploads
+    const persistStart = getNowMs();
     const { imageUrl } = await inferenceService.persistUpload(req.file.buffer, req.file.originalname);
+    persistMs = getNowMs() - persistStart;
 
     // Extract new fields for Phase 1, Drone integration, and GPS
     const { field_id, source_type, batch_id, latitude, longitude } = req.body;
@@ -46,6 +56,7 @@ const analyzeImage = async (req, res) => {
     // Lưu kết quả vào database nếu phân tích thành công
     let sampleId = null;
     if (inferenceData.success) {
+      const saveStart = getNowMs();
       sampleId = await inferenceService.saveResult(req.user.userId, req.file, imageUrl, inferenceData, {
         fieldId: field_id || null,
         sourceType: source_type || 'mobile',
@@ -53,10 +64,23 @@ const analyzeImage = async (req, res) => {
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
       });
+      saveMs = getNowMs() - saveStart;
       console.info(`[Inference] Sample saved → DB id=${sampleId} user=${req.user.userId}`);
     }
 
     // Trả về kết quả cho frontend, bao gồm image_name và sample_id
+    logInferenceTiming('backend-analyze', {
+      receivedAt,
+      aiCoreMs,
+      persistMs,
+      saveMs,
+      totalMs: getNowMs() - totalStart,
+      fileSizeBytes: req.file.size,
+      boxes: inferenceData.boxes?.length ?? 0,
+      hasFieldContext: Boolean(field_id),
+      hasLocation: Boolean(latitude && longitude),
+    });
+
     res.json({
       success: true,
       message: 'Phan tich va luu tru thanh cong',
@@ -68,6 +92,14 @@ const analyzeImage = async (req, res) => {
     });
   } catch (error) {
     console.error(`[Inference] analyzeImage error user=${req.user?.userId}:`, error.message);
+    logInferenceTiming('backend-analyze-error', {
+      receivedAt,
+      aiCoreMs,
+      persistMs,
+      saveMs,
+      totalMs: getNowMs() - totalStart,
+      message: error.message,
+    });
     res.status(500).json({ success: false, message: 'Loi he thong may chu.' });
   }
 };
@@ -99,3 +131,18 @@ module.exports = {
   analyzeImage,
   getHistory,
 };
+
+function getNowMs() {
+  return Number(process.hrtime.bigint()) / 1e6;
+}
+
+function logInferenceTiming(label, metrics) {
+  if (process.env.NODE_ENV === 'production' || process.env.INFERENCE_TIMING_LOGS !== '1') return;
+  const rounded = Object.fromEntries(
+    Object.entries(metrics).map(([key, value]) => [
+      key,
+      typeof value === 'number' ? Math.round(value) : value,
+    ])
+  );
+  console.info(`[InferenceTiming] ${label}`, rounded);
+}

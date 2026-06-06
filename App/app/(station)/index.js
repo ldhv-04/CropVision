@@ -17,10 +17,10 @@ import { useAdminStore } from '../../src/modules/admin/store/useAdminStore';
 import { KpiCard } from '../../src/modules/station/components/KpiCard';
 import { DARK_COLORS, SPACING, RADIUS, FONT_SIZE } from '../../src/modules/@core/constants/theme';
 
-// MapShell — web-only dashboard layout (lazily required to avoid bundling DOM libs on native)
-let MapShell = null;
+// StationShell — web-only station shell boundary.
+let StationShell = null;
 if (Platform.OS === 'web') {
-  MapShell = require('../../src/modules/@core/components/MapShell').MapShell;
+  StationShell = require('../../src/modules/station/shell').StationShell;
 }
 
 const C = DARK_COLORS;
@@ -102,9 +102,9 @@ export default function StationCommandCenter() {
     loadAdminData(token);
   }, []);
 
-  // ── Web: render the new MapShell dashboard ──
-  if (Platform.OS === 'web' && MapShell) {
-    return <MapShell />;
+  // ── Web: render the station-owned shell boundary ──
+  if (Platform.OS === 'web' && StationShell) {
+    return <StationShell />;
   }
 
   // ── Mobile: keep existing native layout ──

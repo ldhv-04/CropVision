@@ -1,3 +1,3 @@
-// [H3] DEAD CODE — Styles for the removed AdminPanel component.
-// Replaced by src/modules/admin/components/ styles.
+// [H3] DEPRECATED COMPATIBILITY STUB — styles for the removed AdminPanel component.
+// Replaced by Station/Admin module styles.
 // TODO: Delete this file.

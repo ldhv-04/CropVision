@@ -8,7 +8,6 @@ const NAV_SECTIONS = [
     label: 'Phân tích',
     items: [
       { label: 'Tổng quan',     href: '/dashboard', key: 'dashboard', icon: '📊' },
-      { label: 'Phân tích ảnh', href: '/analysis', key: 'analysis', icon: '🔬' },
     ],
   },
   {
@@ -39,7 +38,7 @@ export function MapSidebar() {
   const toggleLayer = useMapStore((state) => state.toggleLayer);
 
   const activeKey = NAV_SECTIONS.flatMap((s) => s.items)
-    .find((i) => pathname.includes(i.key) || (i.key === 'analysis' && pathname.includes('inference')))?.key ?? 'dashboard';
+    .find((i) => pathname.includes(i.key))?.key ?? 'dashboard';
 
   const menuWidgetStyle = {
     padding: 12,
