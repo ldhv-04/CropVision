@@ -13,7 +13,7 @@ import { LIGHT_COLORS, SPACING, FONT_SIZE } from '../../src/modules/@core/consta
 import { CameraModal } from '../../src/modules/agrivision/components/CameraModal';
 import { useState } from 'react';
 
-// AgrivisionShell — web-only compatibility shell boundary.
+// AgrivisionShell — web-only owner shell boundary.
 let AgrivisionShell = null;
 if (Platform.OS === 'web') {
   AgrivisionShell = require('../../src/modules/agrivision/shell').AgrivisionShell;
@@ -49,7 +49,7 @@ export default function AgriVisionLayout() {
   if (!token) return <Redirect href="/welcome" />;
   if (user?.role === 'admin') return <Redirect href="/(station)" />;
 
-  // ── Web/Electron: render Agrivision shell only on desktop screens ──
+  // ── Web/Electron: render Agrivision-owned shell only on desktop screens ──
   if (Platform.OS === 'web' && AgrivisionShell && width > 768) {
     return <AgrivisionShell />;
   }

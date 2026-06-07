@@ -1,0 +1,42 @@
+﻿diff --git a/App/src/modules/@core/components/GridShell/index.jsx b/App/src/modules/@core/components/GridShell/index.jsx
+index a7ac0f2..697eaa4 100644
+--- a/App/src/modules/@core/components/GridShell/index.jsx
++++ b/App/src/modules/@core/components/GridShell/index.jsx
+@@ -3,8 +3,9 @@
+  *
+  * Compatibility-heavy renderer: reads layout config → renders CSS Grid.
+  * Wrapped in ThemeProvider so all child widgets can call useTheme().
+- * Current widgets are mixed Station/Agrivision ownership. New route entry
+- * points should prefer owner shell adapters:
++ * Owner widgets now live under Station/Agrivision modules, but this shell still
++ * keeps legacy layout, menu, content, and route-alias compatibility. New route
++ * entry points should prefer owner shell adapters:
+  * - src/modules/station/shell/StationShell.jsx
+  * - src/modules/agrivision/shell/AgrivisionShell.jsx
+  *
+diff --git a/App/src/modules/agrivision/shell/AgrivisionShell.jsx b/App/src/modules/agrivision/shell/AgrivisionShell.jsx
+index d7bc2e3..0f4024f 100644
+--- a/App/src/modules/agrivision/shell/AgrivisionShell.jsx
++++ b/App/src/modules/agrivision/shell/AgrivisionShell.jsx
+@@ -2,7 +2,7 @@
+  * AgrivisionShell — Agrivision-owned shell entry point.
+  *
+  * Boundary adapter only. It delegates to the existing compatibility GridShell
+- * until Agrivision inference widgets move out of @core.
++ * while Agrivision route ownership continues to migrate away from shared shells.
+  */
+ 
+ import { GridShell } from '../../@core/components/GridShell';
+diff --git a/App/src/modules/station/shell/StationShell.jsx b/App/src/modules/station/shell/StationShell.jsx
+index b8845c9..f432dcf 100644
+--- a/App/src/modules/station/shell/StationShell.jsx
++++ b/App/src/modules/station/shell/StationShell.jsx
+@@ -2,7 +2,7 @@
+  * StationShell — Station-owned shell entry point.
+  *
+  * Boundary adapter only. It delegates to the existing compatibility MapShell
+- * until Station dashboard widgets move out of @core.
++ * while Station route ownership continues to migrate away from shared shells.
+  */
+ 
+ import { MapShell } from '../../@core/components/MapShell';

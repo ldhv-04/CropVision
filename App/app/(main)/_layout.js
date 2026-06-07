@@ -4,7 +4,7 @@ import { useAuthStore } from '../../src/modules/@core/auth/useAuthStore';
 import { AppShell } from '../../src/modules/@core/components/AppShell';
 
 // ─── Platform-split shell ─────────────────────────────────────────────────
-// Web/Electron  → GridShell (GridStack.js — draggable/resizable widgets)
+// Web/Electron  → compatibility GridShell
 // Mobile        → AppShell  (Flexbox — unchanged)
 //
 // GridShell is lazily required to avoid bundling DOM libs on native.
@@ -23,9 +23,8 @@ if (Platform.OS === 'web') {
  * Keep this route group as a compatibility surface until legacy URLs and tests
  * are migrated. New feature work should not target `/(main)`.
  *
- * On web/Electron: renders the full GridStack dashboard (Phase 1).
- *   Widgets: NavWidget | MenuWidget | UserWidget | CanvasWidget |
- *            StatsWidget | ResultsWidget | ControlWidget
+ * On web/Electron: renders compatibility GridShell. Owner routes should use
+ * `StationShell` or `AgrivisionShell` instead.
  *
  * On mobile (iOS/Android): renders existing AppShell + <Slot /> unchanged.
  */
@@ -46,7 +45,11 @@ export default function MainLayout() {
     return <Redirect href={user?.role === 'admin' ? '/(station)' : '/(agrivision)'} />;
   }
 
-  // ── Web/Electron: GridStack layout ──
+  if ((pathname.includes('/alerts') || pathname.includes('/system')) && user?.role !== 'admin') {
+    return <Redirect href="/(agrivision)" />;
+  }
+
+  // ── Web/Electron: compatibility GridShell layout ──
   if (Platform.OS === 'web' && GridShell) {
     // GridShell manages its own content via usePathname — no <Slot /> needed
     return <GridShell />;

@@ -59,7 +59,7 @@ export default function FieldMapScreen() {
 
   if (loading && currentZones.length === 0) {
     return (
-      <View style={styles.loadingContainer}>
+      <View testID="field-map-screen" style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#10b981" />
         <Text style={styles.loadingText}>Loading fields...</Text>
       </View>
@@ -67,7 +67,7 @@ export default function FieldMapScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View testID="field-map-screen" style={styles.container}>
       {/* Top Bar: Field Selector + Layer Switcher + View Toggle + Actions */}
       <TopBar
         fieldOptions={fieldOptions}

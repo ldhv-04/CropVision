@@ -2,7 +2,7 @@
  * AgrivisionShell — Agrivision-owned shell entry point.
  *
  * Boundary adapter only. It delegates to the existing compatibility GridShell
- * until Agrivision inference widgets move out of @core.
+ * while Agrivision route ownership continues to migrate away from shared shells.
  */
 
 import { GridShell } from '../../@core/components/GridShell';

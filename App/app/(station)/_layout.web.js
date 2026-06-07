@@ -8,8 +8,8 @@
  * Legacy backup: App/app/(station-legacy)/
  */
 
-import { useState } from 'react';
-import { Redirect } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Redirect, usePathname } from 'expo-router';
 import { useAuthStore } from '../../src/modules/@core/auth/useAuthStore';
 import { Platform, View, Text, StyleSheet } from 'react-native';
 import { ThemeProvider } from '../../src/modules/@core/context/ThemeContext';
@@ -27,6 +27,7 @@ import RecommendationsPage from '../../src/modules/station/pages/Recommendations
 import InterventionsPage from '../../src/modules/station/pages/InterventionsPage';
 import ReportsPage from '../../src/modules/station/pages/ReportsPage';
 import SettingsPage from '../../src/modules/station/pages/SettingsPage';
+import SystemPage from '../../src/modules/station/pages/SystemPage';
 
 const PAGE_COMPONENTS = {
   dashboard: DashboardPage,
@@ -37,12 +38,26 @@ const PAGE_COMPONENTS = {
   interventions: InterventionsPage,
   reports: ReportsPage,
   settings: SettingsPage,
+  system: SystemPage,
 };
+
+function getRouteFromPathname(pathname = '') {
+  if (pathname.includes('/system')) return 'system';
+  return null;
+}
 
 function StationContent() {
   const token = useAuthStore((s) => s.token);
   const user = useAuthStore((s) => s.user);
-  const [activeRoute, setActiveRoute] = useState('dashboard');
+  const pathname = usePathname();
+  const routeFromPath = getRouteFromPathname(pathname);
+  const [activeRoute, setActiveRoute] = useState(routeFromPath ?? 'dashboard');
+
+  useEffect(() => {
+    if (routeFromPath) {
+      setActiveRoute(routeFromPath);
+    }
+  }, [routeFromPath]);
 
   if (!token) return <Redirect href="/welcome" />;
   if (user?.role !== 'admin') return <Redirect href="/(agrivision)" />;

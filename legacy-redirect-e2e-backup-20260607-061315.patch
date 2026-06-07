@@ -1,0 +1,181 @@
+﻿diff --git a/App/app/(agrivision)/_layout.js b/App/app/(agrivision)/_layout.js
+index d50b293..a8a92fd 100644
+--- a/App/app/(agrivision)/_layout.js
++++ b/App/app/(agrivision)/_layout.js
+@@ -13,7 +13,7 @@ import { LIGHT_COLORS, SPACING, FONT_SIZE } from '../../src/modules/@core/consta
+ import { CameraModal } from '../../src/modules/agrivision/components/CameraModal';
+ import { useState } from 'react';
+ 
+-// AgrivisionShell — web-only compatibility shell boundary.
++// AgrivisionShell — web-only owner shell boundary.
+ let AgrivisionShell = null;
+ if (Platform.OS === 'web') {
+   AgrivisionShell = require('../../src/modules/agrivision/shell').AgrivisionShell;
+@@ -49,7 +49,7 @@ export default function AgriVisionLayout() {
+   if (!token) return <Redirect href="/welcome" />;
+   if (user?.role === 'admin') return <Redirect href="/(station)" />;
+ 
+-  // ── Web/Electron: render Agrivision shell only on desktop screens ──
++  // ── Web/Electron: render Agrivision-owned shell only on desktop screens ──
+   if (Platform.OS === 'web' && AgrivisionShell && width > 768) {
+     return <AgrivisionShell />;
+   }
+diff --git a/App/app/(main)/_layout.js b/App/app/(main)/_layout.js
+index efb67f0..21778bc 100644
+--- a/App/app/(main)/_layout.js
++++ b/App/app/(main)/_layout.js
+@@ -4,7 +4,7 @@ import { useAuthStore } from '../../src/modules/@core/auth/useAuthStore';
+ import { AppShell } from '../../src/modules/@core/components/AppShell';
+ 
+ // ─── Platform-split shell ─────────────────────────────────────────────────
+-// Web/Electron  → GridShell (GridStack.js — draggable/resizable widgets)
++// Web/Electron  → compatibility GridShell
+ // Mobile        → AppShell  (Flexbox — unchanged)
+ //
+ // GridShell is lazily required to avoid bundling DOM libs on native.
+@@ -23,9 +23,8 @@ if (Platform.OS === 'web') {
+  * Keep this route group as a compatibility surface until legacy URLs and tests
+  * are migrated. New feature work should not target `/(main)`.
+  *
+- * On web/Electron: renders the full GridStack dashboard (Phase 1).
+- *   Widgets: NavWidget | MenuWidget | UserWidget | CanvasWidget |
+- *            StatsWidget | ResultsWidget | ControlWidget
++ * On web/Electron: renders compatibility GridShell. Owner routes should use
++ * `StationShell` or `AgrivisionShell` instead.
+  *
+  * On mobile (iOS/Android): renders existing AppShell + <Slot /> unchanged.
+  */
+@@ -46,7 +45,7 @@ export default function MainLayout() {
+     return <Redirect href={user?.role === 'admin' ? '/(station)' : '/(agrivision)'} />;
+   }
+ 
+-  // ── Web/Electron: GridStack layout ──
++  // ── Web/Electron: compatibility GridShell layout ──
+   if (Platform.OS === 'web' && GridShell) {
+     // GridShell manages its own content via usePathname — no <Slot /> needed
+     return <GridShell />;
+diff --git a/App/e2e/test_nav.spec.ts b/App/e2e/test_nav.spec.ts
+index 34981e5..34aa728 100644
+--- a/App/e2e/test_nav.spec.ts
++++ b/App/e2e/test_nav.spec.ts
+@@ -1,24 +1,34 @@
+-import { test, expect } from '@playwright/test';
++import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
+ 
+ const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL || 'admin@cropvision.local';
+ const ADMIN_PASS = process.env.TEST_ADMIN_PASS || 'Admin@123';
++const FARMER_EMAIL = process.env.TEST_FARMER_EMAIL || 'farmer@cropvision.local';
++const FARMER_PASS = process.env.TEST_FARMER_PASS || 'Password@123';
+ const API_ORIGIN = process.env.TEST_API_ORIGIN || process.env.EXPO_PUBLIC_API_ORIGIN || 'http://127.0.0.1:3000';
+ 
+-test('admin navigation stays within Station ownership', async ({ page, request }) => {
++async function assertBackendAvailable(request: APIRequestContext) {
+   const health = await request.get(`${API_ORIGIN}/api/health`, { timeout: 5000 }).catch((error) => {
+     throw new Error(`Backend unavailable at ${API_ORIGIN}. Start backend before Playwright. Cause: ${error.message}`);
+   });
+   expect(health.ok(), `Backend health check failed at ${API_ORIGIN}/api/health with ${health.status()}`).toBeTruthy();
++}
+ 
++async function loginViaUI(page: Page, email: string, password: string) {
+   await page.goto('/login');
+ 
+   await page.locator('#login-email').click();
+-  await page.locator('#login-email').pressSequentially(ADMIN_EMAIL);
++  await page.locator('#login-email').pressSequentially(email);
+   await page.locator('#login-password').click();
+-  await page.locator('#login-password').pressSequentially(ADMIN_PASS);
++  await page.locator('#login-password').pressSequentially(password);
+ 
+   await page.getByTestId('login-submit').click();
+   await expect(page).not.toHaveURL(/\/login/, { timeout: 30000 });
++}
++
++test('admin navigation stays within Station ownership', async ({ page, request }) => {
++  await assertBackendAvailable(request);
++
++  await loginViaUI(page, ADMIN_EMAIL, ADMIN_PASS);
+ 
+   const stationShell = page
+     .getByTestId('soilzepro-shell')
+@@ -32,3 +42,39 @@ test('admin navigation stays within Station ownership', async ({ page, request }
+   await expect(page).not.toHaveURL(/analysis/);
+   await expect(page.getByText(/Ph.n t.ch .nh/i)).toHaveCount(0);
+ });
++
++test('farmer navigation stays within Agrivision ownership', async ({ page, request }) => {
++  await assertBackendAvailable(request);
++
++  await loginViaUI(page, FARMER_EMAIL, FARMER_PASS);
++
++  await expect(page.getByTestId('agrivision-home').filter({ visible: true }).first()).toBeVisible({ timeout: 30000 });
++  await expect(page).not.toHaveURL(/\/login|\/analysis|station/);
++  await expect(page.getByTestId('soilzepro-shell')).toHaveCount(0);
++  await expect(page.getByTestId('station-dashboard-map-shell')).toHaveCount(0);
++  await expect(page.getByTestId('station-dashboard')).toHaveCount(0);
++  await expect(page.getByText(/Qu.n tr./i)).toHaveCount(0);
++});
++
++test('farmer inference route is Agrivision-owned', async ({ page, request }) => {
++  await assertBackendAvailable(request);
++
++  await loginViaUI(page, FARMER_EMAIL, FARMER_PASS);
++  await page.goto('/(agrivision)/inference');
++
++  await expect(page).toHaveURL(/agrivision.*inference|inference/, { timeout: 30000 });
++  await expect(page.getByTestId('inference-screen').filter({ visible: true }).first()).toBeVisible({ timeout: 30000 });
++  await expect(page.getByTestId('soilzepro-shell')).toHaveCount(0);
++  await expect(page.getByTestId('station-dashboard-map-shell')).toHaveCount(0);
++});
++
++test('legacy analysis route redirects farmer to Agrivision inference', async ({ page, request }) => {
++  await assertBackendAvailable(request);
++
++  await loginViaUI(page, FARMER_EMAIL, FARMER_PASS);
++  await page.goto('/analysis');
++
++  await expect(page).toHaveURL(/agrivision.*inference|inference/, { timeout: 30000 });
++  await expect(page).not.toHaveURL(/\/analysis/);
++  await expect(page.getByTestId('inference-screen').filter({ visible: true }).first()).toBeVisible({ timeout: 30000 });
++});
+diff --git a/App/src/modules/@core/components/GridShell/index.jsx b/App/src/modules/@core/components/GridShell/index.jsx
+index a7ac0f2..697eaa4 100644
+--- a/App/src/modules/@core/components/GridShell/index.jsx
++++ b/App/src/modules/@core/components/GridShell/index.jsx
+@@ -3,8 +3,9 @@
+  *
+  * Compatibility-heavy renderer: reads layout config → renders CSS Grid.
+  * Wrapped in ThemeProvider so all child widgets can call useTheme().
+- * Current widgets are mixed Station/Agrivision ownership. New route entry
+- * points should prefer owner shell adapters:
++ * Owner widgets now live under Station/Agrivision modules, but this shell still
++ * keeps legacy layout, menu, content, and route-alias compatibility. New route
++ * entry points should prefer owner shell adapters:
+  * - src/modules/station/shell/StationShell.jsx
+  * - src/modules/agrivision/shell/AgrivisionShell.jsx
+  *
+diff --git a/App/src/modules/agrivision/shell/AgrivisionShell.jsx b/App/src/modules/agrivision/shell/AgrivisionShell.jsx
+index d7bc2e3..0f4024f 100644
+--- a/App/src/modules/agrivision/shell/AgrivisionShell.jsx
++++ b/App/src/modules/agrivision/shell/AgrivisionShell.jsx
+@@ -2,7 +2,7 @@
+  * AgrivisionShell — Agrivision-owned shell entry point.
+  *
+  * Boundary adapter only. It delegates to the existing compatibility GridShell
+- * until Agrivision inference widgets move out of @core.
++ * while Agrivision route ownership continues to migrate away from shared shells.
+  */
+ 
+ import { GridShell } from '../../@core/components/GridShell';
+diff --git a/App/src/modules/station/shell/StationShell.jsx b/App/src/modules/station/shell/StationShell.jsx
+index b8845c9..f432dcf 100644
+--- a/App/src/modules/station/shell/StationShell.jsx
++++ b/App/src/modules/station/shell/StationShell.jsx
+@@ -2,7 +2,7 @@
+  * StationShell — Station-owned shell entry point.
+  *
+  * Boundary adapter only. It delegates to the existing compatibility MapShell
+- * until Station dashboard widgets move out of @core.
++ * while Station route ownership continues to migrate away from shared shells.
+  */
+ 
+ import { MapShell } from '../../@core/components/MapShell';

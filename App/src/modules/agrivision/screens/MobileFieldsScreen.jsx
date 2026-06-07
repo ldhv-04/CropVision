@@ -77,7 +77,7 @@ export default function MobileFieldsScreen() {
   // Loading
   if (isLoadingFields && fields.length === 0) {
     return (
-      <View style={styles.centerContainer}>
+      <View testID="fields-screen" style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#4CAF50" />
         <Text style={styles.loadingText}>Loading your fields...</Text>
       </View>
@@ -87,7 +87,7 @@ export default function MobileFieldsScreen() {
   // Error
   if (fieldsError && fields.length === 0) {
     return (
-      <View style={styles.centerContainer}>
+      <View testID="fields-screen" style={styles.centerContainer}>
         <Text style={styles.errorIcon}>⚠️</Text>
         <Text style={styles.errorText}>{fieldsError}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={fetchFields}>
@@ -100,7 +100,7 @@ export default function MobileFieldsScreen() {
   // Empty
   if (!isLoadingFields && fields.length === 0) {
     return (
-      <View style={styles.centerContainer}>
+      <View testID="fields-screen" style={styles.centerContainer}>
         <Text style={styles.emptyIcon}>🌾</Text>
         <Text style={styles.emptyTitle}>No fields assigned yet</Text>
         <Text style={styles.emptySubtitle}>
