@@ -1,3 +1,4 @@
 // [H3] DEPRECATED COMPATIBILITY STUB — styles for the removed AdminPanel component.
-// Replaced by Station/Admin module styles.
-// TODO: Delete this file.
+throw new Error(
+  'Deprecated AdminPanel styles stub imported. Use Station/Admin module styles instead.',
+);
