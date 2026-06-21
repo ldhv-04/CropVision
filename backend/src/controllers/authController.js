@@ -25,7 +25,7 @@ const verifyEmail = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log(`[AUTH DEBUG] Received login request: email="${email}", password="${password}" (length=${password?.length})`);
+    console.log(`[AUTH DEBUG] Received login request: email="${email}", password=[redacted] (length=${password?.length})`);
     const session = await authService.loginUser(email, password);
     const isAdmin = session.user.role === 'admin';
     res.json({

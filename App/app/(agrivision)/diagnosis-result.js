@@ -9,6 +9,8 @@ import { useAuthStore } from '../../src/modules/@core/auth/useAuthStore';
 import { useInferenceStore } from '../../src/modules/inference/store/useInferenceStore';
 import { apiRequest } from '../../src/modules/@core/api/apiClient';
 import { LIGHT_COLORS, SPACING, RADIUS, FONT_SIZE } from '../../src/modules/@core/constants/theme';
+import { InferenceDebugPanel } from '../../src/modules/inference/components/InferenceDebugPanel';
+import { markLatestInferenceDebugEvent } from '../../src/modules/inference/debug/inferenceDebug';
 
 const { width } = Dimensions.get('window');
 const C = LIGHT_COLORS;
@@ -30,10 +32,26 @@ export default function DiagnosisResultScreen() {
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [diseaseDetails, setDiseaseDetails] = useState(null);
 
+  useEffect(() => {
+    markLatestInferenceDebugEvent('screen-mounted', {
+      screen: 'diagnosis-result',
+      hasSelectedAsset: Boolean(selectedAsset),
+      hasImageUri: Boolean(imageUri),
+    });
+    markLatestInferenceDebugEvent('route-param-received', {
+      screen: 'diagnosis-result',
+      hasRouteParams: false,
+    });
+  }, []);
+
   // 1. Run inference on mount if an image is selected but not analyzed yet
   useEffect(() => {
     if (selectedAsset && !detections && !isAnalyzing) {
-      runInference(token);
+      runInference(token, null, null, {
+        source: 'diagnosis-result',
+        trigger: 'auto-run',
+        imageSource: 'store',
+      });
     }
   }, [selectedAsset]);
 
@@ -51,10 +69,20 @@ export default function DiagnosisResultScreen() {
   const fetchDiseaseInfo = async (className) => {
     const detailStart = getNowMs();
     setLoadingDetails(true);
+    markLatestInferenceDebugEvent('disease-detail-fetch-start', {
+      screen: 'diagnosis-result',
+      className,
+    });
     try {
       const res = await apiRequest(`/api/chat/diseases/class/${className}`, {}, token);
       if (res.success) {
         setDiseaseDetails(res.data);
+        markLatestInferenceDebugEvent('disease-detail-fetch-done', {
+          screen: 'diagnosis-result',
+          durationMs: getNowMs() - detailStart,
+          className,
+          hasDetails: Boolean(res.data),
+        });
         logDiagnosisTiming('disease-detail-fetch', {
           totalMs: getNowMs() - detailStart,
           className,
@@ -62,6 +90,12 @@ export default function DiagnosisResultScreen() {
         });
       } else {
         console.warn('[DiagnosisResult] Fetch disease info unsuccessful:', res.message);
+        markLatestInferenceDebugEvent('disease-detail-fetch-done', {
+          screen: 'diagnosis-result',
+          durationMs: getNowMs() - detailStart,
+          className,
+          success: false,
+        });
         logDiagnosisTiming('disease-detail-fetch-unsuccessful', {
           totalMs: getNowMs() - detailStart,
           className,
@@ -69,6 +103,11 @@ export default function DiagnosisResultScreen() {
       }
     } catch (err) {
       console.warn('[DiagnosisResult] Fetch disease info failed:', err.message);
+      markLatestInferenceDebugEvent('inference-error', {
+        screen: 'diagnosis-result',
+        phase: 'disease-detail-fetch',
+        message: err?.message,
+      });
       logDiagnosisTiming('disease-detail-fetch-error', {
         totalMs: getNowMs() - detailStart,
         className,
@@ -94,6 +133,7 @@ export default function DiagnosisResultScreen() {
         <Pressable style={styles.backBtn} onPress={handleBackHome}>
           <Text style={styles.backBtnText}>Quay lại trang chủ</Text>
         </Pressable>
+        <InferenceDebugPanel compact />
       </View>
     );
   }
@@ -116,7 +156,14 @@ export default function DiagnosisResultScreen() {
         <Text style={styles.errorIcon}>⚠️</Text>
         <Text style={styles.errorTitle}>Lỗi phân tích hình ảnh</Text>
         <Text style={styles.errorDesc}>{error}</Text>
-        <Pressable style={styles.retryBtn} onPress={() => runInference(token)}>
+        <Pressable
+          style={styles.retryBtn}
+          onPress={() => runInference(token, null, null, {
+            source: 'diagnosis-result',
+            trigger: 'retry-button',
+            imageSource: 'store',
+          })}
+        >
           <Text style={styles.retryBtnText}>Thử lại chẩn đoán</Text>
         </Pressable>
         <Pressable style={styles.backBtn} onPress={handleBackHome}>
@@ -148,12 +195,22 @@ export default function DiagnosisResultScreen() {
             source={{ uri: `data:image/jpeg;base64,${resultImageBase64}` }}
             style={styles.image}
             resizeMode="cover"
+            onLoadEnd={() => markLatestInferenceDebugEvent('render-ready', {
+              screen: 'diagnosis-result',
+              hasBase64: true,
+              boxes: detections?.length || 0,
+            })}
           />
         ) : (
           <Image
             source={{ uri: imageUri }}
             style={styles.image}
             resizeMode="cover"
+            onLoadEnd={() => markLatestInferenceDebugEvent('render-ready', {
+              screen: 'diagnosis-result',
+              hasBase64: false,
+              boxes: detections?.length || 0,
+            })}
           />
         )}
         <LinearGradient

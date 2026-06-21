@@ -79,27 +79,50 @@ export const resolveAssetUrl = (path) => {
  */
 export const apiRequest = async (path, options = {}, token = null) => {
   const url = buildUrl(path);
+  const { debugRun, ...fetchOptions } = options;
 
   const activeToken = token || getAuthToken();
 
   const headers = {
     'Content-Type': 'application/json',
     ...(activeToken ? { Authorization: `Bearer ${activeToken}` } : {}),
-    ...(options.headers || {}),
+    ...(debugRun?.runId ? { 'X-Inference-Debug-Run-Id': debugRun.runId } : {}),
+    ...(fetchOptions.headers || {}),
   };
 
   // When sending FormData, remove Content-Type so browser sets multipart boundary
-  if (options.body instanceof FormData) {
+  if (fetchOptions.body instanceof FormData) {
     delete headers['Content-Type'];
   }
 
+  debugRun?.mark?.('upload-start', {
+    path,
+    apiOrigin: API_ORIGIN,
+    method: fetchOptions.method || 'GET',
+    hasFormData: fetchOptions.body instanceof FormData,
+  });
+  const uploadStartedAt = getNowMs();
   const response = await fetch(url, {
-    ...options,
+    ...fetchOptions,
     headers,
+  });
+  debugRun?.mark?.('upload-done', {
+    durationMs: getNowMs() - uploadStartedAt,
+    status: response.status,
+    ok: response.ok,
   });
 
   // [H1] Always parse JSON first so callers get the body even on errors.
+  debugRun?.mark?.('response-parse-start', {
+    status: response.status,
+  });
+  const parseStartedAt = getNowMs();
   const data = await response.json();
+  debugRun?.mark?.('response-parse-done', {
+    durationMs: getNowMs() - parseStartedAt,
+    success: Boolean(data?.success),
+    hasData: Boolean(data?.data),
+  });
 
   // [H1] If the server returned a non-2xx status, throw an error that
   //       includes both the status code and the server's message.
@@ -114,6 +137,12 @@ export const apiRequest = async (path, options = {}, token = null) => {
 
   return data;
 };
+
+function getNowMs() {
+  return typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now()
+    : Date.now();
+}
 
 // Default api helper object containing convenience methods
 const api = {

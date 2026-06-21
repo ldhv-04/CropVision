@@ -13,6 +13,7 @@ import { useVisibleIndexes } from '../hooks/useVisibleIndexes'; // [refactor] sh
 
 import { InferencePreview } from './InferencePreview';
 import { InferenceActionPanel } from './InferenceActionPanel';
+import { InferenceDebugPanel } from './InferenceDebugPanel';
 import { DiseaseFilter } from './DiseaseFilter';
 import { DetectionList } from './DetectionList';
 import { COLORS, SPACING, RADIUS, FONT_SIZE } from '../../@core/constants/theme';
@@ -83,6 +84,7 @@ export function InferenceLayout() {
           />
         </View>
       </View>
+      <InferenceDebugPanel compact={isCompact} />
     </View>
   );
 }
@@ -93,6 +95,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: SPACING.md,
     gap: SPACING.md,
+    position: 'relative',
   },
   rootCompact: {
     flexDirection: 'column',

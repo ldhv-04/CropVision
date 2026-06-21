@@ -6,6 +6,7 @@
 import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import { useInferenceStore } from '../store/useInferenceStore';
 import { useOverlayBoxes } from '../hooks/useOverlayBoxes';
+import { markLatestInferenceDebugEvent } from '../debug/inferenceDebug';
 import { COLORS, RADIUS } from '../../@core/constants/theme';
 
 export function InferencePreview({
@@ -44,6 +45,11 @@ export function InferencePreview({
             source={displaySource}
             style={styles.image}
             resizeMode="contain"
+            onLoadEnd={() => markLatestInferenceDebugEvent('render-ready', {
+              screen: 'inference-preview',
+              hasBase64: Boolean(resultImageBase64),
+              boxes: detections?.length || 0,
+            })}
           />
 
           {boxes.map((b) => {

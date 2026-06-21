@@ -2,8 +2,9 @@ import base64
 import io
 import os
 import time
+from typing import Optional
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, Header, HTTPException, UploadFile
 from PIL import Image, ImageOps
 
 from models.yolo_model import model
@@ -27,7 +28,7 @@ def healthcheck():
 
 
 @router.post("/predict", response_model=PredictionResult)
-async def predict(file: UploadFile = File(...)):
+async def predict(file: UploadFile = File(...), x_inference_debug_run_id: Optional[str] = Header(default=None)):
     total_start = time.perf_counter()
     # Validate MIME type truoc khi doc noi dung.
     if file.content_type not in ALLOWED_CONTENT_TYPES:
@@ -101,6 +102,7 @@ async def predict(file: UploadFile = File(...)):
             "boxes": len(extracted_boxes),
             "width": image.width,
             "height": image.height,
+            "debugRunId": x_inference_debug_run_id,
         },
     )
 

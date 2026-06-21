@@ -47,6 +47,7 @@ repomix-output.xml
 .vscode/launch.json
 .mimo-context.md
 .gitignore
+.understand-anything
 .understand-anything/init.json
 .understand-anything/knowledge-graph.json
 .understand-anything/intermediate/assembled-graph.json
@@ -86,3 +87,6 @@ knowledge.md
 
 map/
 App/public/map-data/
+Hoang_Vu_CV.pdf
+App/README_MOBILE_INFERENCE_WORKFLOW.md
+App/README_WORKFLOWS.md

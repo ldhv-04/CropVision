@@ -23,6 +23,7 @@ const inferenceModel = require('../models/inferenceModel');
 const analyzeImage = async (req, res) => {
   const totalStart = getNowMs();
   const receivedAt = new Date().toISOString();
+  const debugRunId = req.get('x-inference-debug-run-id') || null;
   let aiCoreMs = null;
   let persistMs = null;
   let saveMs = null;
@@ -41,7 +42,8 @@ const analyzeImage = async (req, res) => {
     const inferenceData = await inferenceService.callAiCore(
       req.file.buffer,
       req.file.originalname,
-      req.file.mimetype
+      req.file.mimetype,
+      debugRunId
     );
     aiCoreMs = getNowMs() - aiCoreStart;
 
@@ -79,6 +81,7 @@ const analyzeImage = async (req, res) => {
       boxes: inferenceData.boxes?.length ?? 0,
       hasFieldContext: Boolean(field_id),
       hasLocation: Boolean(latitude && longitude),
+      debugRunId,
     });
 
     res.json({
@@ -99,6 +102,7 @@ const analyzeImage = async (req, res) => {
       saveMs,
       totalMs: getNowMs() - totalStart,
       message: error.message,
+      debugRunId,
     });
     res.status(500).json({ success: false, message: 'Loi he thong may chu.' });
   }

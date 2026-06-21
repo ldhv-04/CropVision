@@ -11,6 +11,7 @@ import { COLORS, SPACING, RADIUS, FONT_SIZE } from '../../@core/constants/theme'
 import { useInferenceStore } from '../store/useInferenceStore';
 import { useAuthStore } from '../../@core/auth/useAuthStore';
 import { ImagePickerService } from '../../platform/services/ImagePickerService';
+import { markLatestInferenceDebugEvent } from '../debug/inferenceDebug';
 
 // Lazy import — only available in AgriVision context (not in Station/Web admin)
 let useFieldStore;
@@ -30,7 +31,19 @@ export function InferenceActionPanel() {
     try {
       const asset = await ImagePickerService.pickImage();
       if (asset) {
-        setSelectedAsset(asset);
+        setSelectedAsset(asset, {
+          source: 'inference-screen',
+          imageSource: 'gallery',
+          fieldId: selectedFieldId || null,
+        });
+        markLatestInferenceDebugEvent('screen-mounted', {
+          screen: 'inference-screen',
+          selectedFieldId: selectedFieldId || null,
+        });
+        markLatestInferenceDebugEvent('route-param-received', {
+          screen: 'inference-screen',
+          hasRouteParams: false,
+        });
       }
     } catch (error) {
       alert(error.message);
@@ -50,7 +63,16 @@ export function InferenceActionPanel() {
       }
     }
 
-    runInference(token, selectedFieldId || null, fieldCoords);
+    markLatestInferenceDebugEvent('manual-analyze-pressed', {
+      screen: 'inference-screen',
+      trigger: 'manual-button',
+      fieldId: selectedFieldId || null,
+    });
+    runInference(token, selectedFieldId || null, fieldCoords, {
+      source: 'inference-screen',
+      trigger: 'manual-button',
+      imageSource: 'gallery',
+    });
   };
 
 

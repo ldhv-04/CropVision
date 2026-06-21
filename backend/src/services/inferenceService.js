@@ -24,13 +24,15 @@ const validateImageFile = (fileBuffer, mimeType) => {
 };
 
 // Gui anh sang AI Core va tra ve ket qua suy luan.
-const callAiCore = async (fileBuffer, originalName, mimeType) => {
+const callAiCore = async (fileBuffer, originalName, mimeType, debugRunId = null) => {
   validateImageFile(fileBuffer, mimeType);
   const blob = new Blob([fileBuffer], { type: mimeType });
   const formData = new FormData();
   formData.append('file', blob, originalName);
 
-  const response = await axios.post(`${AI_CORE_URL}/predict`, formData);
+  const response = await axios.post(`${AI_CORE_URL}/predict`, formData, {
+    headers: debugRunId ? { 'X-Inference-Debug-Run-Id': debugRunId } : undefined,
+  });
   return response.data;
 };
 

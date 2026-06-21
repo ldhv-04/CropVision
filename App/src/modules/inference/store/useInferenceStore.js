@@ -10,8 +10,14 @@
 
 import { create } from 'zustand';
 import { Platform } from 'react-native';
-import { apiRequest } from '../../@core/api/apiClient';
+import { API_ORIGIN, apiRequest } from '../../@core/api/apiClient';
 import { ENDPOINTS } from '../../@core/api/endpoints';
+import {
+  getInferenceDebugRun,
+  registerInferenceRunAttempt,
+  sanitizeImageAsset,
+  startInferenceDebugRun,
+} from '../debug/inferenceDebug';
 
 // Lazy import expo-location — only available in native/Expo context
 let Location;
@@ -20,6 +26,8 @@ try {
 } catch {
   Location = null;
 }
+
+const GPS_TIMEOUT_MS = Platform.OS === 'web' ? 5000 : 2000;
 
 const useInferenceStore = create((set, get) => ({
   // ─── Image selection state ─────────────────────────────────────────────
@@ -43,22 +51,44 @@ const useInferenceStore = create((set, get) => ({
 
   // ─── Status ────────────────────────────────────────────────────────────
   error: null,
+  debugRunId: null,
 
   // ─── Actions ───────────────────────────────────────────────────────────
 
   /** Called when user picks an image (native or web). */
-  setSelectedAsset: (asset) => set({
-    selectedAsset:          asset,
-    imageUri:               asset?.uri ?? null,
-    imageName:              asset?.fileName || null,
-    detections:             null,
-    resultImageBase64:      null,
-    hoveredDetectionIndex:  null,
-    selectedDetectionIndex: null,
-    activeDiseaseFilter:    'all',
-    focusMode:              'all',
-    error:                  null,
-  }),
+  setSelectedAsset: (asset, debugMeta = {}) => {
+    const imageSource = debugMeta.imageSource || 'store';
+    const debugRun = asset
+      ? startInferenceDebugRun({
+          source: debugMeta.source || 'setSelectedAsset',
+          imageSource,
+          asset,
+          fieldId: debugMeta.fieldId || null,
+        })
+      : null;
+
+    if (debugRun) {
+      debugRun.mark(imageSource === 'camera' ? 'camera-captured' : 'image-selected', {
+        screen: debugMeta.source || 'setSelectedAsset',
+        imageSource,
+        asset,
+      });
+    }
+
+    set({
+      selectedAsset:          asset,
+      imageUri:               asset?.uri ?? null,
+      imageName:              asset?.fileName || null,
+      detections:             null,
+      resultImageBase64:      null,
+      hoveredDetectionIndex:  null,
+      selectedDetectionIndex: null,
+      activeDiseaseFilter:    'all',
+      focusMode:              'all',
+      error:                  null,
+      debugRunId:             debugRun?.runId || null,
+    });
+  },
 
   /** Called when the image container lays out on screen. */
   setPreviewFrame: (frame) => set({ previewFrame: frame }),
@@ -107,28 +137,86 @@ const useInferenceStore = create((set, get) => ({
    * Capture device GPS coordinates. Returns [lat, lon] or null.
    * Gracefully handles web (navigator.geolocation), native (expo-location), and failures.
    */
-  _captureGPS: async () => {
+  _captureGPS: async ({ debugRun = null, timeoutMs = GPS_TIMEOUT_MS } = {}) => {
     try {
       if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
-        return new Promise((resolve) => {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => resolve([pos.coords.latitude, pos.coords.longitude]),
-            () => resolve(null),
-            { enableHighAccuracy: false, timeout: 5000, maximumAge: 30000 }
-          );
+        debugRun?.mark('context-location-permission-start', {
+          platform: Platform.OS,
         });
+        debugRun?.mark('context-location-permission-done', {
+          platform: Platform.OS,
+          permissionStatus: 'browser-managed',
+        });
+        return await captureWebGPS({ debugRun, timeoutMs });
       }
 
       if (Location) {
+        const permissionStart = getNowMs();
+        debugRun?.mark('context-location-permission-start', {
+          platform: Platform.OS,
+        });
         const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') return null;
-        const loc = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
+        debugRun?.mark('context-location-permission-done', {
+          durationMs: getNowMs() - permissionStart,
+          permissionStatus: status,
+        });
+        if (status !== 'granted') {
+          debugRun?.mark('context-location-skipped', {
+            reason: 'permission-not-granted',
+            permissionStatus: status,
+            requestedDeviceGps: true,
+          });
+          return null;
+        }
+
+        const locationStart = getNowMs();
+        debugRun?.mark('context-location-start', {
+          accuracy: 'Balanced',
+          timeoutMs,
+        });
+        const result = await Promise.race([
+          Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          })
+            .then((loc) => ({ loc }))
+            .catch((error) => ({ error })),
+          delay(timeoutMs).then(() => ({ timedOut: true })),
+        ]);
+
+        const durationMs = getNowMs() - locationStart;
+        if (result.timedOut) {
+          debugRun?.mark('context-location-timeout', {
+            durationMs,
+            timeoutMs,
+          });
+          debugRun?.mark('context-location-done', {
+            durationMs,
+            hasLocation: false,
+            reason: 'timeout',
+          });
+          return null;
+        }
+        if (result.error) throw result.error;
+
+        const loc = result.loc;
+        debugRun?.mark('context-location-done', {
+          durationMs,
+          hasLocation: Boolean(loc?.coords),
         });
         return [loc.coords.latitude, loc.coords.longitude];
       }
+
+      debugRun?.mark('context-location-skipped', {
+        reason: 'location-api-unavailable',
+        requestedDeviceGps: false,
+      });
     } catch (e) {
       console.warn('[GPS] Could not capture location:', e.message);
+      debugRun?.mark('context-location-done', {
+        hasLocation: false,
+        reason: 'error',
+        message: e?.message,
+      });
     }
     return null;
   },
@@ -138,38 +226,127 @@ const useInferenceStore = create((set, get) => ({
    *  @param {string|null} [fieldId] - Optional field ID for weather+crop context injection
    *  @param {object|null} [fieldCoords] - Optional {latitude, longitude} from selected field
    */
-  runInference: async (token, fieldId = null, fieldCoords = null) => {
-    const { selectedAsset } = get();
+  runInference: async (token, fieldId = null, fieldCoords = null, debugMeta = {}) => {
+    const { selectedAsset, debugRunId } = get();
     if (!selectedAsset?.uri) return;
 
+    const debugRun = debugRunId
+      ? getInferenceDebugRun(debugRunId)
+      : startInferenceDebugRun({
+          source: debugMeta.source || 'runInference',
+          imageSource: debugMeta.imageSource || 'store',
+          asset: selectedAsset,
+          fieldId,
+        });
+    const activeDebugRunId = debugRun.runId || debugRunId || null;
+    const duplicate = registerInferenceRunAttempt({
+      runId: activeDebugRunId,
+      asset: selectedAsset,
+      fieldId,
+      source: debugMeta.source || 'runInference',
+    });
+
     const totalStart = getNowMs();
-    set({ isAnalyzing: true, error: null });
+    debugRun.mark('inference-run-requested', {
+      screen: debugMeta.source || 'runInference',
+      trigger: debugMeta.trigger || 'manual',
+      fieldId,
+      apiOrigin: API_ORIGIN,
+      asset: selectedAsset,
+    });
+    debugRun.mark('duplicate-guard-check', {
+      duplicateCount: duplicate.duplicateCount,
+      hasSelectedAsset: Boolean(selectedAsset?.uri),
+      hasDetections: Boolean(get().detections?.length),
+      isAnalyzing: Boolean(get().isAnalyzing),
+    });
+    set({ isAnalyzing: true, error: null, debugRunId: activeDebugRunId });
 
     try {
       // [M2] Delegate FormData construction to helper (reduces cognitive load here)
       const prepStart = getNowMs();
+      debugRun.mark('formdata-start', {
+        asset: selectedAsset,
+        formDataStrategy: getFormDataStrategy(selectedAsset),
+      });
       const formData = await get()._buildImageFormData(selectedAsset);
       const imagePrepMs = getNowMs() - prepStart;
-
-      // [AgriVision] Inject field context if provided
-      if (fieldId) formData.append('field_id', fieldId);
+      debugRun.mark('formdata-done', {
+        durationMs: imagePrepMs,
+        image: sanitizeImageAsset(selectedAsset, debugMeta.imageSource || 'store'),
+      });
 
       // [GPS] Capture location — prefer field coords, fallback to device GPS
       const contextStart = getNowMs();
-      let coords = normalizeCoordinates(fieldCoords);
-      if (!coords) {
-        coords = normalizeCoordinates(await get()._captureGPS());
+      debugRun.mark('context-start', {
+        hasFieldId: Boolean(fieldId),
+        hasFieldCoords: Boolean(fieldCoords),
+      });
+
+      const fieldContextStart = getNowMs();
+      debugRun.mark('context-field-start', {
+        hasFieldId: Boolean(fieldId),
+        hasFieldCoords: Boolean(fieldCoords),
+      });
+      if (fieldId) formData.append('field_id', fieldId);
+      const fieldCoordsNormalized = normalizeCoordinates(fieldCoords);
+      debugRun.mark('context-field-done', {
+        durationMs: getNowMs() - fieldContextStart,
+        hasFieldId: Boolean(fieldId),
+        hasFieldCoords: Boolean(fieldCoordsNormalized),
+      });
+
+      const weatherContextStart = getNowMs();
+      debugRun.mark('context-weather-start', {
+        requested: false,
+      });
+      debugRun.mark('context-weather-done', {
+        durationMs: getNowMs() - weatherContextStart,
+        requested: false,
+        reason: 'not-collected-in-inference-context',
+      });
+
+      const assetCoords = normalizeCoordinates(
+        selectedAsset?.location ||
+        selectedAsset?.gps ||
+        selectedAsset?.coords ||
+        selectedAsset
+      );
+      let coords = fieldCoordsNormalized || assetCoords;
+      let locationSource = fieldCoordsNormalized ? 'field' : assetCoords ? 'asset' : 'none';
+      if (coords) {
+        debugRun.mark('context-location-skipped', {
+          reason: `${locationSource}-coordinates-present`,
+          hasLocation: true,
+          requestedDeviceGps: false,
+        });
+      } else {
+        coords = normalizeCoordinates(await get()._captureGPS({ debugRun }));
+        locationSource = coords ? 'device' : 'none';
       }
       if (coords) {
         formData.append('latitude', String(coords[0]));
         formData.append('longitude', String(coords[1]));
       }
       const contextMs = getNowMs() - contextStart;
+      debugRun.mark('context-finalized', {
+        durationMs: contextMs,
+        hasLocation: Boolean(coords),
+        locationSource,
+        requestedDeviceGps: !fieldCoordsNormalized && !assetCoords,
+        timeoutMs: GPS_TIMEOUT_MS,
+      });
+      debugRun.mark('context-done', {
+        durationMs: contextMs,
+        hasLocation: Boolean(coords),
+        locationSource,
+      });
 
       const uploadStart = getNowMs();
       const data = await apiRequest(ENDPOINTS.inference.analyze, {
         method: 'POST',
         body:   formData,
+        debugRun,
       }, token);
       const uploadMs = getNowMs() - uploadStart;
 
@@ -186,6 +363,14 @@ const useInferenceStore = create((set, get) => ({
           focusMode:              'all',
           isAnalyzing:            false,
         });
+        debugRun.mark('store-update-done', {
+          boxes: data.data?.boxes?.length ?? 0,
+          hasBase64: Boolean(data.data?.image_base64),
+          imageWidth: data.data?.image_width || 0,
+          imageHeight: data.data?.image_height || 0,
+          sampleId: data.data?.sample_id || null,
+        });
+        debugRun.print();
         logInferenceTiming('client-runInference', {
           imagePrepMs,
           contextMs,
@@ -196,6 +381,11 @@ const useInferenceStore = create((set, get) => ({
         });
       } else {
         set({ error: data.message, isAnalyzing: false });
+        debugRun.mark('store-update-done', {
+          success: false,
+          message: data.message,
+        });
+        debugRun.print();
         logInferenceTiming('client-runInference-unsuccessful', {
           imagePrepMs,
           contextMs,
@@ -208,6 +398,11 @@ const useInferenceStore = create((set, get) => ({
         error: 'Không thể kết nối đến máy chủ. Hãy chắc chắn backend và AI Core đang chạy.',
         isAnalyzing: false,
       });
+      debugRun.error('inference-error', err, {
+        screen: debugMeta.source || 'runInference',
+        totalMs: getNowMs() - totalStart,
+      });
+      debugRun.print();
       logInferenceTiming('client-runInference-error', {
         totalMs: getNowMs() - totalStart,
         message: err?.message,
@@ -257,6 +452,52 @@ function normalizeCoordinates(coords) {
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
 
   return [lat, lon];
+}
+
+async function captureWebGPS({ debugRun, timeoutMs }) {
+  const locationStart = getNowMs();
+  debugRun?.mark('context-location-start', {
+    accuracy: 'browser-default',
+    timeoutMs,
+  });
+
+  const result = await new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({
+        coords: [pos.coords.latitude, pos.coords.longitude],
+      }),
+      (error) => resolve({
+        error,
+        timedOut: error?.code === error?.TIMEOUT,
+      }),
+      { enableHighAccuracy: false, timeout: timeoutMs, maximumAge: 30000 }
+    );
+  });
+
+  const durationMs = getNowMs() - locationStart;
+  if (result.timedOut) {
+    debugRun?.mark('context-location-timeout', {
+      durationMs,
+      timeoutMs,
+    });
+  }
+
+  debugRun?.mark('context-location-done', {
+    durationMs,
+    hasLocation: Boolean(result.coords),
+    reason: result.error ? (result.timedOut ? 'timeout' : 'error') : undefined,
+  });
+  return result.coords || null;
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getFormDataStrategy(asset) {
+  if (Platform.OS === 'web' && asset?.file) return 'web-file';
+  if (Platform.OS === 'web' || asset?.uri?.startsWith('data:')) return 'blob-from-uri';
+  return 'native-uri';
 }
 
 function getNowMs() {
