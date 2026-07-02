@@ -2,35 +2,6 @@
 
 Hệ thống phát hiện bệnh lá cây dựa trên YOLOv8, gồm 3 thành phần vận hành tách biệt theo mô hình Tri-Platform Modular Architecture:
 
-```mermaid
-graph TD
-    User((User))
-    Web[Web Browser]
-    Desktop[Electron App]
-    Mobile[Expo Go/Native]
-    
-    subgraph Frontend [App Module - Expo Router]
-        UI[Modular UI src/modules]
-        Core[@core Design & Stores]
-        Platform[Platform Services]
-    end
-    
-    subgraph Services
-        Backend[Backend API Node.js]
-        AICore[AI Core Python/YOLOv8]
-        DB[(PostgreSQL)]
-    end
-
-    User --> Web
-    User --> Desktop
-    User --> Mobile
-    Web & Desktop & Mobile --> UI
-    UI --> Core
-    UI --> Platform
-    Core --> Backend
-    Backend --> DB
-    Backend --> AICore
-```
 
 ---
 
