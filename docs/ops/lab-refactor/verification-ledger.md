@@ -10,7 +10,8 @@ for a mandatory P0 runtime row.
 | A typecheck | `App: npx tsc --noEmit` | none | static | PASS | exit 0 |
 | A lint | no script discovered | none | static | NOT RUN | project provides no command |
 | A format | no script discovered | none | static | NOT RUN | project provides no command |
-| A architecture/negative proof | no baseline suite | none | architecture | NOT RUN | L2 required |
+| A architecture focused | `npx jest __tests__/architectureBoundary.test.js --runInBand` | source graph | architecture | PASS | 7 rules, no snapshots |
+| A architecture negative proof | temporary Station private import of Agrivision store | source graph | architecture | PASS | intended run failed on exact edge; file removed; suite green again |
 | A web renderer build | `App: npm run export:web` | none | shared renderer | FAIL | undeclared `maplibre-gl` |
 | A tracked artifact hygiene | status and exact cleanup | none | repository | PASS | worktree clean after tests |
 | B Electron static/security | `App: node electron/smoke-check.js` | none | Electron static | PASS | syntax/policy assertions |
@@ -41,3 +42,10 @@ for a mandatory P0 runtime row.
 - The timed-out Gradle run created three Java processes; all were terminated by exact PID.
 - All generated Playwright and Android output from the baseline attempts was removed or
   restored, leaving a clean worktree before documentation.
+
+## L2 evidence
+
+- Parser coverage: static import, re-export, fixed `require`, and fixed `import()` across
+  JS/JSX/TS/TSX; comments ignored; dynamic expressions rejected.
+- Fixed exception sets preserve only audited L1 edges and registry keys.
+- The deliberate violation was never staged or committed.

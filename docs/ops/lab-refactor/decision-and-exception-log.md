@@ -47,3 +47,14 @@
   timeout, or selectors during L1.
 - Acceptance criteria: unchanged; P2 readiness is supplementary and cannot certify P0.
 - Status: unresolved pre-existing frontend failure.
+
+## D-006 - Existing parser instead of a new architecture dependency
+
+- Evidence: committed frontend tooling already installs Babel parser through the Babel
+  toolchain and it parses the repository's JS/JSX/TS/TSX syntax.
+- Decision: use that parser plus Node filesystem/path APIs in one Jest file. Do not add a
+  package, helper generator, snapshot, or configuration file.
+- Acceptance criteria: import/re-export/fixed-require/fixed-import coverage and negative
+  proof remain mandatory.
+- Rollback boundary: the L2 test/contract commit.
+- Status: resolved; focused and whole-suite checks are green.
