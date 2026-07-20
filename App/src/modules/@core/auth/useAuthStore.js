@@ -19,6 +19,7 @@ import { create } from 'zustand';
 import { Platform } from 'react-native';
 import { apiRequest } from '../api/apiClient';
 import { ENDPOINTS } from '../api/endpoints';
+import { setSessionTokenProvider } from '../session/sessionProvider';
 
 // ─── Persistence helpers (H2) ─────────────────────────────────────────────
 // Web: localStorage (synchronous, simple).
@@ -195,5 +196,7 @@ const useAuthStore = create((set, get) => ({
    */
   clearError: () => set({ error: null }),
 }));
+
+setSessionTokenProvider(() => useAuthStore.getState().token);
 
 export { useAuthStore };

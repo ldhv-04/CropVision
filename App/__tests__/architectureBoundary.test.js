@@ -86,9 +86,6 @@ const COMPATIBILITY_CONSUMER_ALLOWLIST = new Set([
   'app/(agrivision)/_layout.js -> ../../src/modules/agrivision/shell',
   'app/(main)/_layout.js -> ../../src/modules/@core/components/GridShell',
 ]);
-const TRANSPORT_AUTH_ALLOWLIST = new Set([
-  'src/modules/@core/api/apiClient.js -> ../auth/useAuthStore',
-]);
 
 function normalize(filePath) {
   return path.relative(APP_ROOT, filePath).replace(/\\/g, '/');
@@ -300,14 +297,13 @@ describe('bounded modulith architecture', () => {
     ]);
   });
 
-  test('transport has only the temporary audited auth-store edge', () => {
+  test('transport does not import the auth store', () => {
     const transportRoot = path.join(MODULE_ROOT, '@core', 'api');
     const authRoot = path.join(MODULE_ROOT, '@core', 'auth');
     const violations = graph.flatMap(({ importer, specifier }) => {
       const target = resolveLocal(importer, specifier);
       if (!target || !isInside(importer, transportRoot) || !isInside(target, authRoot)) return [];
-      const currentEdge = edge(importer, specifier);
-      return TRANSPORT_AUTH_ALLOWLIST.has(currentEdge) ? [] : [currentEdge];
+      return [edge(importer, specifier)];
     });
     expect(violations).toEqual([]);
   });

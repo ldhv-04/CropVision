@@ -49,3 +49,18 @@ for a mandatory P0 runtime row.
   JS/JSX/TS/TSX; comments ignored; dynamic expressions rejected.
 - Fixed exception sets preserve only audited L1 edges and registry keys.
 - The deliberate violation was never staged or committed.
+
+## L3 evidence
+
+| Check | Result | Evidence |
+|---|---|---|
+| Runtime bridge contract | PASS | browser vs Electron bridge plus Android unit assertions |
+| Session-provider validation/injection | PASS | null/reset, invalid provider, and Authorization header assertions |
+| Transport/auth cycle | PASS | architecture scan finds no API-to-auth import |
+| Focused L3 tests | PASS | 2 suites, 9 tests |
+| Whole Jest suite | PASS | 3 suites, 10 tests |
+| TypeScript | PASS | `npx tsc --noEmit` |
+| Electron static/security | PASS | `node electron/smoke-check.js` |
+
+The pre-existing web export, P2, Android build, and real P0 runtime blockers remain
+unchanged; L3 did not claim them as exercised behavior.

@@ -15,25 +15,10 @@
  *   hasNativeFS: boolean — true only for electron (via IPC)
  */
 
-import { Platform } from 'react-native';
-
-const detectPlatform = () => {
-  if (Platform.OS === 'ios') return 'ios';
-  if (Platform.OS === 'android') return 'android';
-
-  if (Platform.OS === 'web') {
-    // Electron injects window.electronAPI via preload.js
-    if (typeof window !== 'undefined' && window.electronAPI) {
-      return 'electron';
-    }
-    return 'web';
-  }
-
-  return 'unknown';
-};
+import { getRuntimePlatform } from '../runtime';
 
 export const usePlatformInfo = () => {
-  const platform = detectPlatform();
+  const platform = getRuntimePlatform();
 
   return {
     platform,

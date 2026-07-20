@@ -73,8 +73,8 @@ test so additions are visible in code review and failures report the missing edg
 - `COMPATIBILITY_CONSUMER_ALLOWLIST`: exactly two live P2/P3 edges:
   - `app/(agrivision)/_layout.js -> ../../src/modules/agrivision/shell`
   - `app/(main)/_layout.js -> ../../src/modules/@core/components/GridShell`
-- `TRANSPORT_AUTH_ALLOWLIST`: exactly one temporary L3 edge:
-  - `src/modules/@core/api/apiClient.js -> ../auth/useAuthStore`
+- Transport/auth exceptions: none after L3. Transport imports only the neutral session
+  provider; the auth store registers its token getter from the dependency-owning side.
 
 Neutral route imports currently include `@core` outside its API folder and the landing
 module root. This permits existing auth/layout composition, not owner business logic.
@@ -97,7 +97,7 @@ program.
 
 ## Removal gates
 
-- L3 removes the sole transport/auth exception after injected session composition passes.
+- L3 removed the sole transport/auth exception after injected session composition passed.
 - L4 removes Station route/private exceptions as Station routes use `station/index.js`.
 - L5 removes Agrivision route/private exceptions as Agrivision routes use
   `agrivision/index.js`.

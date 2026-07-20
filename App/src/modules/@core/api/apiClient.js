@@ -8,16 +8,8 @@
  */
 
 import { Platform } from 'react-native';
-
-// Dynamically get token to avoid circular import issue with useAuthStore
-const getAuthToken = () => {
-  try {
-    const { useAuthStore } = require('../auth/useAuthStore');
-    return useAuthStore.getState().token;
-  } catch (e) {
-    return null;
-  }
-};
+import { getSessionToken } from '../session/sessionProvider';
+import { getRuntimePlatform } from '../../platform/runtime';
 
 // ─────────────────────────────────────────────
 // Origin resolution (ported from legacy api.js)
@@ -27,15 +19,10 @@ const MANUAL_ORIGIN = process.env.EXPO_PUBLIC_API_ORIGIN?.trim();
 const API_PROTOCOL  = process.env.EXPO_PUBLIC_API_PROTOCOL || 'http';
 const API_PORT      = process.env.EXPO_PUBLIC_API_PORT || '3000';
 
-const isElectronRenderer = () =>
-  Platform.OS === 'web' &&
-  typeof navigator !== 'undefined' &&
-  /electron/i.test(navigator.userAgent || '');
-
 const resolveHost = () => {
   const manual = process.env.EXPO_PUBLIC_API_HOST?.trim();
   if (manual) return manual;
-  if (isElectronRenderer()) return '127.0.0.1';
+  if (getRuntimePlatform() === 'electron') return '127.0.0.1';
   if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.hostname) {
     return window.location.hostname;
   }
@@ -81,7 +68,7 @@ export const apiRequest = async (path, options = {}, token = null) => {
   const url = buildUrl(path);
   const { debugRun, ...fetchOptions } = options;
 
-  const activeToken = token || getAuthToken();
+  const activeToken = token || getSessionToken();
 
   const headers = {
     'Content-Type': 'application/json',

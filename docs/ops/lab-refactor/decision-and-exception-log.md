@@ -58,3 +58,19 @@
   proof remain mandatory.
 - Rollback boundary: the L2 test/contract commit.
 - Status: resolved; focused and whole-suite checks are green.
+
+## D-007 - Minimal injected session provider
+
+- Evidence: transport used a fixed-string `require()` of the auth store while the auth store
+  imported transport; API host detection also duplicated platform capability logic.
+- Decision: add one neutral session-provider module and one neutral runtime detector. Auth
+  registers `useAuthStore.getState().token`; transport reads only the provider. Both API host
+  resolution and `usePlatformInfo` use the same preload-bridge detector.
+- Alternatives rejected: pass tokens through every existing call site (large behavioral
+  migration), keep the lazy require (cycle remains), or create a larger service/container.
+- Acceptance criteria: unchanged; Electron must be identified through the bridge and P0
+  behavior still requires runtime proof.
+- Affected files/tests: `@core/api`, `@core/auth`, `@core/session`, `platform/runtime`,
+  platform hook, architecture test, and focused capability/session test.
+- Rollback boundary: L3 commit only.
+- Status: resolved statically and by unit tests; real P0 runtime remains pending.
