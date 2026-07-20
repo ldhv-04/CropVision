@@ -4,7 +4,8 @@ import { useAuthStore } from '../src/modules/@core/auth/useAuthStore';
 /**
  * Root index route.
  * Redirects to the appropriate section based on auth state.
- * - Authenticated → (main)/inference
+ * - Authenticated farmer → (agrivision)
+ * - Authenticated admin → (station)
  * - Unauthenticated → (auth)/welcome
  */
 export default function Index() {

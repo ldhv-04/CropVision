@@ -1,6 +1,6 @@
 /**
- * Alert Management — Expo Route
- * Re-exports the shared module component for Expo Router.
+ * Legacy alert management route.
+ * Kept for compatibility until Station route migration is fully verified.
  */
 
 export { default } from '../../src/modules/admin/components/AlertsAdminScreen';

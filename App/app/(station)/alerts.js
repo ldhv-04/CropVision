@@ -1,6 +1,5 @@
-/**
- * Alert Management — Station Expo Route
- * Re-exports the shared module component for Expo Router under (station).
- */
+import { Redirect } from 'expo-router';
 
-export { default } from '../../src/modules/admin/components/AlertsAdminScreen';
+export default function StationAlertsAlias() {
+  return <Redirect href="/station/alerts" />;
+}

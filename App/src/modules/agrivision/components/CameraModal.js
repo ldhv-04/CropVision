@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import * as MediaLibrary from 'expo-media-library';
 import { ImagePickerService } from '../../platform/services/ImagePickerService';
 import { useInferenceStore } from '../../inference/store/useInferenceStore';
+import { markLatestInferenceDebugEvent } from '../../inference/debug/inferenceDebug';
 import { LIGHT_COLORS, SPACING, RADIUS, FONT_SIZE } from '../../@core/constants/theme';
 
 const { width, height } = Dimensions.get('window');
@@ -49,9 +50,23 @@ export function CameraModal({ visible, onClose }) {
 
   const handleTakePhoto = async () => {
     try {
+      const startedAt = getNowMs();
       const asset = await ImagePickerService.takePhoto();
       if (asset) {
-        setSelectedAsset(asset);
+        setSelectedAsset(asset, {
+          source: 'camera-modal',
+          imageSource: 'camera',
+        });
+        markLatestInferenceDebugEvent('image-picker-done', {
+          screen: 'camera-modal',
+          imageSource: 'camera',
+          durationMs: getNowMs() - startedAt,
+          asset,
+        });
+        markLatestInferenceDebugEvent('route-transition-start', {
+          from: 'camera-modal',
+          to: '/(agrivision)/diagnosis-result',
+        });
         onClose();
         router.push('/(agrivision)/diagnosis-result');
       }
@@ -62,9 +77,23 @@ export function CameraModal({ visible, onClose }) {
 
   const handlePickFromGallery = async () => {
     try {
+      const startedAt = getNowMs();
       const asset = await ImagePickerService.pickImage();
       if (asset) {
-        setSelectedAsset(asset);
+        setSelectedAsset(asset, {
+          source: 'camera-modal',
+          imageSource: 'gallery',
+        });
+        markLatestInferenceDebugEvent('image-picker-done', {
+          screen: 'camera-modal',
+          imageSource: 'gallery',
+          durationMs: getNowMs() - startedAt,
+          asset,
+        });
+        markLatestInferenceDebugEvent('route-transition-start', {
+          from: 'camera-modal',
+          to: '/(agrivision)/diagnosis-result',
+        });
         onClose();
         router.push('/(agrivision)/diagnosis-result');
       }
@@ -81,7 +110,14 @@ export function CameraModal({ visible, onClose }) {
       width: asset.width,
       height: asset.height
     };
-    setSelectedAsset(mappedAsset);
+    setSelectedAsset(mappedAsset, {
+      source: 'camera-modal',
+      imageSource: 'recent-gallery',
+    });
+    markLatestInferenceDebugEvent('route-transition-start', {
+      from: 'camera-modal-recent-gallery',
+      to: '/(agrivision)/diagnosis-result',
+    });
     onClose();
     router.push('/(agrivision)/diagnosis-result');
   };
@@ -309,3 +345,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+function getNowMs() {
+  return typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now()
+    : Date.now();
+}

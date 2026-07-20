@@ -16,9 +16,9 @@ import { useLayoutMode } from '../../platform/hooks/useLayoutMode';
 import { COLORS, SPACING, FONT_SIZE, RADIUS } from '../constants/theme';
 
 const NAV_ITEMS = [
-  { label: 'Phân tích ảnh',    href: '/inference', key: 'inference' },
+  { label: 'Phân tích ảnh',    href: '/(agrivision)/inference', key: 'inference' },
   { label: 'Lịch sử mẫu vật',  href: '/history',   key: 'history'   },
-  { label: 'Quản trị hệ thống', href: '/admin',     key: 'admin',  adminOnly: true },
+  { label: 'Quản trị hệ thống', href: '/(station)', key: 'admin',  adminOnly: true },
 ];
 
 function NavItem({ item, isActive, compact = false }) {

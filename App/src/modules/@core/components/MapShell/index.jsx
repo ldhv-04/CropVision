@@ -1,8 +1,10 @@
 /**
  * MapShell — Map-Centric Layout Shell
  *
- * Full-screen map background with floating UI elements on top.
- * Used for the Station App redesign (Epoch 1 & 3).
+ * @deprecated Frozen compatibility shell. Canonical Station uses
+ * SoilzeProShell + <Slot />; do not add new consumers to this chain.
+ * Moving or deleting it requires a separately approved plan. Its old
+ * GridShell NavWidget/MapWidget adapters remain protected while it exists.
  */
 
 import { useMemo } from 'react';

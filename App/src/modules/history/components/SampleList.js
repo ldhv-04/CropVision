@@ -100,7 +100,7 @@ export default function SampleList({ authToken, currentUser }) {
 
   if (isLoading) {
     return (
-      <View style={styles.loaderContainer}>
+      <View testID="sample-history-screen" style={styles.loaderContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
         <Text style={{ color: COLORS.textSecondary, marginTop: 10 }}>Đang tải dữ liệu...</Text>
       </View>
@@ -108,7 +108,7 @@ export default function SampleList({ authToken, currentUser }) {
   }
 
   return (
-    <View style={styles.container}>
+    <View testID="sample-history-screen" style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Danh sách Mẫu vật</Text>
         <Text style={styles.subTitle}>

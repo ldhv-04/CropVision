@@ -1,3 +1,8 @@
+/**
+ * @deprecated Frozen MapShell compatibility child. Canonical Station uses
+ * SoilzeProShell + <Slot />; do not add new consumers or move/delete this file
+ * without a separately approved plan.
+ */
 import { useMapStore } from '../../store/useMapStore';
 import { useTheme } from '../../context/ThemeContext';
 import { SHADOWS } from '../../constants/theme';

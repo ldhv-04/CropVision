@@ -5,10 +5,12 @@
  * so AI recommendations become context-aware (weather + crop type).
  */
 
+import { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useAuthStore } from '../../src/modules/@core/auth/useAuthStore';
 import { useFieldStore } from '../../src/modules/agrivision/store/useFieldStore';
 import { InferenceLayout } from '../../src/modules/inference/components/InferenceLayout';
+import { markLatestInferenceDebugEvent } from '../../src/modules/inference/debug/inferenceDebug';
 import { LIGHT_COLORS, SPACING, RADIUS, FONT_SIZE } from '../../src/modules/@core/constants/theme';
 
 const C = LIGHT_COLORS;
@@ -16,6 +18,17 @@ const C = LIGHT_COLORS;
 export default function InferenceScreen() {
   const { fields, selectedFieldId, selectField } = useFieldStore();
   const selectedField = fields.find(f => f.id === selectedFieldId);
+
+  useEffect(() => {
+    markLatestInferenceDebugEvent('screen-mounted', {
+      screen: 'inference-screen',
+      selectedFieldId,
+    });
+    markLatestInferenceDebugEvent('route-param-received', {
+      screen: 'inference-screen',
+      hasRouteParams: false,
+    });
+  }, []);
 
   return (
     <View testID="inference-screen" style={styles.root}>

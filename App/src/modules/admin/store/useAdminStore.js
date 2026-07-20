@@ -1,7 +1,8 @@
 /**
  * useAdminStore — Admin Module / Layer 1: Core
  *
- * Zustand store replacing local state and inline fetch calls in the old AdminPanel.
+ * Station/Admin support store replacing local state and inline fetch calls in
+ * the old AdminPanel.
  */
 
 import { create } from 'zustand';

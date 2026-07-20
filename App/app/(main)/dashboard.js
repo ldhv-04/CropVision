@@ -1,10 +1,7 @@
-/**
- * Dashboard page — Smart Farming Overview
- * Uses the GridShell 'dashboard' layout variant which renders:
- *   OverviewStats, Map, SensorGrid, AlertsFeed, Nav, Menu, User
- */
-import { GridShell } from '../../src/modules/@core/components/GridShell';
+import { Redirect } from 'expo-router';
+import { useAuthStore } from '../../src/modules/@core/auth/useAuthStore';
 
 export default function DashboardScreen() {
-  return <GridShell />;
+  const user = useAuthStore((s) => s.user);
+  return <Redirect href={user?.role === 'admin' ? '/(station)' : '/(agrivision)'} />;
 }

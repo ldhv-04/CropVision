@@ -1,7 +1,8 @@
 /**
  * AlertsAdminScreen — Shared module component for alert management.
- * Used by both the Expo Router route (App/app/(main)/alerts.js)
- * and the GridShell ContentWidget.
+ * Station/Admin-owned alert management screen.
+ * Legacy `(main)/alerts` and GridShell ContentWidget may still reach this
+ * during route cleanup; new navigation should enter through Station.
  * Theme-aware: uses useTheme() for light/dark mode support.
  * Web-compatible: uses window.confirm for web, RNAlert for native.
  */
@@ -166,12 +167,12 @@ function LeafletMapPicker({ onLocationSelected, initialLat, initialLng, initialR
       mapInstanceRef.current = map;
 
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '© Esri', maxZoom: 18,
+        attribution: '© Esri', maxZoom: 17.8,
       }).addTo(map);
 
       const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' });
       L.control.layers({
-        '🛰️ Vệ tinh': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18 }),
+        '🛰️ Vệ tinh': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 17.8 }),
         '🗺️ Bản đồ': streetLayer,
       }).addTo(map);
 

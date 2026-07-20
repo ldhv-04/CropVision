@@ -1,3 +1,8 @@
+/**
+ * @deprecated Frozen MapShell compatibility child. Canonical Station uses
+ * SoilzeProShell + <Slot />; do not add new consumers or move/delete this file
+ * without a separately approved plan.
+ */
 import { router, usePathname } from 'expo-router';
 import { useAuthStore } from '../../auth/useAuthStore';
 import { useTheme } from '../../context/ThemeContext';
@@ -7,8 +12,7 @@ const NAV_SECTIONS = [
   {
     label: 'Phân tích',
     items: [
-      { label: 'Tổng quan',     href: '/dashboard', key: 'dashboard', icon: '📊' },
-      { label: 'Phân tích ảnh', href: '/analysis', key: 'analysis', icon: '🔬' },
+      { label: 'Tổng quan',     href: '/(station)', key: 'dashboard', icon: '📊' },
     ],
   },
   {
@@ -39,7 +43,7 @@ export function MapSidebar() {
   const toggleLayer = useMapStore((state) => state.toggleLayer);
 
   const activeKey = NAV_SECTIONS.flatMap((s) => s.items)
-    .find((i) => pathname.includes(i.key) || (i.key === 'analysis' && pathname.includes('inference')))?.key ?? 'dashboard';
+    .find((i) => pathname.includes(i.key))?.key ?? 'dashboard';
 
   const menuWidgetStyle = {
     padding: 12,

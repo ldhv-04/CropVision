@@ -13,10 +13,10 @@ import { LIGHT_COLORS, SPACING, FONT_SIZE } from '../../src/modules/@core/consta
 import { CameraModal } from '../../src/modules/agrivision/components/CameraModal';
 import { useState } from 'react';
 
-// GridShell — web-only dashboard layout (lazily required to avoid bundling DOM libs on native)
-let GridShell = null;
+// AgrivisionShell — web-only owner shell boundary.
+let AgrivisionShell = null;
 if (Platform.OS === 'web') {
-  GridShell = require('../../src/modules/@core/components/GridShell').GridShell;
+  AgrivisionShell = require('../../src/modules/agrivision/shell').AgrivisionShell;
 }
 
 
@@ -49,9 +49,9 @@ export default function AgriVisionLayout() {
   if (!token) return <Redirect href="/welcome" />;
   if (user?.role === 'admin') return <Redirect href="/(station)" />;
 
-  // ── Web/Electron: render GridShell (full-screen dashboard) only on desktop screens ──
-  if (Platform.OS === 'web' && GridShell && width > 768) {
-    return <GridShell />;
+  // ── Web/Electron: render Agrivision-owned shell only on desktop screens ──
+  if (Platform.OS === 'web' && AgrivisionShell && width > 768) {
+    return <AgrivisionShell />;
   }
 
   return (
@@ -135,7 +135,7 @@ export default function AgriVisionLayout() {
         <Tabs.Screen
           name="field-map"
           options={{
-            href: null, // Touch comment to trigger Metro rebuild
+            href: null,
             headerShown: false,
           }}
         />
@@ -148,6 +148,28 @@ export default function AgriVisionLayout() {
         />
         <Tabs.Screen
           name="zone-detail"
+          options={{
+            href: null,
+            headerShown: false,
+          }}
+        />
+        {/* Task 2: Mobile Field Manager — hidden routes */}
+        <Tabs.Screen
+          name="my-fields"
+          options={{
+            href: null,
+            headerShown: false,
+          }}
+        />
+        <Tabs.Screen
+          name="field-detail/[fieldId]"
+          options={{
+            href: null,
+            headerShown: false,
+          }}
+        />
+        <Tabs.Screen
+          name="field-detail/[fieldId]/cultivation/[zoneId]"
           options={{
             href: null,
             headerShown: false,

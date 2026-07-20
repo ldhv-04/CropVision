@@ -6,6 +6,7 @@ import FieldMapCanvas from '../components/map/FieldMapCanvas';
 import MapColorLegend from '../components/map/MapColorLegend';
 import TopBar from '../components/controls/TopBar';
 import BottomDrawer from '../components/panels/BottomDrawer';
+import FieldsLegacyScreen from './FieldsLegacyScreen';
 
 /**
  * FieldMapScreen — Primary map-first field management screen.
@@ -47,15 +48,7 @@ export default function FieldMapScreen() {
     statusCounts,
   } = useFieldSelector();
 
-  // Lazy-load legacy fields screen for list view
-  let LegacyFieldsScreen = null;
-  if (viewMode === 'list') {
-    try {
-      LegacyFieldsScreen = require('../../../app/(agrivision)/fieldsLegacy').default;
-    } catch {
-      // Legacy screen not available, stay in map mode
-    }
-  }
+  const LegacyFieldsScreen = FieldsLegacyScreen;
 
   // Auto-select first field if none selected
   useEffect(() => {
@@ -66,7 +59,7 @@ export default function FieldMapScreen() {
 
   if (loading && currentZones.length === 0) {
     return (
-      <View style={styles.loadingContainer}>
+      <View testID="field-map-screen" style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#10b981" />
         <Text style={styles.loadingText}>Loading fields...</Text>
       </View>
@@ -74,7 +67,7 @@ export default function FieldMapScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View testID="field-map-screen" style={styles.container}>
       {/* Top Bar: Field Selector + Layer Switcher + View Toggle + Actions */}
       <TopBar
         fieldOptions={fieldOptions}

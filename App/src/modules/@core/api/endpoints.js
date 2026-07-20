@@ -43,15 +43,21 @@ export const ENDPOINTS = {
     searchDiseases: '/api/chat/diseases/search',                 // Search diseases by keyword
   },
 
-  // Fields (AgriVision)
+  // Fields (AgriVision + Station GIS)
   fields: {
     list:       '/api/fields',
     create:     '/api/fields',
     detail:     (id) => `/api/fields/${id}`,
     update:     (id) => `/api/fields/${id}`,
     delete:     (id) => `/api/fields/${id}`,
+    restore:    (id) => `/api/fields/${id}/restore`,
+    permanent:  (id) => `/api/fields/${id}/permanent`,
+    trash:      '/api/fields/trash',
+    generatePolygon: '/api/fields/generate-polygon',
     activities: (id) => `/api/fields/${id}/activities`,
     addActivity: (id) => `/api/fields/${id}/activities`,
+    assignOwner: (id) => `/api/fields/${id}/assign-owner`,
+    zonesSummary: (id) => `/api/fields/${id}/zones/summary`,
   },
 
   // Weather (AgriVision)
@@ -90,7 +96,7 @@ export const ENDPOINTS = {
     outbreakDetail:     (id) => `/api/epidemic/outbreaks/${id}`,
   },
 
-  // Sub-zones
+  // Sub-zones (legacy)
   subzones: {
     list:       (fieldId) => `/api/fields/${fieldId}/subzones`,
     create:     (fieldId) => `/api/fields/${fieldId}/subzones`,
@@ -102,6 +108,16 @@ export const ENDPOINTS = {
     summary:        (fieldId) => `/api/fields/${fieldId}/zones/summary`,
     timeSeries:     (id, metric, range) => `/api/subzones/${id}/metrics/timeseries?metric=${metric}&range=${range || '7d'}`,
     healthHistory:  (id) => `/api/subzones/${id}/health-history`,
+  },
+
+  // Management Zones (Station/Admin Zone Editor)
+  zones: {
+    list:       (fieldId) => `/api/fields/${fieldId}/zones`,
+    create:     (fieldId) => `/api/fields/${fieldId}/zones`,
+    update:     (fieldId, zoneId) => `/api/fields/${fieldId}/zones/${zoneId}`,
+    delete:     (fieldId, zoneId) => `/api/fields/${fieldId}/zones/${zoneId}`,
+    validate:   (fieldId) => `/api/fields/${fieldId}/zones/validate`,
+    publish:    (fieldId) => `/api/fields/${fieldId}/zones/publish`,
   },
 
   // GPS Boundary Walk (mobile farmer → field perimeter mapping)
@@ -116,6 +132,28 @@ export const ENDPOINTS = {
   homepage: {
     summary:  '/api/homepage/summary',
     diseases: (limit) => `/api/homepage/diseases?limit=${limit || 8}`,
+  },
+
+  // Mobile Field Manager (Task 1/2: Station-to-Mobile bridge)
+  // DEPENDENCY NOTE: Mobile consumes only latest published zone maps.
+  // Draft station zone maps are never exposed here.
+  // No satellite tiles, no MapLibre — polygon-only GeoJSON.
+  mobile: {
+    fields:         '/api/mobile/fields',
+    fieldZoneMap:   (fieldId) => `/api/mobile/fields/${fieldId}/zone-map`,
+    cultivation:    (fieldId, zoneId) => `/api/mobile/fields/${fieldId}/zones/${zoneId}/cultivation`,
+    cultivationLogs: (fieldId, zoneId, params = {}) => {
+      const query = [];
+      if (params.limit !== undefined) query.push(`limit=${encodeURIComponent(params.limit)}`);
+      if (params.offset !== undefined) query.push(`offset=${encodeURIComponent(params.offset)}`);
+      const qs = query.join('&');
+      return `/api/mobile/fields/${fieldId}/zones/${zoneId}/cultivation/logs${qs ? `?${qs}` : ''}`;
+    },
+    cultivationProfile: (fieldId, zoneId) => `/api/mobile/fields/${fieldId}/zones/${zoneId}/cultivation/profile`,
+    cultivationLog: (fieldId, zoneId, logId) => `/api/mobile/fields/${fieldId}/zones/${zoneId}/cultivation/logs/${logId}`,
+    cultivationLogDelete: (fieldId, zoneId, logId, publicationVersion) => (
+      `/api/mobile/fields/${fieldId}/zones/${zoneId}/cultivation/logs/${logId}?publicationVersion=${encodeURIComponent(publicationVersion)}`
+    ),
   },
 
   // Health
