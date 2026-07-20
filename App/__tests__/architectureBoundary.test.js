@@ -203,6 +203,16 @@ function arrayPropertyValues(node, propertyName) {
     .sort();
 }
 
+function exportedNames(filePath) {
+  const names = [];
+  walk(parseFile(filePath), (node) => {
+    if (node.type === 'ExportNamedDeclaration') {
+      node.specifiers.forEach((specifier) => names.push(specifier.exported.name ?? specifier.exported.value));
+    }
+  });
+  return names.sort();
+}
+
 describe('bounded modulith architecture', () => {
   const graph = allDependencies();
 
@@ -306,5 +316,21 @@ describe('bounded modulith architecture', () => {
       return [edge(importer, specifier)];
     });
     expect(violations).toEqual([]);
+  });
+
+  test('Station exposes only its audited public screens and shell', () => {
+    expect(exportedNames(path.join(STATION_ROOT, 'index.js'))).toEqual([
+      'StationAlertsScreen',
+      'StationDashboardScreen',
+      'StationFieldsScreen',
+      'StationInterventionsScreen',
+      'StationMicrobiomeScreen',
+      'StationRecommendationsScreen',
+      'StationReportsScreen',
+      'StationSensorsScreen',
+      'StationSettingsScreen',
+      'StationShell',
+      'StationSystemScreen',
+    ]);
   });
 });

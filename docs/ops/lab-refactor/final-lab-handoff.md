@@ -9,3 +9,6 @@ proof passed, and the transport/auth cycle is removed. Mandatory Electron runtim
 disposable-backend journeys are not yet available, so no candidate verdict or final tag is
 permitted. This file will be completed only after L7 or at the latest clean blocked
 checkpoint.
+
+L4A is in progress: the previously missing MapLibre dependency is repaired and the Station
+public entry exists, but Station routes have not yet migrated and no L4 commit is complete.

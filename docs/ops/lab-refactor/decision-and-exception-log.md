@@ -74,3 +74,19 @@
   platform hook, architecture test, and focused capability/session test.
 - Rollback boundary: L3 commit only.
 - Status: resolved statically and by unit tests; real P0 runtime remains pending.
+
+## D-008 - Repair undeclared Station MapLibre runtime dependency
+
+- Evidence: L1 web export failed because two live Station sources import `maplibre-gl` and
+  its bundled CSS while the manifest/lock omitted the package.
+- Original assumption invalidated: lockfile-faithful install alone could build the frozen
+  renderer.
+- Options considered: rewrite the 1,000-line map against another library, hide the route,
+  or declare the package the source already uses. The exact declaration is the smallest
+  behavior-preserving repair.
+- Decision: add `maplibre-gl@5.24.0`, the current stable official npm release. No other
+  package or version was changed intentionally.
+- Acceptance criteria: unchanged; renderer build and real Electron checks remain required.
+- Affected files/tests: App manifest/lock, Station renderer import resolution, web export.
+- Rollback boundary: L4A Station public-boundary commit.
+- Status: renderer export resolved; Electron/native runtime evidence still pending.

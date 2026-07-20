@@ -64,3 +64,11 @@ for a mandatory P0 runtime row.
 
 The pre-existing web export, P2, Android build, and real P0 runtime blockers remain
 unchanged; L3 did not claim them as exercised behavior.
+
+## L4A evidence
+
+- Added exact runtime dependency `maplibre-gl@5.24.0`, matching the existing Station source
+  imports and the official package/CSS installation contract.
+- `npm run export:web`: PASS after the dependency repair; 84 static routes emitted.
+- Station public API is a named, statically asserted root entry. No route uses it until L4B.
+- npm audit remains the same baseline 19 findings; no audit fix or unrelated update ran.
