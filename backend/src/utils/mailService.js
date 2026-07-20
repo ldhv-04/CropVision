@@ -1,5 +1,5 @@
 const { Resend } = require('resend');
-require('dotenv').config();
+require('dotenv').config({ quiet: process.env.NODE_ENV === 'test' });
 
 const resendApiKey = process.env.RESEND_API_KEY;
 const resend = resendApiKey ? new Resend(resendApiKey) : null;

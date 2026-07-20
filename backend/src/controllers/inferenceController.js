@@ -53,7 +53,9 @@ const analyzeImage = async (req, res) => {
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
       });
-      console.info(`[Inference] Sample saved → DB id=${sampleId} user=${req.user.userId}`);
+      if (process.env.NODE_ENV !== 'test') {
+        console.info(`[Inference] Sample saved → DB id=${sampleId} user=${req.user.userId}`);
+      }
     }
 
     // Trả về kết quả cho frontend, bao gồm image_name và sample_id

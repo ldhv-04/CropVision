@@ -34,9 +34,11 @@ const DEFAULT_MODEL = 'ag/gemini-3-flash';
 const MAX_HISTORY_MESSAGES = 50; // Cap context window to avoid huge payloads.
 
 // ── Startup diagnostic ──────────────────────────────────────
-console.log(`[Chat] Config loaded: GEMINI_API_KEY=${GEMINI_API_KEY ? '***SET***' : 'NOT SET'}`);
-console.log(`[Chat] Config loaded: NINEROUTER_URL=${NINEROUTER_URL || 'NOT SET'}`);
-console.log(`[Chat] Default model: ${DEFAULT_MODEL}`);
+if (process.env.NODE_ENV !== 'test') {
+  console.log(`[Chat] Config loaded: GEMINI_API_KEY=${GEMINI_API_KEY ? '***SET***' : 'NOT SET'}`);
+  console.log(`[Chat] Config loaded: NINEROUTER_URL=${NINEROUTER_URL || 'NOT SET'}`);
+  console.log(`[Chat] Default model: ${DEFAULT_MODEL}`);
+}
 
 // ── System Prompt for Plant Disease Expert ──────────────────
 
