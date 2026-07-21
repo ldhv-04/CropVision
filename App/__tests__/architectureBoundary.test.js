@@ -333,4 +333,11 @@ describe('bounded modulith architecture', () => {
       'StationSystemScreen',
     ]);
   });
+
+  test('native Station fields do not load the browser-only map stack', () => {
+    const nativeFields = path.join(STATION_ROOT, 'pages', 'FieldsPage.native.jsx');
+
+    expect(fs.existsSync(nativeFields)).toBe(true);
+    expect(dependencies(nativeFields)).toEqual([]);
+  });
 });
