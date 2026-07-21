@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-require('dotenv').config();
+require('dotenv').config({ quiet: process.env.NODE_ENV === 'test' });
 
 const inferenceRoutes = require('./src/routes/inferenceRoutes');
 const authRoutes = require('./src/routes/authRoutes');
@@ -11,10 +11,13 @@ const weatherRoutes = require('./src/routes/weatherRoutes');
 const fieldRoutes = require('./src/routes/fieldRoutes');
 const diseaseRoutes = require('./src/routes/diseaseRoutes');
 const alertRoutes = require('./src/routes/alertRoutes');
+const healthRoutes = require('./src/routes/healthRoutes');
 // [NEW] Geo-Spatial Mapping & Epidemiological Dispersion module routes
 const { topLevelRouter: subZoneTopRouter } = require('./src/routes/subZoneRoutes');
 const epidemicRoutes = require('./src/routes/epidemicRoutes');
 const homepageRoutes = require('./src/routes/homepageRoutes');
+// [NEW] Task 1: Station-to-Mobile bridge — mobile field/zone map APIs
+const mobileRoutes = require('./src/routes/mobileRoutes');
 const { ensureFixedAdminAccount } = require('./src/services/adminService');
 
 const app = express();
@@ -27,6 +30,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.get('/api/health', (req, res) => {
   res.json({ success: true, service: 'backend', port });
 });
+
+app.use('/api', healthRoutes);
 
 // Gan router cho API inference, auth va chat.
 app.use('/api', inferenceRoutes);
@@ -41,15 +46,18 @@ app.use('/api/alerts', alertRoutes);
 app.use('/api/subzones', subZoneTopRouter);       // /api/subzones/:id, /api/subzones/:id/metrics
 app.use('/api/epidemic', epidemicRoutes);          // /api/epidemic/report, /api/epidemic/alerts
 app.use('/api/homepage', homepageRoutes);          // /api/homepage/summary, /api/homepage/diseases
+// [NEW] Task 1: Station-to-Mobile bridge — mobile field & zone map APIs
+// Mobile user fetches assigned fields and published polygon-only zone maps.
+// No satellite tiles, no MapLibre, no draft zones exposed.
+app.use('/api/mobile', mobileRoutes);              // /api/mobile/fields, /api/mobile/fields/:fieldId/zone-map
 
-// Khoi dong server sau khi dam bao tai khoan admin co dinh da duoc tao trong DB.
 const startServer = async () => {
   try {
     const adminUser = await ensureFixedAdminAccount();
 
     app.listen(port, () => {
       console.log(`[Node.js] May chu Tiep tan dang chay tai http://localhost:${port}`);
-      console.log(`[Auth] Admin san sang: ${adminUser.email} / ${adminUser.plainPassword}`);
+      console.log(`[Auth] Admin san sang: ${adminUser.email}`);
     });
   } catch (error) {
     console.error('[Server] Khong the khoi tao tai khoan admin:', error.message);
@@ -57,4 +65,10 @@ const startServer = async () => {
   }
 };
 
-startServer();
+if (require.main === module) {
+  // Khoi dong server sau khi dam bao tai khoan admin co dinh da duoc tao trong DB.
+  startServer();
+}
+
+module.exports = app;
+module.exports.startServer = startServer;
