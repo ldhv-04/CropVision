@@ -15,7 +15,7 @@ projection contract is required.
 | Zone metrics | agrivision `stores/metricStore` | — | map hooks | map + zone detail | — | Single authority |
 | Sub-zones (home) | agrivision `store/useSubZoneStore` | `stores/fieldStore.currentZones` overlaps conceptually | home route | home route, legacy widgets | none | Duplicate concept across API families — same P1 item |
 | Cultivation state | agrivision `store/useMobileCultivationStore` | — | MobileZoneCultivationScreen | same | — | Single authority |
-| Inference context/results | inference `store/useInferenceStore` | — | inference screens/panels | inference module | field context via P0-1 provider contract | Single authority |
+| Inference context/results | inference `store/useInferenceStore` | — | inference screens/panels | inference module | field context arrives as a prop from the owning route (S2) | Single authority |
 | Selected field (inference context) | agrivision `store/useFieldStore.selectedFieldId` | `useMobileFieldStore.selectedFieldId` (detail navigation) | respective screens | inference provider; detail screens | UI-local per family; explicit | Acceptable split: route-local selection vs inference context, now documented |
 | Station GIS fields/zones | station `stores/fieldGISStore` | — | Station pages/hooks | Station pages | — | Single authority |
 | Admin map scans (frozen) | `@core/store/useMapStore` | — | frozen Map* components | frozen Map* + legacy MapWidget | — | Compatibility-only; contained, no new consumers |
