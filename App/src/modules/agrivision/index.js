@@ -5,6 +5,7 @@
  * The compatibility shell is deliberately excluded: its single permitted
  * consumer is the (agrivision) layout's frozen allowlisted edge.
  */
+export { default as HomeScreen } from './screens/HomeScreen';
 export { default as MobileFieldsScreen } from './screens/MobileFieldsScreen';
 export { default as MobileFieldDetailScreen } from './screens/MobileFieldDetailScreen';
 export { default as MobileZoneCultivationScreen } from './screens/MobileZoneCultivationScreen';
