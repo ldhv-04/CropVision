@@ -19,6 +19,7 @@ const COMPATIBILITY_ROOTS = [
   path.join(MODULE_ROOT, '@core', 'components', 'MapSidebar'),
   path.join(MODULE_ROOT, '@core', 'components', 'MapDetailDrawer'),
   path.join(MODULE_ROOT, '@core', 'components', 'TimelineScrubber'),
+  path.join(MODULE_ROOT, '@core', 'store'),
   path.join(STATION_ROOT, 'shell'),
   path.join(STATION_ROOT, 'widgets', 'GridShell'),
   path.join(AGRIVISION_ROOT, 'shell'),

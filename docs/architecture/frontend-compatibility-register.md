@@ -8,9 +8,9 @@ the boundary suite pins consumers and registry keys.
 | `legacy/GridShell/**` (incl. compat registries) | `@core/components/GridShell` re-export | P3 wide web, legacy `(main)` web | Yes | SoilzePro (Station) / Tabs (Agrivision) | L6: zero routed consumers + registry keys proven unreferenced + P0 runtime evidence |
 | `@core/components/GridShell` | `(main)/_layout.js`, `AgrivisionShell` | P3/legacy web | Yes | direct owner shells | Same as legacy GridShell |
 | `agrivision/shell` (AgrivisionShell) | `(agrivision)/_layout.js` wide web | P3 wide web | Yes (adapter) | none planned | Retires with GridShell |
-| `station/shell` (StationShell) | `station/index.js` public re-export only | none routed | Yes | SoilzeProShell | Removal requires human decision (frozen) once export consumers proven zero |
+| `station/shell` (StationShell) | none — zero importers (the `StationShell` name exported by `station/index.js` is an alias of `SoilzeProShell`, not this file) | none | Yes | SoilzeProShell | Removal requires human decision (frozen file) |
 | `@core/components/MapShell`, `MapSidebar`, `MapDetailDrawer`, `TimelineScrubber` | StationShell only | none routed | Yes | SoilzePro pages | Same gate as StationShell |
-| `@core/store/useMapStore` | frozen Map* components + legacy `MapWidget` | none routed (P3 widget path) | Effectively frozen (all consumers frozen) | Station GIS store family | Retires with MapShell family |
+| `@core/store/useMapStore` | frozen Map* components + legacy `MapWidget` | none routed (P3 widget path) | Contained: `@core/store` is a boundary-test compatibility root (no new consumers) | Station GIS store family | Retires with MapShell family |
 | owner `widgets/GridShell/*` (station + agrivision) | legacy GridShell widget wrappers | P3 wide web | Yes | — | Retires with GridShell |
 | `(main)` route group | direct legacy URLs | legacy web | Yes (no growth) | `(station)`/`(agrivision)` groups | Legacy URL traffic confirmed zero + human decision (public route removal) |
 | `@core/components/AppShell` | `(main)/_layout.js` mobile branch | legacy mobile | No (neutral UI) | Tabs layout | Retires with `(main)` group |
