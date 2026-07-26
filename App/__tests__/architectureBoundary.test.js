@@ -45,10 +45,6 @@ const OWNER_PRIVATE_ALLOWLIST = new Set([
   'src/modules/legacy/GridShell/widgets/StatsWidget.jsx -> ../../../agrivision/widgets/GridShell/StatsWidget',
 ]);
 const ROUTE_MODULE_ALLOWLIST = new Set([
-  'app/(agrivision)/chat.js -> ../../src/modules/@core/api/apiClient',
-  'app/(agrivision)/encyclopedia.js -> ../../src/modules/@core/api/apiClient',
-  'app/(agrivision)/encyclopedia.js -> ../../src/modules/@core/api/endpoints',
-  'app/(agrivision)/settings.js -> ../../src/modules/@core/api/apiClient',
   'app/(main)/alerts.js -> ../../src/modules/admin/components/AlertsAdminScreen',
   'app/(main)/history.js -> ../../src/modules/history/components/SampleList',
 ]);
@@ -318,12 +314,15 @@ describe('bounded modulith architecture', () => {
   test('Agrivision exposes only its audited public screens, components, and stores', () => {
     expect(exportedNames(path.join(AGRIVISION_ROOT, 'index.js'))).toEqual([
       'CameraModal',
+      'ChatScreen',
+      'EncyclopediaScreen',
       'FieldMapScreen',
       'FieldsLegacyScreen',
       'HomeScreen',
       'MobileFieldDetailScreen',
       'MobileFieldsScreen',
       'MobileZoneCultivationScreen',
+      'SettingsScreen',
       'WeatherWidget',
       'ZoneDetailScreen',
       'useFieldStore',
