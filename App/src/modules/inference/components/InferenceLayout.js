@@ -18,7 +18,7 @@ import { DiseaseFilter } from './DiseaseFilter';
 import { DetectionList } from './DetectionList';
 import { COLORS, SPACING, RADIUS, FONT_SIZE } from '../../@core/constants/theme';
 
-export function InferenceLayout() {
+export function InferenceLayout({ fieldContext }) {
   const { isCompact } = useLayoutMode();
   const {
     detections,
@@ -55,7 +55,7 @@ export function InferenceLayout() {
           onHover={setHovered}
           onPressBox={toggleSelected}
         />
-        <InferenceActionPanel />
+        <InferenceActionPanel fieldContext={fieldContext} />
       </View>
 
       {/* RIGHT / BOTTOM: Filters + List */}

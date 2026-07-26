@@ -50,7 +50,6 @@ const OWNER_PRIVATE_ALLOWLIST = new Set([
   'app/(station)/station/settings.js -> ../../../src/modules/station/pages/SettingsPage',
   'app/(station)/station/system.js -> ../../../src/modules/station/pages/SystemPage',
   'app/(station)/_layout.web.js -> ../../src/modules/station/layout/SoilzeProShell',
-  'src/modules/inference/components/InferenceActionPanel.js -> ../../agrivision/store/useFieldStore',
   'src/modules/legacy/GridShell/compat/contentRegistry.js -> ../../../agrivision/screens/MobileFieldsScreen',
   'src/modules/legacy/GridShell/compat/contentRegistry.js -> ../../../station/pages/SystemPage',
   'src/modules/legacy/GridShell/widgets/AlertsFeedWidget.jsx -> ../../../station/widgets/GridShell/AlertsFeedWidget',

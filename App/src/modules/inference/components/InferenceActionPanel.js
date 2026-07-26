@@ -13,18 +13,15 @@ import { useAuthStore } from '../../@core/auth/useAuthStore';
 import { ImagePickerService } from '../../platform/services/ImagePickerService';
 import { markLatestInferenceDebugEvent } from '../debug/inferenceDebug';
 
-// Lazy import — only available in AgriVision context (not in Station/Web admin)
-let useFieldStore;
-try {
-  useFieldStore = require('../../agrivision/store/useFieldStore').useFieldStore;
-} catch {
-  useFieldStore = () => ({ selectedFieldId: null });
-}
+// Field context arrives as a prop so inference never imports Agrivision state.
+// The empty default covers the frozen wide-web ControlWidget, where no route
+// screen mounts and the Agrivision field store is never populated anyway.
+const EMPTY_FIELD_CONTEXT = { selectedFieldId: null, fields: [] };
 
-export function InferenceActionPanel() {
+export function InferenceActionPanel({ fieldContext = EMPTY_FIELD_CONTEXT }) {
   const token = useAuthStore((s) => s.token);
   const { isAnalyzing, imageUri, setSelectedAsset, runInference } = useInferenceStore();
-  const { selectedFieldId, fields } = useFieldStore();
+  const { selectedFieldId, fields } = fieldContext;
 
   /** Mở image picker và lưu asset được chọn vào store */
   const handlePickImage = async () => {

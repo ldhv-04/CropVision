@@ -76,7 +76,7 @@ export default function InferenceScreen() {
 
       {/* Reuse existing InferenceLayout */}
       <View style={styles.inferenceContainer}>
-        <InferenceLayout />
+        <InferenceLayout fieldContext={{ selectedFieldId, fields }} />
       </View>
     </View>
   );
