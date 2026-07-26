@@ -3,6 +3,6 @@
  * Mobile Zone Cultivation Manager - profile and logs for one stable zone.
  * Hidden route - navigated to programmatically from field-detail selected zone.
  */
-import MobileZoneCultivationScreen from '../../../../../src/modules/agrivision/screens/MobileZoneCultivationScreen';
+import { MobileZoneCultivationScreen } from '../../../../../src/modules/agrivision';
 
 export default MobileZoneCultivationScreen;

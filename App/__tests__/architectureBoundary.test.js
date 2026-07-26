@@ -28,18 +28,6 @@ const COMPATIBILITY_ROOTS = [
 
 // Temporary L2 baseline exceptions. Later phases may only remove entries.
 const OWNER_PRIVATE_ALLOWLIST = new Set([
-  'app/(agrivision)/field-detail/[fieldId]/cultivation/[zoneId].js -> ../../../../../src/modules/agrivision/screens/MobileZoneCultivationScreen',
-  'app/(agrivision)/field-detail/[fieldId].js -> ../../../src/modules/agrivision/screens/MobileFieldDetailScreen',
-  'app/(agrivision)/field-map.js -> ../../src/modules/agrivision/screens/FieldMapScreen',
-  'app/(agrivision)/fields.js -> ../../src/modules/agrivision/screens/MobileFieldsScreen',
-  'app/(agrivision)/fieldsLegacy.js -> ../../src/modules/agrivision/screens/FieldsLegacyScreen',
-  'app/(agrivision)/index.js -> ../../src/modules/agrivision/store/useFieldStore',
-  'app/(agrivision)/index.js -> ../../src/modules/agrivision/store/useSubZoneStore',
-  'app/(agrivision)/index.js -> ../../src/modules/agrivision/components/WeatherWidget',
-  'app/(agrivision)/inference.js -> ../../src/modules/agrivision/store/useFieldStore',
-  'app/(agrivision)/my-fields.js -> ../../src/modules/agrivision/screens/MobileFieldsScreen',
-  'app/(agrivision)/zone-detail.js -> ../../src/modules/agrivision/screens/ZoneDetailScreen',
-  'app/(agrivision)/_layout.js -> ../../src/modules/agrivision/components/CameraModal',
   'app/(agrivision)/_layout.js -> ../../src/modules/agrivision/shell',
   'src/modules/legacy/GridShell/compat/contentRegistry.js -> ../../../agrivision/screens/MobileFieldsScreen',
   'src/modules/legacy/GridShell/compat/contentRegistry.js -> ../../../station/pages/SystemPage',
@@ -323,6 +311,20 @@ describe('bounded modulith architecture', () => {
     ]);
   });
 
+  test('Agrivision exposes only its audited public screens, components, and stores', () => {
+    expect(exportedNames(path.join(AGRIVISION_ROOT, 'index.js'))).toEqual([
+      'CameraModal',
+      'FieldMapScreen',
+      'FieldsLegacyScreen',
+      'MobileFieldDetailScreen',
+      'MobileFieldsScreen',
+      'MobileZoneCultivationScreen',
+      'WeatherWidget',
+      'ZoneDetailScreen',
+      'useFieldStore',
+      'useSubZoneStore',
+    ]);
+  });
   test('native Station fields do not load the browser-only map stack', () => {
     const nativeFields = path.join(STATION_ROOT, 'pages', 'FieldsPage.native.jsx');
 

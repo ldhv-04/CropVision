@@ -8,7 +8,7 @@
 import { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useAuthStore } from '../../src/modules/@core/auth/useAuthStore';
-import { useFieldStore } from '../../src/modules/agrivision/store/useFieldStore';
+import { useFieldStore } from '../../src/modules/agrivision';
 import { InferenceLayout } from '../../src/modules/inference/components/InferenceLayout';
 import { markLatestInferenceDebugEvent } from '../../src/modules/inference/debug/inferenceDebug';
 import { LIGHT_COLORS, SPACING, RADIUS, FONT_SIZE } from '../../src/modules/@core/constants/theme';

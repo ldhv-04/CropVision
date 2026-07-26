@@ -5,6 +5,6 @@
  * Station/Admin map-first field management remains outside this mobile path.
  */
 
-import MobileFieldsScreen from '../../src/modules/agrivision/screens/MobileFieldsScreen';
+import { MobileFieldsScreen } from '../../src/modules/agrivision';
 
 export default MobileFieldsScreen;

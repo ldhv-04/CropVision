@@ -10,7 +10,7 @@ import { useAuthStore } from '../../src/modules/@core/auth/useAuthStore';
 import { Redirect } from 'expo-router';
 import { View, Text, StyleSheet, Pressable, Platform, useWindowDimensions } from 'react-native';
 import { LIGHT_COLORS, SPACING, FONT_SIZE } from '../../src/modules/@core/constants/theme';
-import { CameraModal } from '../../src/modules/agrivision/components/CameraModal';
+import { CameraModal } from '../../src/modules/agrivision';
 import { useState } from 'react';
 
 // AgrivisionShell — web-only owner shell boundary.

@@ -15,9 +15,9 @@ import {
 import { router } from 'expo-router';
 import * as Location from 'expo-location';
 import { useAuthStore } from '../../src/modules/@core/auth/useAuthStore';
-import { useFieldStore } from '../../src/modules/agrivision/store/useFieldStore';
-import { useSubZoneStore } from '../../src/modules/agrivision/store/useSubZoneStore';
-import { WeatherWidget } from '../../src/modules/agrivision/components/WeatherWidget';
+import { useFieldStore } from '../../src/modules/agrivision';
+import { useSubZoneStore } from '../../src/modules/agrivision';
+import { WeatherWidget } from '../../src/modules/agrivision';
 import { apiRequest } from '../../src/modules/@core/api/apiClient';
 import { ENDPOINTS } from '../../src/modules/@core/api/endpoints';
 import { LIGHT_COLORS, SPACING, RADIUS, FONT_SIZE } from '../../src/modules/@core/constants/theme';
