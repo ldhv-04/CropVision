@@ -7,6 +7,7 @@ const MODULE_ROOT = path.join(APP_ROOT, 'src', 'modules');
 const ROUTE_ROOT = path.join(APP_ROOT, 'app');
 const STATION_ROOT = path.join(MODULE_ROOT, 'station');
 const AGRIVISION_ROOT = path.join(MODULE_ROOT, 'agrivision');
+const INFERENCE_ROOT = path.join(MODULE_ROOT, 'inference');
 const CORE_ROOTS = [
   path.join(MODULE_ROOT, '@core'),
   path.join(MODULE_ROOT, 'platform'),
@@ -45,14 +46,8 @@ const OWNER_PRIVATE_ALLOWLIST = new Set([
 ]);
 const ROUTE_MODULE_ALLOWLIST = new Set([
   'app/(agrivision)/chat.js -> ../../src/modules/@core/api/apiClient',
-  'app/(agrivision)/diagnosis-result.js -> ../../src/modules/inference/store/useInferenceStore',
-  'app/(agrivision)/diagnosis-result.js -> ../../src/modules/@core/api/apiClient',
-  'app/(agrivision)/diagnosis-result.js -> ../../src/modules/inference/components/InferenceDebugPanel',
-  'app/(agrivision)/diagnosis-result.js -> ../../src/modules/inference/debug/inferenceDebug',
   'app/(agrivision)/encyclopedia.js -> ../../src/modules/@core/api/apiClient',
   'app/(agrivision)/encyclopedia.js -> ../../src/modules/@core/api/endpoints',
-  'app/(agrivision)/inference.js -> ../../src/modules/inference/components/InferenceLayout',
-  'app/(agrivision)/inference.js -> ../../src/modules/inference/debug/inferenceDebug',
   'app/(agrivision)/settings.js -> ../../src/modules/@core/api/apiClient',
   'app/(main)/alerts.js -> ../../src/modules/admin/components/AlertsAdminScreen',
   'app/(main)/history.js -> ../../src/modules/history/components/SampleList',
@@ -232,7 +227,11 @@ describe('bounded modulith architecture', () => {
     const violations = graph.flatMap(({ importer, specifier }) => {
       const target = resolveLocal(importer, specifier);
       if (!target || !isInside(importer, ROUTE_ROOT) || !isInside(target, MODULE_ROOT)) return [];
-      if (isOwnerPublic(target, STATION_ROOT) || isOwnerPublic(target, AGRIVISION_ROOT)) return [];
+      if (
+        isOwnerPublic(target, STATION_ROOT) ||
+        isOwnerPublic(target, AGRIVISION_ROOT) ||
+        isOwnerPublic(target, INFERENCE_ROOT)
+      ) return [];
       const currentEdge = edge(importer, specifier);
       return isNeutralRouteTarget(target) ||
         OWNER_PRIVATE_ALLOWLIST.has(currentEdge) ||
@@ -309,6 +308,13 @@ describe('bounded modulith architecture', () => {
     ]);
   });
 
+  test('Inference exposes only its audited public screen, layout, and debug mark', () => {
+    expect(exportedNames(path.join(INFERENCE_ROOT, 'index.js'))).toEqual([
+      'DiagnosisResultScreen',
+      'InferenceLayout',
+      'markLatestInferenceDebugEvent',
+    ]);
+  });
   test('Agrivision exposes only its audited public screens, components, and stores', () => {
     expect(exportedNames(path.join(AGRIVISION_ROOT, 'index.js'))).toEqual([
       'CameraModal',
