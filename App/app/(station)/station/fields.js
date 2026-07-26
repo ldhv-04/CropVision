@@ -1,1 +1,1 @@
-export { default } from '../../../src/modules/station/pages/FieldsPage';
+export { StationFieldsScreen as default } from '../../../src/modules/station';

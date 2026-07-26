@@ -1,1 +1,1 @@
-export { default } from '../../../src/modules/station/pages/SensorsPage';
+export { StationSensorsScreen as default } from '../../../src/modules/station';

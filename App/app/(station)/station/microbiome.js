@@ -1,1 +1,1 @@
-export { default } from '../../../src/modules/station/pages/MicrobiomePage';
+export { StationMicrobiomeScreen as default } from '../../../src/modules/station';

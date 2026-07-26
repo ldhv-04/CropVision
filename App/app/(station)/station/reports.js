@@ -1,1 +1,1 @@
-export { default } from '../../../src/modules/station/pages/ReportsPage';
+export { StationReportsScreen as default } from '../../../src/modules/station';

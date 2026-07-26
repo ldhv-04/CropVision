@@ -15,7 +15,7 @@ import { ThemeProvider } from '../../src/modules/@core/context/ThemeContext';
 import { DARK_COLORS, FONT_SIZE } from '../../src/modules/@core/constants/theme';
 
 // Layout components
-import { SoilzeProShell } from '../../src/modules/station/layout/SoilzeProShell';
+import { StationShell as SoilzeProShell } from '../../src/modules/station';
 
 function StationContent() {
   const token = useAuthStore((s) => s.token);

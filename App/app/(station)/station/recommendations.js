@@ -1,1 +1,1 @@
-export { default } from '../../../src/modules/station/pages/RecommendationsPage';
+export { StationRecommendationsScreen as default } from '../../../src/modules/station';

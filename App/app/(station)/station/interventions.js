@@ -1,1 +1,1 @@
-export { default } from '../../../src/modules/station/pages/InterventionsPage';
+export { StationInterventionsScreen as default } from '../../../src/modules/station';

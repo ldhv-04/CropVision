@@ -1,1 +1,1 @@
-export { default } from '../../../src/modules/station/pages/SettingsPage';
+export { StationSettingsScreen as default } from '../../../src/modules/station';

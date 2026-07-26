@@ -1,1 +1,1 @@
-export { default } from '../../../src/modules/admin/components/AlertsAdminScreen';
+export { StationAlertsScreen as default } from '../../../src/modules/station';

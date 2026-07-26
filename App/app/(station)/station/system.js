@@ -1,1 +1,1 @@
-export { default } from '../../../src/modules/station/pages/SystemPage';
+export { StationSystemScreen as default } from '../../../src/modules/station';
