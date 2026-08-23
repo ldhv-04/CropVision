@@ -1,64 +1,70 @@
 /**
- * FooterSection.jsx
- * 
- * Thiết kế chân trang tối giản (Minimalist), sang trọng.
- * Có một dải gradient mờ tạo cảm giác Glow bên dưới nút bấm.
+ * FooterSection — Chân trang doanh nghiệp nông nghiệp công nghệ cao
  */
 
+import React from 'react';
 import { router } from 'expo-router';
-import { useTheme } from '../../@core/context/ThemeContext';
 
 export function FooterSection() {
-  const { colors } = useTheme();
-
   return (
-    <footer style={{ position: 'relative', overflow: 'hidden', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-      {/* Background Glow */}
+    <footer style={{
+      backgroundColor: '#06090E',
+      borderTop: '1px solid #1B2537',
+      padding: '40px 24px 32px',
+    }}>
       <div style={{
-        position: 'absolute', bottom: '-20%', left: '50%', transform: 'translateX(-50%)',
-        width: '600px', height: '300px',
-        background: `radial-gradient(ellipse, ${colors.primary}20 0%, transparent 70%)`,
-        filter: 'blur(60px)', zIndex: 0,
-      }} />
-
-      {/* Cụm CTA Giữa Màn Hình */}
-      <div style={{ padding: '120px 20px', textAlign: 'center', position: 'relative', zIndex: 1 }}>
-        <h2 style={{ fontSize: '48px', fontWeight: '800', color: '#fff', marginBottom: '24px', letterSpacing: '-1px' }}>
-          Bạn đã sẵn sàng?
-        </h2>
-        <p style={{ fontSize: '18px', color: '#a1a1aa', marginBottom: '40px' }}>
-          Gia nhập nền tảng quản lý nông nghiệp thông minh bậc nhất hiện nay.
-        </p>
-        <button 
-          onClick={() => router.push('/register')}
-          style={{
-            padding: '16px 40px', fontSize: '18px', fontWeight: '600',
-            backgroundColor: '#fff', color: '#000',
-            border: 'none', borderRadius: '12px', cursor: 'pointer',
-            boxShadow: `0 0 30px rgba(255,255,255,0.15)`,
-            transition: 'all 0.2s ease',
-          }}
-          onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-          onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-        >
-          Tham gia ngay
-        </button>
-      </div>
-
-      {/* Thông tin Bản quyền */}
-      <div style={{ 
-        maxWidth: '1200px', margin: '0 auto', padding: '32px 20px', 
-        borderTop: '1px solid rgba(255,255,255,0.05)',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        position: 'relative', zIndex: 1 
+        maxWidth: '1140px',
+        margin: '0 auto',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '20px',
       }}>
-        <div style={{ fontSize: '20px', fontWeight: '800', color: '#fff' }}>
-          CropVision <span style={{ color: colors.primary }}>.</span>
+        {/* Brand & Standards */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 32,
+            height: 32,
+            borderRadius: 6,
+            backgroundColor: 'rgba(0, 245, 160, 0.12)',
+            border: '1px solid #00F5A0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 16,
+          }}>
+            🌿
+          </div>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 900, color: '#F8FAFC', fontFamily: '"JetBrains Mono", monospace' }}>
+              CROPVISION AI
+            </div>
+            <div style={{ fontSize: 11, color: '#64748B' }}>
+              Hệ Thống Trí Tuệ Nhân Tạo & Bản Đồ Số Nông Nghiệp Thực Chứng
+            </div>
+          </div>
         </div>
-        <div style={{ color: '#52525b', fontSize: '14px' }}>
-          © 2026 CropVision AI. Đã đăng ký bản quyền.
+
+        {/* Links & Certification */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 20,
+          fontSize: 12,
+          color: '#94A3B8',
+        }}>
+          <span style={{ color: '#00F5A0', fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}>
+            ● HỆ THỐNG TRỰC TUYẾN 24/7
+          </span>
+          <span>·</span>
+          <span>Bảo mật dữ liệu ISO 27001</span>
+          <span>·</span>
+          <span>© 2026 CropVision Inc.</span>
         </div>
       </div>
     </footer>
   );
 }
+
+export default FooterSection;

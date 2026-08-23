@@ -1,78 +1,157 @@
 /**
- * DashboardPage — SoilzePro Dashboard
+ * DashboardPage — Tactical Agronomy Mission Control
  *
- * Wireframe: soilzepro-research/markdown-wireframes.md (Dashboard)
- * Layout: KPI row + Chart row + Activity Feed
- *
- * Integrates existing Station features:
- * - Admin KPIs (users, samples, today's count, avg confidence)
- * - Disease frequency chart
- * - Recent activity feed
+ * Direction 3: Tactical Agronomy Command & Mission Control
+ * High-density operational telemetry dashboard.
  */
 
-import { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
-import { useTheme } from '../../@core/context/ThemeContext';
+import React, { useEffect } from 'react';
+import { ActivityIndicator } from 'react-native';
 import { useAuthStore } from '../../@core/auth/useAuthStore';
 import { useAdminStore } from '../../../modules/admin/store/useAdminStore';
-import { SHADOWS } from '../../@core/constants/theme';
+import { TACTICAL_THEME } from '../constants/tacticalTheme';
 
-function KpiCard({ icon, label, value, subValue, color, colors }) {
+function TelemetryKpiCard({ icon, code, label, value, subValue, color, accentBg }) {
   return (
     <div style={{
-      flex: '1 1 200px',
-      minWidth: 180,
-      padding: '20px',
-      borderRadius: 12,
-      backgroundColor: colors.surface,
-      border: `1px solid ${colors.border}`,
-      boxShadow: SHADOWS.card,
+      flex: '1 1 210px',
+      minWidth: 200,
+      padding: '18px 20px',
+      borderRadius: 8,
+      backgroundColor: TACTICAL_THEME.bgPanel,
+      border: `1px solid ${TACTICAL_THEME.border}`,
+      boxShadow: TACTICAL_THEME.shadowPanel,
       display: 'flex',
       flexDirection: 'column',
-      gap: 8,
+      gap: 10,
+      position: 'relative',
+      overflow: 'hidden',
     }}>
+      {/* Corner indicator */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        width: 32,
+        height: 32,
+        background: `linear-gradient(135deg, transparent 50%, ${color || TACTICAL_THEME.radar}25 50%)`,
+      }} />
+
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 24 }}>{icon}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 18, filter: `drop-shadow(0 0 8px ${color || TACTICAL_THEME.radar}60)` }}>{icon}</span>
+          <span style={{
+            fontSize: 9,
+            fontWeight: 800,
+            color: color || TACTICAL_THEME.radar,
+            fontFamily: TACTICAL_THEME.fontMono,
+            letterSpacing: '1px',
+            backgroundColor: `${color || TACTICAL_THEME.radar}15`,
+            padding: '2px 5px',
+            borderRadius: 3,
+          }}>{code}</span>
+        </div>
         <span style={{
-          fontSize: 10, fontWeight: 700, color: colors.textMuted,
-          textTransform: 'uppercase', letterSpacing: 0.8,
+          fontSize: 9,
+          fontWeight: 700,
+          color: TACTICAL_THEME.textMuted,
+          textTransform: 'uppercase',
+          letterSpacing: '1px',
+          fontFamily: TACTICAL_THEME.fontMono,
         }}>{label}</span>
       </div>
-      <div style={{ fontSize: 32, fontWeight: 800, color: color || colors.textPrimary, lineHeight: 1 }}>
+
+      <div style={{
+        fontSize: 30,
+        fontWeight: 900,
+        color: color || TACTICAL_THEME.textPrimary,
+        fontFamily: TACTICAL_THEME.fontMono,
+        lineHeight: 1,
+        letterSpacing: '-0.5px',
+      }}>
         {value}
       </div>
+
       {subValue && (
-        <div style={{ fontSize: 11, color: colors.textMuted, fontWeight: 500 }}>{subValue}</div>
+        <div style={{
+          fontSize: 10.5,
+          color: TACTICAL_THEME.textSecondary,
+          fontFamily: TACTICAL_THEME.fontMono,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+        }}>
+          <span style={{ color: TACTICAL_THEME.textMuted }}>STATUS:</span>
+          <span>{subValue}</span>
+        </div>
       )}
     </div>
   );
 }
 
-function ChartCard({ title, children, colors }) {
+function TacticalPanel({ title, subtitle, icon, children, badge }) {
   return (
     <div style={{
-      flex: '1 1 400px',
+      flex: '1 1 420px',
       padding: '20px',
-      borderRadius: 12,
-      backgroundColor: colors.surface,
-      border: `1px solid ${colors.border}`,
-      boxShadow: SHADOWS.card,
+      borderRadius: 8,
+      backgroundColor: TACTICAL_THEME.bgPanel,
+      border: `1px solid ${TACTICAL_THEME.border}`,
+      boxShadow: TACTICAL_THEME.shadowPanel,
+      display: 'flex',
+      flexDirection: 'column',
     }}>
       <div style={{
-        fontSize: 14, fontWeight: 700, color: colors.textPrimary,
-        marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 16,
+        borderBottom: `1px solid ${TACTICAL_THEME.border}`,
+        paddingBottom: 12,
       }}>
-        <span>📈</span> {title}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 16 }}>{icon}</span>
+          <div>
+            <div style={{
+              fontSize: 13,
+              fontWeight: 800,
+              color: TACTICAL_THEME.textPrimary,
+              fontFamily: TACTICAL_THEME.fontMono,
+              letterSpacing: '0.6px',
+            }}>
+              {title}
+            </div>
+            {subtitle && (
+              <div style={{ fontSize: 10, color: TACTICAL_THEME.textMuted, fontFamily: TACTICAL_THEME.fontMono }}>
+                {subtitle}
+              </div>
+            )}
+          </div>
+        </div>
+        {badge && (
+          <span style={{
+            fontSize: 9,
+            fontWeight: 800,
+            color: TACTICAL_THEME.radar,
+            backgroundColor: 'rgba(0, 245, 160, 0.12)',
+            border: `1px solid ${TACTICAL_THEME.radar}`,
+            padding: '3px 7px',
+            borderRadius: 4,
+            fontFamily: TACTICAL_THEME.fontMono,
+          }}>
+            {badge}
+          </span>
+        )}
       </div>
       {children}
     </div>
   );
 }
 
-function DiseaseChart({ samples, colors }) {
+function DiseaseThreatSpectrum({ samples }) {
   const diseaseCount = {};
-  samples.forEach(s => {
-    s.detections?.forEach(d => {
+  samples.forEach((s) => {
+    s.detections?.forEach((d) => {
       if (d.disease_class) {
         diseaseCount[d.disease_class] = (diseaseCount[d.disease_class] || 0) + 1;
       }
@@ -81,26 +160,81 @@ function DiseaseChart({ samples, colors }) {
 
   const sorted = Object.entries(diseaseCount).sort(([, a], [, b]) => b - a).slice(0, 8);
   if (sorted.length === 0) {
-    return <div style={{ textAlign: 'center', color: colors.textMuted, padding: 24, fontSize: 13 }}>No disease data available</div>;
+    return (
+      <div style={{
+        textAlign: 'center',
+        color: TACTICAL_THEME.textMuted,
+        padding: 32,
+        fontSize: 12,
+        fontFamily: TACTICAL_THEME.fontMono,
+      }}>
+        [NO ACTIVE THREAT TELEMETRY DETECTED]
+      </div>
+    );
   }
 
   const maxVal = sorted[0][1];
-  const barColors = [colors.danger, colors.warning, colors.info, colors.primaryGlow, colors.success, '#a78bfa', '#f472b6', '#fb923c'];
+  const spectrumColors = [
+    TACTICAL_THEME.alert,
+    TACTICAL_THEME.telemetry,
+    TACTICAL_THEME.satellite,
+    TACTICAL_THEME.radar,
+    TACTICAL_THEME.violet,
+    '#38BDF8',
+    '#FB923C',
+    '#F472B6',
+  ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {sorted.map(([disease, count], idx) => {
-        const pct = (count / maxVal) * 100;
-        const barColor = barColors[idx % barColors.length];
+        const pct = Math.round((count / maxVal) * 100);
+        const barColor = spectrumColors[idx % spectrumColors.length];
         return (
-          <div key={disease} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 120, fontSize: 11, color: colors.textSecondary, fontWeight: 500, textTransform: 'capitalize', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {disease.replace(/_/g, ' ')}
+          <div key={disease} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{
+                fontSize: 11.5,
+                color: TACTICAL_THEME.textPrimary,
+                fontWeight: 600,
+                textTransform: 'capitalize',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: barColor }} />
+                {disease.replace(/_/g, ' ')}
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: TACTICAL_THEME.fontMono }}>
+                <span style={{ fontSize: 10, color: TACTICAL_THEME.textMuted }}>{pct}% OCCURRENCE</span>
+                <span style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  color: barColor,
+                  backgroundColor: `${barColor}15`,
+                  padding: '1px 5px',
+                  borderRadius: 3,
+                }}>
+                  {count}
+                </span>
+              </div>
             </div>
-            <div style={{ flex: 1, height: 10, backgroundColor: `${colors.border}40`, borderRadius: 5, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${pct}%`, backgroundColor: barColor, borderRadius: 5, transition: 'width 0.5s ease' }} />
+            <div style={{
+              height: 6,
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: 3,
+              overflow: 'hidden',
+              border: `1px solid ${TACTICAL_THEME.borderSubtle}`,
+            }}>
+              <div style={{
+                height: '100%',
+                width: `${pct}%`,
+                backgroundColor: barColor,
+                boxShadow: `0 0 8px ${barColor}80`,
+                borderRadius: 3,
+                transition: 'width 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+              }} />
             </div>
-            <div style={{ width: 36, textAlign: 'right', fontSize: 12, fontWeight: 700, color: barColor }}>{count}</div>
           </div>
         );
       })}
@@ -108,39 +242,92 @@ function DiseaseChart({ samples, colors }) {
   );
 }
 
-function ActivityFeed({ samples, colors }) {
-  const recent = samples.slice(0, 8);
+function TacticalActivityFeed({ samples }) {
+  const recent = samples.slice(0, 7);
 
   if (recent.length === 0) {
-    return <div style={{ textAlign: 'center', color: colors.textMuted, padding: 24, fontSize: 13 }}>No recent activity</div>;
+    return (
+      <div style={{
+        textAlign: 'center',
+        color: TACTICAL_THEME.textMuted,
+        padding: 32,
+        fontSize: 12,
+        fontFamily: TACTICAL_THEME.fontMono,
+      }}>
+        [NO RECENT RECONNAISSANCE LOGS]
+      </div>
+    );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       {recent.map((s, i) => {
         const topDisease = s.detections?.[0];
         const conf = topDisease ? Math.round(topDisease.confidence * 100) : null;
-        const confColor = conf >= 70 ? colors.danger : conf >= 40 ? colors.warning : colors.success;
+        const isCritical = conf && conf >= 70;
+        const confColor = isCritical
+          ? TACTICAL_THEME.alert
+          : conf >= 40
+            ? TACTICAL_THEME.telemetry
+            : TACTICAL_THEME.radar;
 
         return (
           <div key={s.id} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '12px 0',
-            borderBottom: i < recent.length - 1 ? `1px solid ${colors.border}` : 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 8px',
+            borderRadius: 4,
+            borderBottom: i < recent.length - 1 ? `1px solid ${TACTICAL_THEME.borderSubtle}` : 'none',
+            backgroundColor: i % 2 === 0 ? 'rgba(255, 255, 255, 0.01)' : 'transparent',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
-              <div style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: confColor, flexShrink: 0 }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+              <div style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                backgroundColor: confColor,
+                boxShadow: `0 0 6px ${confColor}`,
+                flexShrink: 0,
+              }} />
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: colors.textPrimary, textTransform: 'capitalize', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {topDisease?.disease_class?.replace(/_/g, ' ') || 'No detection'}
+                <div style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: TACTICAL_THEME.textPrimary,
+                  textTransform: 'capitalize',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {topDisease?.disease_class?.replace(/_/g, ' ') || 'Nominal Leaf Structure'}
                 </div>
-                <div style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>
-                  👤 {s.owner_name || s.owner_email} · {new Date(s.created_at).toLocaleString('vi-VN')}
+                <div style={{
+                  fontSize: 9.5,
+                  color: TACTICAL_THEME.textMuted,
+                  marginTop: 2,
+                  fontFamily: TACTICAL_THEME.fontMono,
+                }}>
+                  OP: {s.owner_name || s.owner_email || 'SCOUT'} · {new Date(s.created_at).toLocaleString('vi-VN')}
                 </div>
               </div>
             </div>
+
             {conf !== null && (
-              <span style={{ fontSize: 13, fontWeight: 700, color: confColor, flexShrink: 0, marginLeft: 12 }}>{conf}%</span>
+              <div style={{
+                fontSize: 11,
+                fontWeight: 800,
+                fontFamily: TACTICAL_THEME.fontMono,
+                color: confColor,
+                backgroundColor: `${confColor}15`,
+                padding: '2px 6px',
+                borderRadius: 4,
+                border: `1px solid ${confColor}40`,
+                flexShrink: 0,
+                marginLeft: 12,
+              }}>
+                {conf}% CONF
+              </div>
             )}
           </div>
         );
@@ -150,31 +337,44 @@ function ActivityFeed({ samples, colors }) {
 }
 
 export default function DashboardPage() {
-  const { colors } = useTheme();
   const token = useAuthStore((s) => s.token);
-  const user = useAuthStore((s) => s.user);
-  const { summary, samples, users, isLoading, isRefreshing, error, loadAdminData } = useAdminStore();
+  const { summary, samples, users, isLoading, error, loadAdminData } = useAdminStore();
 
-  useEffect(() => { loadAdminData(token); }, []);
+  useEffect(() => {
+    loadAdminData(token);
+  }, []);
 
-  const recentSamples = samples.slice(0, 10);
-  const todaySamples = samples.filter(s => {
+  const todaySamples = samples.filter((s) => {
     const d = new Date(s.created_at);
     const now = new Date();
     return d.toDateString() === now.toDateString();
   });
 
-  let avgConf = null, totalConf = 0, confCount = 0;
-  samples.forEach(s => {
-    s.detections?.forEach(d => { totalConf += d.confidence; confCount++; });
+  let avgConf = null;
+  let totalConf = 0;
+  let confCount = 0;
+  samples.forEach((s) => {
+    s.detections?.forEach((d) => {
+      totalConf += d.confidence;
+      confCount++;
+    });
   });
   if (confCount > 0) avgConf = Math.round((totalConf / confCount) * 100);
 
   if (isLoading && samples.length === 0) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 16 }}>
-        <ActivityIndicator color={colors.primaryGlow} size="large" />
-        <div style={{ color: colors.textMuted, fontSize: 13 }}>Loading dashboard data...</div>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        gap: 16,
+      }}>
+        <ActivityIndicator color={TACTICAL_THEME.radar} size="large" />
+        <div style={{ color: TACTICAL_THEME.radar, fontSize: 12, fontFamily: TACTICAL_THEME.fontMono }}>
+          [SYNCHRONIZING TELEMETRY STREAMS...]
+        </div>
       </div>
     );
   }
@@ -183,67 +383,161 @@ export default function DashboardPage() {
     <div style={{
       flex: 1,
       overflowY: 'auto',
-      padding: 24,
+      padding: '24px 28px',
       display: 'flex',
       flexDirection: 'column',
-      gap: 24,
+      gap: 20,
     }} data-testid="dashboard-page">
       {error && (
         <div style={{
-          padding: '12px 16px', backgroundColor: colors.dangerBg, borderRadius: 10,
-          border: `1px solid ${colors.dangerBorder}`, color: colors.danger, fontSize: 13,
+          padding: '12px 16px',
+          backgroundColor: TACTICAL_THEME.alertMuted,
+          borderRadius: 6,
+          border: `1px solid ${TACTICAL_THEME.alert}`,
+          color: TACTICAL_THEME.alert,
+          fontSize: 12,
+          fontFamily: TACTICAL_THEME.fontMono,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
         }}>
-          ⚠️ {error}
+          <span>⚠ TELEMETRY FAULT:</span> {error}
         </div>
       )}
 
-      {/* KPI Row */}
+      {/* Telemetry KPI Metrics Grid */}
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        <KpiCard icon="👥" label="Users" value={summary?.total_users ?? users.length} subValue="Registered" color={colors.info} colors={colors} />
-        <KpiCard icon="🔬" label="Samples" value={summary?.total_samples ?? samples.length} subValue="Total analyzed" color={colors.primaryGlow} colors={colors} />
-        <KpiCard icon="📅" label="Today" value={todaySamples.length} subValue="New samples" color={colors.success} colors={colors} />
-        <KpiCard icon="🎯" label="Avg Confidence" value={avgConf !== null ? `${avgConf}%` : '—'} subValue="AI accuracy" color={avgConf >= 70 ? colors.success : avgConf >= 40 ? colors.warning : colors.danger} colors={colors} />
+        <TelemetryKpiCard
+          icon="👥"
+          code="USR-METRIC"
+          label="Registered Personnel"
+          value={summary?.total_users ?? users.length}
+          subValue="ACTIVE_AGRONOMISTS"
+          color={TACTICAL_THEME.satellite}
+        />
+        <TelemetryKpiCard
+          icon="🔬"
+          code="SCN-TOTAL"
+          label="Total Diagnoses"
+          value={summary?.total_samples ?? samples.length}
+          subValue="AI_DISCOVERIES"
+          color={TACTICAL_THEME.radar}
+        />
+        <TelemetryKpiCard
+          icon="📡"
+          code="SCN-TODAY"
+          label="Today's Field Recon"
+          value={todaySamples.length}
+          subValue="NEW_DISPATCHES"
+          color={TACTICAL_THEME.telemetry}
+        />
+        <TelemetryKpiCard
+          icon="🎯"
+          code="AI-PRECISION"
+          label="Avg Model Accuracy"
+          value={avgConf !== null ? `${avgConf}%` : '—'}
+          subValue="YOLOv8_CONFIDENCE"
+          color={avgConf >= 70 ? TACTICAL_THEME.radar : avgConf >= 40 ? TACTICAL_THEME.telemetry : TACTICAL_THEME.alert}
+        />
       </div>
 
-      {/* Charts Row */}
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        <ChartCard title="Disease Frequency" colors={colors}>
-          <DiseaseChart samples={samples} colors={colors} />
-        </ChartCard>
+      {/* Main Operations Radar & Activity Split */}
+      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+        <TacticalPanel
+          title="EPIDEMIC THREAT SPECTRUM"
+          subtitle="Frequency distribution of detected pathologies"
+          icon="📊"
+          badge="SPECTRUM ANALYZER"
+        >
+          <DiseaseThreatSpectrum samples={samples} />
+        </TacticalPanel>
 
-        <ChartCard title="Recent Activity" colors={colors}>
-          <ActivityFeed samples={samples} colors={colors} />
-        </ChartCard>
+        <TacticalPanel
+          title="FIELD RECONNAISSANCE LOGS"
+          subtitle="Real-time optical diagnostic events"
+          icon="📡"
+          badge="LIVE TELEMETRY"
+        >
+          <TacticalActivityFeed samples={samples} />
+        </TacticalPanel>
       </div>
 
-      {/* Alerts Summary */}
+      {/* Active Sensor Threat Matrices */}
       <div style={{
         padding: '20px',
-        borderRadius: 12,
-        backgroundColor: colors.surface,
-        border: `1px solid ${colors.border}`,
-        boxShadow: SHADOWS.card,
+        borderRadius: 8,
+        backgroundColor: TACTICAL_THEME.bgPanel,
+        border: `1px solid ${TACTICAL_THEME.border}`,
+        boxShadow: TACTICAL_THEME.shadowPanel,
       }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: colors.textPrimary, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span>🚨</span> Active Alerts
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 16,
+          borderBottom: `1px solid ${TACTICAL_THEME.border}`,
+          paddingBottom: 10,
+        }}>
+          <div style={{
+            fontSize: 12,
+            fontWeight: 800,
+            color: TACTICAL_THEME.textPrimary,
+            fontFamily: TACTICAL_THEME.fontMono,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}>
+            <span>⚡</span> SENSOR THREAT VECTORS & ACTIVE INCIDENTS
+          </div>
+          <span style={{
+            fontSize: 9,
+            color: TACTICAL_THEME.radar,
+            fontFamily: TACTICAL_THEME.fontMono,
+            fontWeight: 700,
+          }}>
+            4 ZONES MONITORED
+          </span>
         </div>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+
+        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
           {[
-            { icon: '🌡️', label: 'Temperature', value: '3 alerts', color: colors.warning },
-            { icon: '💧', label: 'Moisture', value: '1 alert', color: colors.info },
-            { icon: '🦠', label: 'Disease', value: '2 alerts', color: colors.danger },
-            { icon: '🧪', label: 'pH Level', value: 'Normal', color: colors.success },
+            { icon: '🌡️', label: 'Canopy Heat Vector', value: '3 Active Alerts', level: 'ELEVATED', color: TACTICAL_THEME.telemetry },
+            { icon: '💧', label: 'Soil Moisture Stress', value: '1 Active Alert', level: 'MONITORING', color: TACTICAL_THEME.satellite },
+            { icon: '🦠', label: 'Spore Dispersion Risk', value: '2 High Threat', level: 'CRITICAL', color: TACTICAL_THEME.alert },
+            { icon: '🧪', label: 'Soil pH & Nitrogen Balance', value: 'Nominal Range', level: 'STABLE', color: TACTICAL_THEME.radar },
           ].map((alert, i) => (
             <div key={i} style={{
-              flex: '1 1 150px', padding: '14px 16px', borderRadius: 10,
-              backgroundColor: `${alert.color}10`, border: `1px solid ${alert.color}30`,
-              display: 'flex', alignItems: 'center', gap: 10,
+              flex: '1 1 180px',
+              padding: '12px 14px',
+              borderRadius: 6,
+              backgroundColor: `${alert.color}0A`,
+              border: `1px solid ${alert.color}35`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
             }}>
-              <span style={{ fontSize: 20 }}>{alert.icon}</span>
-              <div>
-                <div style={{ fontSize: 11, color: colors.textMuted, fontWeight: 600 }}>{alert.label}</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: alert.color }}>{alert.value}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 20 }}>{alert.icon}</span>
+                <div>
+                  <div style={{ fontSize: 10, color: TACTICAL_THEME.textMuted, fontWeight: 700, fontFamily: TACTICAL_THEME.fontMono }}>
+                    {alert.label}
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: TACTICAL_THEME.textPrimary }}>
+                    {alert.value}
+                  </div>
+                </div>
               </div>
+              <span style={{
+                fontSize: 8,
+                fontWeight: 800,
+                color: alert.color,
+                fontFamily: TACTICAL_THEME.fontMono,
+                backgroundColor: `${alert.color}15`,
+                padding: '2px 5px',
+                borderRadius: 3,
+              }}>
+                {alert.level}
+              </span>
             </div>
           ))}
         </div>

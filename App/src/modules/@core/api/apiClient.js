@@ -1,13 +1,13 @@
 /**
  * API Client — Layer 1 Core
  *
- * Central fetch wrapper with automatic JWT injection.
- * NO platform-specific imports. Pure JS.
- *
- * All API calls in the app should go through this client.
+ * Central fetch wrapper with automatic JWT injection and smart host resolution.
+ * Automatically resolves development machine IP for physical Android/iOS devices,
+ * Android emulators, Web, and Electron.
  */
 
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
 // Dynamically get token to avoid circular import issue with useAuthStore
 const getAuthToken = () => {
@@ -20,7 +20,7 @@ const getAuthToken = () => {
 };
 
 // ─────────────────────────────────────────────
-// Origin resolution (ported from legacy api.js)
+// Origin resolution
 // ─────────────────────────────────────────────
 
 const MANUAL_ORIGIN = process.env.EXPO_PUBLIC_API_ORIGIN?.trim();
@@ -32,14 +32,52 @@ const isElectronRenderer = () =>
   typeof navigator !== 'undefined' &&
   /electron/i.test(navigator.userAgent || '');
 
+const getExpoHost = () => {
+  try {
+    const hostUri =
+      Constants?.expoConfig?.hostUri ||
+      Constants?.manifest2?.extra?.expoGo?.debuggerHost ||
+      Constants?.manifest?.debuggerHost;
+    if (hostUri) {
+      const host = hostUri.split(':')[0];
+      if (host && host !== 'localhost' && host !== '127.0.0.1') {
+        return host;
+      }
+    }
+  } catch (e) {
+    // Ignore fallback errors
+  }
+  return null;
+};
+
 const resolveHost = () => {
   const manual = process.env.EXPO_PUBLIC_API_HOST?.trim();
-  if (manual) return manual;
-  if (isElectronRenderer()) return '127.0.0.1';
-  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.hostname) {
-    return window.location.hostname;
+
+  // 1. If explicit specific IP/domain is specified (e.g. 192.168.1.15 or api.cropvision.vn)
+  if (manual && manual !== '127.0.0.1' && manual !== 'localhost') {
+    return manual;
   }
+
+  // 2. Electron renderer (running on desktop)
+  if (isElectronRenderer()) return '127.0.0.1';
+
+  // 3. Web browser environment
+  if (Platform.OS === 'web') {
+    if (manual) return manual;
+    if (typeof window !== 'undefined' && window.location?.hostname) {
+      return window.location.hostname;
+    }
+    return '127.0.0.1';
+  }
+
+  // 4. Mobile (Android/iOS) via Expo Metro host IP (Works for real phones on Wi-Fi & emulators)
+  const expoHost = getExpoHost();
+  if (expoHost) return expoHost;
+
+  // 5. Android Emulator loopback fallback (10.0.2.2 maps to host PC 127.0.0.1)
   if (Platform.OS === 'android') return '10.0.2.2';
+
+  // 6. Default fallback
   return '127.0.0.1';
 };
 
@@ -90,7 +128,7 @@ export const apiRequest = async (path, options = {}, token = null) => {
     ...(fetchOptions.headers || {}),
   };
 
-  // When sending FormData, remove Content-Type so browser sets multipart boundary
+  // When sending FormData, remove Content-Type so browser/engine sets multipart boundary
   if (fetchOptions.body instanceof FormData) {
     delete headers['Content-Type'];
   }
@@ -101,35 +139,56 @@ export const apiRequest = async (path, options = {}, token = null) => {
     method: fetchOptions.method || 'GET',
     hasFormData: fetchOptions.body instanceof FormData,
   });
+
   const uploadStartedAt = getNowMs();
-  const response = await fetch(url, {
-    ...fetchOptions,
-    headers,
-  });
+  let response;
+
+  try {
+    response = await fetch(url, {
+      ...fetchOptions,
+      headers,
+    });
+  } catch (networkErr) {
+    console.error(`[API Client] Network failure calling ${url}:`, networkErr?.message || networkErr);
+
+    const isNetworkFailed = networkErr?.name === 'TypeError' || String(networkErr?.message).includes('Network request failed');
+    if (isNetworkFailed) {
+      const helpfulError = new Error(`Không thể kết nối đến máy chủ (${API_ORIGIN}). Vui lòng đảm bảo backend đang chạy trên cổng ${API_PORT} và thiết bị cùng mạng Wi-Fi.`);
+      helpfulError.originalError = networkErr;
+      helpfulError.url = url;
+      throw helpfulError;
+    }
+    throw networkErr;
+  }
+
   debugRun?.mark?.('upload-done', {
     durationMs: getNowMs() - uploadStartedAt,
     status: response.status,
     ok: response.ok,
   });
 
-  // [H1] Always parse JSON first so callers get the body even on errors.
   debugRun?.mark?.('response-parse-start', {
     status: response.status,
   });
   const parseStartedAt = getNowMs();
-  const data = await response.json();
+  
+  let data;
+  try {
+    data = await response.json();
+  } catch (jsonErr) {
+    const parseError = new Error(`Phản hồi máy chủ không hợp lệ (HTTP ${response.status})`);
+    parseError.status = response.status;
+    throw parseError;
+  }
+
   debugRun?.mark?.('response-parse-done', {
     durationMs: getNowMs() - parseStartedAt,
     success: Boolean(data?.success),
     hasData: Boolean(data?.data),
   });
 
-  // [H1] If the server returned a non-2xx status, throw an error that
-  //       includes both the status code and the server's message.
-  //       This lets callers (e.g. stores) distinguish network errors
-  //       from server-side validation failures.
   if (!response.ok) {
-    const err = new Error(data.message || `Request failed with status ${response.status}`);
+    const err = new Error(data?.message || `Request failed with status ${response.status}`);
     err.status = response.status;
     err.data = data;
     throw err;

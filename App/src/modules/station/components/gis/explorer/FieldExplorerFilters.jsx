@@ -1,22 +1,20 @@
 /**
- * FieldExplorerFilters — Quick filter chips for the explorer.
+ * FieldExplorerFilters — Tactical Filter Chips
  *
- * Filters by crop type and status. Compact chip-based UI.
- *
- * Debug logs: [Explorer]
+ * Direction 3: Tactical Agronomy Command
  */
 
 import React, { useCallback, useMemo } from 'react';
+import { TACTICAL_THEME } from '../../../constants/tacticalTheme';
 
 const STATUS_OPTIONS = [
-  { value: '', label: 'All' },
-  { value: 'ACTIVE', label: 'Active', color: '#4CAF50' },
-  { value: 'INACTIVE', label: 'Inactive', color: '#9E9E9E' },
-  { value: 'FALLOW', label: 'Fallow', color: '#795548' },
+  { value: '', label: 'ALL' },
+  { value: 'ACTIVE', label: 'ACTIVE', color: TACTICAL_THEME.radar },
+  { value: 'INACTIVE', label: 'INACTIVE', color: TACTICAL_THEME.textMuted },
+  { value: 'FALLOW', label: 'FALLOW', color: TACTICAL_THEME.telemetry },
 ];
 
 export default function FieldExplorerFilters({ fields, filters, onFilterChange }) {
-  // Extract unique crop types from fields
   const cropTypes = useMemo(() => {
     const types = new Set();
     fields.forEach((f) => {
@@ -42,15 +40,24 @@ export default function FieldExplorerFilters({ fields, filters, onFilterChange }
   return (
     <div
       style={{
-        padding: '6px 12px 8px',
-        borderBottom: '1px solid #F0F0F0',
+        padding: '6px 10px 8px',
+        borderBottom: `1px solid ${TACTICAL_THEME.borderSubtle}`,
+        backgroundColor: TACTICAL_THEME.bgPanelSolid,
         flexShrink: 0,
       }}
     >
       {/* Status filter chips */}
       <div style={{ marginBottom: 6 }}>
-        <div style={{ fontSize: 10, color: '#999', fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          Status
+        <div style={{
+          fontSize: 8.5,
+          color: TACTICAL_THEME.textMuted,
+          fontWeight: 800,
+          marginBottom: 4,
+          textTransform: 'uppercase',
+          letterSpacing: '1px',
+          fontFamily: TACTICAL_THEME.fontMono,
+        }}>
+          STATUS VECTOR
         </div>
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           {STATUS_OPTIONS.map((opt) => {
@@ -60,13 +67,14 @@ export default function FieldExplorerFilters({ fields, filters, onFilterChange }
                 key={opt.value}
                 onClick={() => handleStatusChange(opt.value)}
                 style={{
-                  padding: '3px 8px',
-                  borderRadius: 12,
-                  border: isActive ? '1px solid #1976D2' : '1px solid #E0E0E0',
-                  backgroundColor: isActive ? '#E3F2FD' : '#FAFAFA',
-                  color: isActive ? '#1976D2' : '#666',
-                  fontSize: 11,
-                  fontWeight: isActive ? 600 : 400,
+                  padding: '2px 7px',
+                  borderRadius: 4,
+                  border: isActive ? `1px solid ${TACTICAL_THEME.radar}` : `1px solid ${TACTICAL_THEME.border}`,
+                  backgroundColor: isActive ? 'rgba(0, 245, 160, 0.12)' : 'rgba(255, 255, 255, 0.02)',
+                  color: isActive ? TACTICAL_THEME.radar : TACTICAL_THEME.textSecondary,
+                  fontSize: 9.5,
+                  fontWeight: 700,
+                  fontFamily: TACTICAL_THEME.fontMono,
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
                   display: 'flex',
@@ -77,10 +85,11 @@ export default function FieldExplorerFilters({ fields, filters, onFilterChange }
                 {opt.color && (
                   <span
                     style={{
-                      width: 6,
-                      height: 6,
+                      width: 5,
+                      height: 5,
                       borderRadius: '50%',
                       backgroundColor: opt.color,
+                      boxShadow: isActive ? `0 0 5px ${opt.color}` : 'none',
                     }}
                   />
                 )}
@@ -94,45 +103,54 @@ export default function FieldExplorerFilters({ fields, filters, onFilterChange }
       {/* Crop type filter chips */}
       {cropTypes.length > 0 && (
         <div>
-          <div style={{ fontSize: 10, color: '#999', fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Crop
+          <div style={{
+            fontSize: 8.5,
+            color: TACTICAL_THEME.textMuted,
+            fontWeight: 800,
+            marginBottom: 4,
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+            fontFamily: TACTICAL_THEME.fontMono,
+          }}>
+            CROP TAXONOMY
           </div>
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             <button
               onClick={() => handleCropChange('')}
               style={{
-                padding: '3px 8px',
-                borderRadius: 12,
-                border: !filters.cropType ? '1px solid #1976D2' : '1px solid #E0E0E0',
-                backgroundColor: !filters.cropType ? '#E3F2FD' : '#FAFAFA',
-                color: !filters.cropType ? '#1976D2' : '#666',
-                fontSize: 11,
-                fontWeight: !filters.cropType ? 600 : 400,
+                padding: '2px 7px',
+                borderRadius: 4,
+                border: !filters.cropType ? `1px solid ${TACTICAL_THEME.satellite}` : `1px solid ${TACTICAL_THEME.border}`,
+                backgroundColor: !filters.cropType ? 'rgba(0, 210, 255, 0.12)' : 'rgba(255, 255, 255, 0.02)',
+                color: !filters.cropType ? TACTICAL_THEME.satellite : TACTICAL_THEME.textSecondary,
+                fontSize: 9.5,
+                fontWeight: 700,
+                fontFamily: TACTICAL_THEME.fontMono,
                 cursor: 'pointer',
-                transition: 'all 0.15s ease',
               }}
             >
-              All
+              ALL
             </button>
             {cropTypes.map((crop) => {
               const isActive = filters.cropType === crop;
               return (
                 <button
                   key={crop}
-                  onClick={() => handleCropChange(isActive ? '' : crop)}
+                  onClick={() => handleCropChange(crop)}
                   style={{
-                    padding: '3px 8px',
-                    borderRadius: 12,
-                    border: isActive ? '1px solid #1976D2' : '1px solid #E0E0E0',
-                    backgroundColor: isActive ? '#E3F2FD' : '#FAFAFA',
-                    color: isActive ? '#1976D2' : '#666',
-                    fontSize: 11,
-                    fontWeight: isActive ? 600 : 400,
+                    padding: '2px 7px',
+                    borderRadius: 4,
+                    border: isActive ? `1px solid ${TACTICAL_THEME.satellite}` : `1px solid ${TACTICAL_THEME.border}`,
+                    backgroundColor: isActive ? 'rgba(0, 210, 255, 0.12)' : 'rgba(255, 255, 255, 0.02)',
+                    color: isActive ? TACTICAL_THEME.satellite : TACTICAL_THEME.textSecondary,
+                    fontSize: 9.5,
+                    fontWeight: 700,
+                    fontFamily: TACTICAL_THEME.fontMono,
                     cursor: 'pointer',
-                    transition: 'all 0.15s ease',
+                    textTransform: 'capitalize',
                   }}
                 >
-                  🌱 {crop}
+                  {crop}
                 </button>
               );
             })}

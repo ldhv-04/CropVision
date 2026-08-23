@@ -1,12 +1,7 @@
 /**
- * CreateFieldDrawer — Right side drawer for creating new fields.
+ * CreateFieldDrawer — Tactical Sector Vector Creation Drawer
  *
- * Three creation methods via tabs:
- * 1. Draw — User draws polygon on map
- * 2. Coordinates — Manual lat/lng entry table
- * 3. Center+Radius — Generate polygon from center point and radius
- *
- * Common field details form below the tab content.
+ * Direction 3: Tactical Agronomy Command
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
@@ -31,15 +26,25 @@ import {
   toGeoJsonPolygon,
   isSelfIntersecting,
 } from '../../utils/fieldGeometry';
+import { TACTICAL_THEME } from '../../constants/tacticalTheme';
 
 const CROP_OPTIONS = ['rice', 'corn', 'vegetables', 'fruit', 'coffee', 'tea', 'rubber', 'other'];
 const GROWTH_OPTIONS = ['germination', 'seedling', 'vegetative', 'flowering', 'fruiting', 'harvest', 'dormant'];
-const COLOR_OPTIONS = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336', '#00BCD4', '#795548', '#607D8B'];
+const COLOR_OPTIONS = [
+  TACTICAL_THEME.radar,
+  TACTICAL_THEME.satellite,
+  TACTICAL_THEME.telemetry,
+  TACTICAL_THEME.alert,
+  TACTICAL_THEME.violet,
+  '#38BDF8',
+  '#FB923C',
+  '#F472B6',
+];
 
 const TABS = [
-  { id: 'draw', label: '✏️ Draw', desc: 'Click on map' },
-  { id: 'coords', label: '📐 Coords', desc: 'Enter GPS' },
-  { id: 'radius', label: '⭕ Center+R', desc: 'Circle gen' },
+  { id: 'draw', label: '✏️ VECTOR DRAW', desc: 'Click map vertices' },
+  { id: 'coords', label: '📐 GPS TABLE', desc: 'Enter coordinates' },
+  { id: 'radius', label: '⭕ RADIUS FIX', desc: 'Center + Radius' },
 ];
 
 export default function CreateFieldDrawer({
@@ -54,15 +59,12 @@ export default function CreateFieldDrawer({
   const [cropType, setCropType] = useState('rice');
   const [growthStage, setGrowthStage] = useState('germination');
   const [plantingDate, setPlantingDate] = useState('');
-  const [color, setColor] = useState('#4CAF50');
+  const [color, setColor] = useState(TACTICAL_THEME.radar);
   const [notes, setNotes] = useState('');
 
-  // Coordinate entry state
   const [coordVertices, setCoordVertices] = useState([]);
-  // Radius generator state
   const [generatedBoundary, setGeneratedBoundary] = useState(null);
 
-  // Compute the active polygon vertices based on tab
   const activeVertices = useMemo(() => {
     if (activeTab === 'draw') return drawVertices;
     if (activeTab === 'coords') return coordVertices;
@@ -80,7 +82,6 @@ export default function CreateFieldDrawer({
   const handleSave = useCallback(() => {
     if (!canSave) return;
 
-    // Validate
     if (isSelfIntersecting(activeVertices)) {
       if (Platform.OS === 'web') {
         window.alert('Warning: Polygon crosses itself. Please adjust vertices.');
@@ -113,7 +114,12 @@ export default function CreateFieldDrawer({
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Create Field</Text>
+        <div>
+          <div style={{ fontSize: 9, fontWeight: 800, color: TACTICAL_THEME.radar, fontFamily: TACTICAL_THEME.fontMono, letterSpacing: '1px' }}>
+            VECTOR REGISTRATION
+          </div>
+          <Text style={styles.title}>CREATE NEW SECTOR</Text>
+        </div>
         <TouchableOpacity onPress={onCancel} style={styles.closeBtn}>
           <Text style={styles.closeText}>✕</Text>
         </TouchableOpacity>
@@ -150,8 +156,8 @@ export default function CreateFieldDrawer({
             <Text style={styles.drawHintIcon}>✏️</Text>
             <Text style={styles.drawHintText}>
               {drawVertices.length === 0
-                ? 'Click on the map to start drawing a field boundary'
-                : `${drawVertices.length} vertices placed. ${drawVertices.length >= 3 ? 'Click "Finish Drawing" or click the first vertex to close.' : 'Keep clicking to add more.'}`}
+                ? 'CLICK ON GIS MAP CANVAS TO PLACE POLYGON VERTICES.'
+                : `[${drawVertices.length} VERTICES PLACED] ${drawVertices.length >= 3 ? 'Click "Finish Drawing" or snap to start vertex.' : 'Add at least 3 vertices to form sector polygon.'}`}
             </Text>
           </View>
         )}
@@ -163,35 +169,35 @@ export default function CreateFieldDrawer({
         {activeVertices.length >= 3 && (
           <View style={styles.summaryBox}>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Area:</Text>
+              <Text style={styles.summaryLabel}>SECTOR EXTENT:</Text>
               <Text style={styles.summaryValue}>{formatArea(area)}</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Vertices:</Text>
+              <Text style={styles.summaryLabel}>VERTEX NODES:</Text>
               <Text style={styles.summaryValue}>{activeVertices.length}</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Center:</Text>
+              <Text style={styles.summaryLabel}>CENTROID GPS:</Text>
               <Text style={styles.summaryValueMono}>{formatCoords(centroid[0], centroid[1])}</Text>
             </View>
           </View>
         )}
 
         {/* Field Details Form */}
-        <Text style={styles.formTitle}>Field Details</Text>
+        <Text style={styles.formTitle}>SECTOR ATTRIBUTES</Text>
 
         {/* Name */}
-        <Text style={styles.label}>Name *</Text>
+        <Text style={styles.label}>SECTOR IDENTIFIER / NAME *</Text>
         <TextInput
           style={styles.input}
-          placeholder="e.g. North Paddy Field"
-          placeholderTextColor="#bbb"
+          placeholder="e.g. North Paddy Sector A4"
+          placeholderTextColor={TACTICAL_THEME.textMuted}
           value={name}
           onChangeText={setName}
         />
 
         {/* Crop Type */}
-        <Text style={styles.label}>Crop Type</Text>
+        <Text style={styles.label}>CROP TAXONOMY</Text>
         <View style={styles.chipRow}>
           {CROP_OPTIONS.map((crop) => (
             <TouchableOpacity
@@ -200,14 +206,14 @@ export default function CreateFieldDrawer({
               onPress={() => setCropType(crop)}
             >
               <Text style={[styles.chipText, cropType === crop && styles.chipTextActive]}>
-                {crop}
+                {crop.toUpperCase()}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
         {/* Growth Stage */}
-        <Text style={styles.label}>Growth Stage</Text>
+        <Text style={styles.label}>PHENOLOGICAL STAGE</Text>
         <View style={styles.chipRow}>
           {GROWTH_OPTIONS.map((stage) => (
             <TouchableOpacity
@@ -216,24 +222,24 @@ export default function CreateFieldDrawer({
               onPress={() => setGrowthStage(stage)}
             >
               <Text style={[styles.chipText, growthStage === stage && styles.chipTextActive]}>
-                {stage}
+                {stage.toUpperCase()}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
         {/* Planting Date */}
-        <Text style={styles.label}>Planting Date</Text>
+        <Text style={styles.label}>CULTIVATION START DATE</Text>
         <TextInput
           style={styles.input}
           placeholder="YYYY-MM-DD"
-          placeholderTextColor="#bbb"
+          placeholderTextColor={TACTICAL_THEME.textMuted}
           value={plantingDate}
           onChangeText={setPlantingDate}
         />
 
-        {/* Color */}
-        <Text style={styles.label}>Color</Text>
+        {/* Color Marker */}
+        <Text style={styles.label}>SECTOR VECTOR COLOR ACCENT</Text>
         <View style={styles.colorRow}>
           {COLOR_OPTIONS.map((c) => (
             <TouchableOpacity
@@ -245,11 +251,11 @@ export default function CreateFieldDrawer({
         </View>
 
         {/* Notes */}
-        <Text style={styles.label}>Notes</Text>
+        <Text style={styles.label}>AGRONOMIST OBSERVATIONS</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
-          placeholder="Optional notes..."
-          placeholderTextColor="#bbb"
+          placeholder="Enter soil telemetry, variety notes, or pest notes..."
+          placeholderTextColor={TACTICAL_THEME.textMuted}
           value={notes}
           onChangeText={setNotes}
           multiline
@@ -257,17 +263,19 @@ export default function CreateFieldDrawer({
         />
       </ScrollView>
 
-      {/* Actions */}
+      {/* Action buttons */}
       <View style={styles.actions}>
         <TouchableOpacity style={styles.cancelBtn} onPress={onCancel}>
-          <Text style={styles.cancelText}>Cancel</Text>
+          <Text style={styles.cancelText}>ABORT</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.saveBtn, (!canSave || isSaving) && styles.saveBtnDisabled]}
           onPress={handleSave}
           disabled={!canSave || isSaving}
         >
-          <Text style={styles.saveText}>{isSaving ? 'Saving...' : '💾 Save Field'}</Text>
+          <Text style={styles.saveText}>
+            {isSaving ? 'REGISTERING...' : '⚡ REGISTER SECTOR'}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -280,13 +288,15 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     bottom: 0,
-    width: 380,
-    backgroundColor: '#ffffff',
+    width: 340,
+    backgroundColor: TACTICAL_THEME.bgPanelSolid,
+    borderLeftWidth: 1,
+    borderLeftColor: TACTICAL_THEME.border,
     shadowColor: '#000',
-    shadowOffset: { width: -3, height: 0 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: -6, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 18,
+    elevation: 12,
     zIndex: 1100,
   },
   header: {
@@ -295,74 +305,244 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: TACTICAL_THEME.border,
+    backgroundColor: 'rgba(6, 9, 14, 0.4)',
   },
-  title: { fontSize: 18, fontWeight: '700', color: '#1a1a1a' },
-  closeBtn: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#F5F5F5', alignItems: 'center', justifyContent: 'center' },
-  closeText: { fontSize: 14, color: '#666' },
-  body: { flex: 1, padding: 16 },
-  tabRow: { flexDirection: 'row', gap: 6, marginBottom: 12 },
+  title: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: TACTICAL_THEME.textPrimary,
+    fontFamily: TACTICAL_THEME.fontMono,
+  },
+  closeBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: TACTICAL_THEME.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeText: {
+    fontSize: 12,
+    color: TACTICAL_THEME.textSecondary,
+    fontWeight: '700',
+  },
+  body: {
+    flex: 1,
+    padding: 16,
+  },
+  tabRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 14,
+  },
   tab: {
     flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 6,
-    borderRadius: 8,
-    backgroundColor: '#F5F5F5',
+    paddingVertical: 7,
+    paddingHorizontal: 4,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: TACTICAL_THEME.border,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
     alignItems: 'center',
   },
-  tabActive: { backgroundColor: '#E3F2FD' },
-  tabLabel: { fontSize: 12, fontWeight: '600', color: '#666' },
-  tabLabelActive: { color: '#1565C0' },
-  tabDesc: { fontSize: 9, color: '#999', marginTop: 2 },
-  tabDescActive: { color: '#64B5F6' },
-  drawHint: { flexDirection: 'row', alignItems: 'center', padding: 12, backgroundColor: '#F8F9FA', borderRadius: 8, marginBottom: 12 },
-  drawHintIcon: { fontSize: 24, marginRight: 10 },
-  drawHintText: { flex: 1, fontSize: 13, color: '#555', lineHeight: 18 },
-  divider: { height: 1, backgroundColor: '#E0E0E0', marginVertical: 12 },
-  summaryBox: { backgroundColor: '#F8F9FA', borderRadius: 8, padding: 10, marginBottom: 12 },
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  summaryLabel: { fontSize: 12, color: '#888' },
-  summaryValue: { fontSize: 12, fontWeight: '600', color: '#333' },
-  summaryValueMono: { fontSize: 11, color: '#333', fontFamily: 'monospace' },
-  formTitle: { fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 10 },
-  label: { fontSize: 11, fontWeight: '600', color: '#888', marginBottom: 4, marginTop: 8 },
-  input: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 13,
-    color: '#333',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
+  tabActive: {
+    borderColor: TACTICAL_THEME.radar,
+    backgroundColor: 'rgba(0, 245, 160, 0.1)',
   },
-  textArea: { minHeight: 60, textAlignVertical: 'top' },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 16,
-    backgroundColor: '#F5F5F5',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+  tabLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: TACTICAL_THEME.textSecondary,
+    fontFamily: TACTICAL_THEME.fontMono,
   },
-  chipActive: { backgroundColor: '#E3F2FD', borderColor: '#90CAF9' },
-  chipText: { fontSize: 11, color: '#666' },
-  chipTextActive: { color: '#1565C0', fontWeight: '600' },
-  colorRow: { flexDirection: 'row', gap: 8 },
-  colorSwatch: { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: 'transparent' },
-  colorActive: { borderColor: '#333', transform: [{ scale: 1.15 }] },
-  actions: {
+  tabLabelActive: {
+    color: TACTICAL_THEME.radar,
+  },
+  tabDesc: {
+    fontSize: 7.5,
+    color: TACTICAL_THEME.textMuted,
+    marginTop: 2,
+  },
+  tabDescActive: {
+    color: TACTICAL_THEME.radar,
+  },
+  drawHint: {
     flexDirection: 'row',
-    padding: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    alignItems: 'center',
+    padding: 10,
+    backgroundColor: 'rgba(0, 245, 160, 0.05)',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 245, 160, 0.2)',
     gap: 8,
   },
-  cancelBtn: { flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: '#F5F5F5', alignItems: 'center' },
-  cancelText: { fontSize: 13, color: '#666', fontWeight: '600' },
-  saveBtn: { flex: 2, paddingVertical: 12, borderRadius: 8, backgroundColor: '#1976D2', alignItems: 'center' },
-  saveBtnDisabled: { backgroundColor: '#BDBDBD' },
-  saveText: { fontSize: 13, color: '#fff', fontWeight: '600' },
+  drawHintIcon: {
+    fontSize: 14,
+  },
+  drawHintText: {
+    flex: 1,
+    fontSize: 10,
+    color: TACTICAL_THEME.radar,
+    fontFamily: TACTICAL_THEME.fontMono,
+    lineHeight: 14,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: TACTICAL_THEME.borderSubtle,
+    marginVertical: 14,
+  },
+  summaryBox: {
+    backgroundColor: 'rgba(0, 210, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 210, 255, 0.2)',
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 14,
+    gap: 4,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  summaryLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: TACTICAL_THEME.textMuted,
+    fontFamily: TACTICAL_THEME.fontMono,
+  },
+  summaryValue: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: TACTICAL_THEME.satellite,
+    fontFamily: TACTICAL_THEME.fontMono,
+  },
+  summaryValueMono: {
+    fontSize: 9.5,
+    color: TACTICAL_THEME.satellite,
+    fontFamily: TACTICAL_THEME.fontMono,
+  },
+  formTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: TACTICAL_THEME.textMuted,
+    fontFamily: TACTICAL_THEME.fontMono,
+    letterSpacing: 1.2,
+    marginBottom: 10,
+  },
+  label: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: TACTICAL_THEME.textSecondary,
+    fontFamily: TACTICAL_THEME.fontMono,
+    marginBottom: 4,
+    marginTop: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: TACTICAL_THEME.border,
+    borderRadius: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    fontSize: 12,
+    color: TACTICAL_THEME.textPrimary,
+    backgroundColor: TACTICAL_THEME.bgInput,
+    fontFamily: TACTICAL_THEME.fontFamily,
+  },
+  textArea: {
+    minHeight: 56,
+    textAlignVertical: 'top',
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  chip: {
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: TACTICAL_THEME.border,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+  },
+  chipActive: {
+    borderColor: TACTICAL_THEME.radar,
+    backgroundColor: 'rgba(0, 245, 160, 0.12)',
+  },
+  chipText: {
+    fontSize: 9,
+    color: TACTICAL_THEME.textSecondary,
+    fontWeight: '700',
+    fontFamily: TACTICAL_THEME.fontMono,
+  },
+  chipTextActive: {
+    color: TACTICAL_THEME.radar,
+  },
+  colorRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginVertical: 4,
+  },
+  colorSwatch: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  colorActive: {
+    borderColor: '#ffffff',
+    borderWidth: 2,
+    transform: [{ scale: 1.15 }],
+  },
+  actions: {
+    flexDirection: 'row',
+    padding: 14,
+    borderTopWidth: 1,
+    borderTopColor: TACTICAL_THEME.border,
+    backgroundColor: 'rgba(6, 9, 14, 0.6)',
+    gap: 10,
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: TACTICAL_THEME.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelText: {
+    color: TACTICAL_THEME.textSecondary,
+    fontSize: 10,
+    fontWeight: '800',
+    fontFamily: TACTICAL_THEME.fontMono,
+  },
+  saveBtn: {
+    flex: 2,
+    paddingVertical: 9,
+    borderRadius: 4,
+    backgroundColor: TACTICAL_THEME.radar,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: TACTICAL_THEME.radar,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+  },
+  saveBtnDisabled: {
+    backgroundColor: 'rgba(0, 245, 160, 0.2)',
+    shadowOpacity: 0,
+  },
+  saveText: {
+    color: '#06090E',
+    fontSize: 11,
+    fontWeight: '900',
+    fontFamily: TACTICAL_THEME.fontMono,
+    letterSpacing: 0.5,
+  },
 });

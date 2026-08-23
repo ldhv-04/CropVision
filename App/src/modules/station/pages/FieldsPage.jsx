@@ -1,22 +1,8 @@
 /**
- * FieldsPage — GIS-Based Field Management (SoilzePro Map View)
+ * FieldsPage — GIS-Based Field Management (Tactical Agronomy Command)
  *
- * Uses MapLibre GL (web) + react-native-maps (mobile).
- * MapLibre provides WebGL-rendered tiles + GeoJSON-based field polygons.
- *
- * Architecture:
- * - MapLibre map instance mounted once (no React re-render loops)
- * - GeoJSON sources updated imperatively
- * - Viewport: Map → Store only (no Store → Map → Store loops)
- * - ResizeObserver for stable tile rendering
- *
- * Features:
- * - Real map tiles with field polygon boundaries
- * - Polygon drawing, coordinate entry, center+radius creation
- * - Polygon vertex editing (drag/add/remove)
- * - Soft delete with trash recovery
- * - Layer controls, filter bar, field detail panel
- * - Zustand state management
+ * Direction 3: Tactical Agronomy Command & Mission Control
+ * Vector-based Cadastral Grid & Geographic Information System.
  */
 
 import React, { useEffect, useCallback, useState, useMemo, useRef } from 'react';
@@ -30,7 +16,6 @@ import useFieldCRUD from '../hooks/useFieldCRUD';
 import StationMapCanvasMapLibre from '../components/gis/StationMapCanvasMapLibre';
 import MapToolbar from '../components/gis/MapToolbar';
 import LayerControls from '../components/gis/LayerControls';
-import FilterBar from '../components/gis/FilterBar';
 import FieldDetailPanel from '../components/gis/FieldDetailPanel';
 import CreateFieldDrawer from '../components/gis/CreateFieldDrawer';
 import ConfirmationDialog from '../components/gis/ConfirmationDialog';
@@ -38,6 +23,7 @@ import FieldExplorerPanel from '../components/gis/explorer/FieldExplorerPanel';
 import ZoneEditorPage from './ZoneEditorPage';
 import { extractPolygonCoords, calculateAreaHectares } from '../utils/fieldGeometry';
 import { FIELD_FOCUS_ZOOM, clampZoom } from '../config/mapConfig';
+import { TACTICAL_THEME } from '../constants/tacticalTheme';
 
 export default function FieldsPage() {
   // ── Store state ──────────────────────────────────────────────
@@ -68,7 +54,6 @@ export default function FieldsPage() {
     setFilter,
     setLayer,
     toggleAdminLayer,
-    setAdminLayerVisibility,
     openPanel,
     closePanel,
     setCreateMethod,
@@ -79,16 +64,10 @@ export default function FieldsPage() {
     cancelDrawing,
     startEditing,
     updateEditVertex,
-    addEditVertex,
-    removeEditVertex,
     undoEdit,
     cancelEditing,
-    finishEditing,
     showToast,
     clearToast,
-    addField,
-    updateField,
-    removeField,
     setSearchQuery,
     toggleExplorer,
   } = useFieldGISStore();
@@ -98,32 +77,21 @@ export default function FieldsPage() {
   // ── Local state ──────────────────────────────────────────────
   const [isSaving, setIsSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [editMetadataField, setEditMetadataField] = useState(null);
   const [zoneEditorFieldId, setZoneEditorFieldId] = useState(null);
 
-  // ── Map ref for imperative flyTo (bridge between explorer and map) ──
   const mapInstanceRef = useRef(null);
 
   const handleMapRef = useCallback((map) => {
     mapInstanceRef.current = map;
   }, []);
 
-  // ── Explorer → Map: flyTo field on explorer click ────────────
   const handleExplorerFlyTo = useCallback(
     (centroid, zoomLevel) => {
       const map = mapInstanceRef.current;
-      if (!map) {
-        console.warn('[MapSync] flyTo — map not ready');
-        return;
-      }
+      if (!map) return;
       const safeZoom = clampZoom(zoomLevel || FIELD_FOCUS_ZOOM);
-      console.log('[ZOOM_DEBUG] flyTo requested', {
-        center: [centroid[1], centroid[0]],
-        zoom: safeZoom,
-        rawZoom: zoomLevel,
-      });
       map.flyTo({
-        center: [centroid[1], centroid[0]], // MapLibre: [lng, lat]
+        center: [centroid[1], centroid[0]],
         zoom: safeZoom,
         duration: 800,
       });
@@ -131,18 +99,15 @@ export default function FieldsPage() {
     []
   );
 
-  // ── Map → Explorer: handle polygon click with map sync ──────
   const handleFieldSelectFromMap = useCallback(
     (id) => {
       if (drawState.isDrawing || editState.isEditing) return;
-      console.log('[MapSync] polygon clicked:', id);
       setSelectedField(id);
       openPanel('detail');
     },
     [drawState.isDrawing, editState.isEditing, setSelectedField, openPanel]
   );
 
-  // ── Map hover handler ───────────────────────────────────────
   const handleMapFieldHover = useCallback(
     (id) => {
       setHoveredField(id);
@@ -150,12 +115,10 @@ export default function FieldsPage() {
     [setHoveredField]
   );
 
-  // ── Load fields on mount ─────────────────────────────────────
   useEffect(() => {
     fetchFields();
   }, [fetchFields]);
 
-  // ── Keyboard shortcuts (web only) ────────────────────────────
   useEffect(() => {
     if (Platform.OS !== 'web') return;
 
@@ -183,23 +146,15 @@ export default function FieldsPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [drawState.isDrawing, editState.isEditing]);
 
-  // ── Filtered fields ──────────────────────────────────────────
   const filteredFields = useMemo(
     () => selectMapFields({ fields, filters }),
     [fields, filters]
   );
 
-  // ── Selected field ───────────────────────────────────────────
   const selectedField = useMemo(
     () => fields.find((f) => f.id === selectedFieldId),
     [fields, selectedFieldId]
   );
-
-  // ── Handlers ─────────────────────────────────────────────────
-
-  // handleFieldSelect is now split:
-  // - handleFieldSelectFromMap: for polygon clicks (Map → List sync)
-  // - handleExplorerFlyTo: for list clicks (List → Map sync, handled in FieldExplorerPanel)
 
   const handleMapClick = useCallback(
     (latlng) => {
@@ -240,7 +195,6 @@ export default function FieldsPage() {
     [updateEditVertex]
   );
 
-  // ── Create Field ─────────────────────────────────────────────
   const handleStartCreate = useCallback(() => {
     startDrawing();
     openPanel('create', { createMethod: 'draw' });
@@ -261,7 +215,7 @@ export default function FieldsPage() {
           setSelectedField(newField.id);
         }
       } catch (err) {
-        // Error handled by useFieldCRUD
+        // Error handled
       } finally {
         setIsSaving(false);
       }
@@ -274,7 +228,6 @@ export default function FieldsPage() {
     closePanel();
   }, [cancelDrawing, closePanel]);
 
-  // ── Edit Boundary ────────────────────────────────────────────
   const handleStartEditBoundary = useCallback(() => {
     if (!selectedField) return;
     const coords = extractPolygonCoords(selectedField.boundary);
@@ -296,7 +249,6 @@ export default function FieldsPage() {
     }
   }, [editState, updateFieldAPI, cancelEditing]);
 
-  // ── Configure Zones ──────────────────────────────────────────
   const handleConfigureZones = useCallback(() => {
     if (!selectedField) return;
     setZoneEditorFieldId(selectedField.id);
@@ -305,17 +257,14 @@ export default function FieldsPage() {
 
   const handleBackFromZoneEditor = useCallback(() => {
     setZoneEditorFieldId(null);
-    // Refresh fields to pick up any zone changes
     fetchFields();
   }, [fetchFields]);
 
-  // ── Edit Metadata (deprecated — replaced by Configure Zones) ─
   const handleEditMetadata = useCallback(() => {
     if (!selectedField) return;
     showToast('Use Configure Zones instead', 'info');
   }, [selectedField, showToast]);
 
-  // ── Delete Field ─────────────────────────────────────────────
   const handleDeleteRequest = useCallback(() => {
     if (!selectedField) return;
     setDeleteTarget(selectedField);
@@ -332,7 +281,6 @@ export default function FieldsPage() {
     }
   }, [deleteTarget, deleteField, clearSelection]);
 
-  // ── KPI calculations ─────────────────────────────────────────
   const totalFields = fields.length;
   const totalArea = useMemo(
     () => fields.reduce((sum, f) => {
@@ -343,17 +291,15 @@ export default function FieldsPage() {
   );
   const activeFields = useMemo(() => fields.filter((f) => f.status === 'ACTIVE' || !f.status).length, [fields]);
 
-  // ── Loading state ────────────────────────────────────────────
   if (isLoading && fields.length === 0) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1976D2" />
-        <Text style={styles.loadingText}>Loading fields...</Text>
+        <ActivityIndicator size="large" color={TACTICAL_THEME.radar} />
+        <Text style={styles.loadingText}>[INITIALIZING SATELLITE CADASTRE & GIS VECTOR LAYERS...]</Text>
       </View>
     );
   }
 
-  // ── If zone editor is active, render it full-screen ──────────
   if (zoneEditorFieldId) {
     return (
       <View style={[styles.container, { overflow: 'hidden' }]}>
@@ -364,24 +310,33 @@ export default function FieldsPage() {
 
   return (
     <View style={[styles.container, { overflow: 'hidden' }]}>
-      {/* ═══ Header Bar ═══ */}
+      {/* ═══ Tactical Header Bar ═══ */}
       <View style={styles.headerBar}>
-        <Text style={styles.headerTitle}>🌾 Field Management</Text>
+        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Text style={styles.headerIcon}>🌾</Text>
+          <div>
+            <div style={{ fontSize: 8.5, fontWeight: '800', color: TACTICAL_THEME.radar, fontFamily: TACTICAL_THEME.fontMono, letterSpacing: '1px' }}>
+              SPATIAL CADASTRAL SYSTEM
+            </div>
+            <Text style={styles.headerTitle}>FIELD VECTOR GRID & ZONING</Text>
+          </div>
+        </View>
+
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.headerBtn} onPress={handleStartCreate}>
-            <Text style={styles.headerBtnText}>+ New Field</Text>
+            <Text style={styles.headerBtnText}>+ REGISTER NEW SECTOR</Text>
           </TouchableOpacity>
           {editState.isEditing && (
             <TouchableOpacity style={styles.saveBoundaryBtn} onPress={handleSaveBoundary}>
-              <Text style={styles.saveBoundaryText}>💾 Save Boundary</Text>
+              <Text style={styles.saveBoundaryText}>💾 PERSIST BOUNDARY VECTORS</Text>
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* ═══ Explorer + Map ═══ */}
+      {/* ═══ Explorer + Map Grid ═══ */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
-        {/* Field Explorer Panel (collapsible sidebar) */}
+        {/* Field Explorer Panel */}
         <FieldExplorerPanel
           fields={fields}
           selectedFieldId={selectedFieldId}
@@ -400,9 +355,8 @@ export default function FieldsPage() {
           onFlyToField={handleExplorerFlyTo}
         />
 
-        {/* Map Container */}
-        <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-          {/* Main Map */}
+        {/* Map Canvas with Tactical HUD */}
+        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', backgroundColor: TACTICAL_THEME.bgBase }}>
           <StationMapCanvasMapLibre
             fields={filteredFields}
             selectedFieldId={selectedFieldId}
@@ -422,102 +376,96 @@ export default function FieldsPage() {
             onMapRef={handleMapRef}
           />
 
-        {/* Floating Overlays */}
-        <MapToolbar activeTool={activeTool} onToolChange={handleToolChange} />
-        <LayerControls
-          layers={layers}
-          adminLayers={adminLayers}
-          onLayerChange={setLayer}
-          onAdminLayerToggle={toggleAdminLayer}
-        />
-        {/* <FilterBar
-          filters={filters}
-          onFilterChange={setFilter}
-          fieldCount={filteredFields.length}
-          totalCount={totalFields}
-        /> */}
-
-        {/* Draw Mode Actions (floating bottom) */}
-        {activeTool === 'draw' && drawState.isDrawing && drawState.vertices.length >= 3 && (
-          <View style={styles.drawActions}>
-            <TouchableOpacity style={styles.drawUndoBtn} onPress={undoDrawVertex}>
-              <Text style={styles.drawActionText}>↩️ Undo</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.drawFinishBtn} onPress={handleFinishDraw}>
-              <Text style={styles.drawFinishText}>✅ Finish Drawing</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.drawCancelBtn} onPress={cancelDrawing}>
-              <Text style={styles.drawActionText}>✕ Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Edit Mode Actions (floating bottom) */}
-        {editState.isEditing && (
-          <View style={styles.drawActions}>
-            <TouchableOpacity style={styles.drawUndoBtn} onPress={undoEdit}>
-              <Text style={styles.drawActionText}>↩️ Undo</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.drawFinishBtn} onPress={handleSaveBoundary}>
-              <Text style={styles.drawFinishText}>💾 Save Changes</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.drawCancelBtn} onPress={cancelEditing}>
-              <Text style={styles.drawActionText}>✕ Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Detail Panel */}
-        {panelState.isOpen && panelState.mode === 'detail' && selectedField && (
-          <FieldDetailPanel
-            field={selectedField}
-            onClose={closePanel}
-            onEdit={handleEditMetadata}
-            onDelete={handleDeleteRequest}
-            onStartEditing={handleStartEditBoundary}
-            onConfigureZones={handleConfigureZones}
+          {/* Floating HUD Overlays */}
+          <MapToolbar activeTool={activeTool} onToolChange={handleToolChange} />
+          <LayerControls
+            layers={layers}
+            adminLayers={adminLayers}
+            onLayerChange={setLayer}
+            onAdminLayerToggle={toggleAdminLayer}
           />
-        )}
 
-        {/* Create Drawer */}
-        {panelState.isOpen && panelState.mode === 'create' && (
-          <CreateFieldDrawer
-            activeTab={panelState.createMethod || 'draw'}
-            onTabChange={(tab) => {
-              setCreateMethod(tab);
-              if (tab === 'draw' && !drawState.isDrawing) {
-                startDrawing();
-              }
-            }}
-            drawVertices={drawState.vertices}
-            onSave={handleSaveField}
-            onCancel={handleCancelCreate}
-            isSaving={isSaving}
-          />
-        )}
+          {/* Draw Mode Actions (floating bottom HUD) */}
+          {activeTool === 'draw' && drawState.isDrawing && drawState.vertices.length >= 3 && (
+            <View style={styles.drawActions}>
+              <TouchableOpacity style={styles.drawUndoBtn} onPress={undoDrawVertex}>
+                <Text style={styles.drawActionText}>↩ UNDO NODE</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.drawFinishBtn} onPress={handleFinishDraw}>
+                <Text style={styles.drawFinishText}>✓ CLOSE POLYGON</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.drawCancelBtn} onPress={cancelDrawing}>
+                <Text style={styles.drawCancelText}>✕ ABORT</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Edit Mode Actions (floating bottom HUD) */}
+          {editState.isEditing && (
+            <View style={styles.drawActions}>
+              <TouchableOpacity style={styles.drawUndoBtn} onPress={undoEdit}>
+                <Text style={styles.drawActionText}>↩ UNDO EDIT</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.drawFinishBtn} onPress={handleSaveBoundary}>
+                <Text style={styles.drawFinishText}>💾 PERSIST VECTORS</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.drawCancelBtn} onPress={cancelEditing}>
+                <Text style={styles.drawCancelText}>✕ CANCEL</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Detail Panel */}
+          {panelState.isOpen && panelState.mode === 'detail' && selectedField && (
+            <FieldDetailPanel
+              field={selectedField}
+              onClose={closePanel}
+              onEdit={handleEditMetadata}
+              onDelete={handleDeleteRequest}
+              onStartEditing={handleStartEditBoundary}
+              onConfigureZones={handleConfigureZones}
+            />
+          )}
+
+          {/* Create Drawer */}
+          {panelState.isOpen && panelState.mode === 'create' && (
+            <CreateFieldDrawer
+              activeTab={panelState.createMethod || 'draw'}
+              onTabChange={(tab) => {
+                setCreateMethod(tab);
+                if (tab === 'draw' && !drawState.isDrawing) {
+                  startDrawing();
+                }
+              }}
+              drawVertices={drawState.vertices}
+              onSave={handleSaveField}
+              onCancel={handleCancelCreate}
+              isSaving={isSaving}
+            />
+          )}
         </div>
       </div>
 
-      {/* ═══ Bottom KPI Bar ═══ */}
+      {/* ═══ Bottom Telemetry KPI Bar ═══ */}
       <View style={styles.kpiBar}>
         <View style={styles.kpiItem}>
           <Text style={styles.kpiValue}>{totalFields}</Text>
-          <Text style={styles.kpiLabel}>Fields</Text>
+          <Text style={styles.kpiLabel}>TOTAL SECTORS</Text>
         </View>
         <View style={styles.kpiDivider} />
         <View style={styles.kpiItem}>
-          <Text style={styles.kpiValue}>{totalArea.toFixed(1)}</Text>
-          <Text style={styles.kpiLabel}>Hectares</Text>
+          <Text style={[styles.kpiValue, { color: TACTICAL_THEME.satellite }]}>{totalArea.toFixed(1)} ha</Text>
+          <Text style={styles.kpiLabel}>HECTARE FOOTPRINT</Text>
         </View>
         <View style={styles.kpiDivider} />
         <View style={styles.kpiItem}>
-          <Text style={styles.kpiValue}>{activeFields}</Text>
-          <Text style={styles.kpiLabel}>Active</Text>
+          <Text style={[styles.kpiValue, { color: TACTICAL_THEME.radar }]}>{activeFields}</Text>
+          <Text style={styles.kpiLabel}>ACTIVE BIOMASS</Text>
         </View>
         <View style={styles.kpiDivider} />
         <View style={styles.kpiItem}>
-          <Text style={styles.kpiValue}>{totalFields - activeFields}</Text>
-          <Text style={styles.kpiLabel}>Inactive</Text>
+          <Text style={[styles.kpiValue, { color: TACTICAL_THEME.telemetry }]}>{totalFields - activeFields}</Text>
+          <Text style={styles.kpiLabel}>FALLOW / IDLE</Text>
         </View>
       </View>
 
@@ -534,11 +482,11 @@ export default function FieldsPage() {
       {/* ═══ Delete Confirmation Dialog ═══ */}
       <ConfirmationDialog
         visible={!!deleteTarget}
-        title="Delete Field?"
-        message={`"${deleteTarget?.name}" will be moved to trash. You can restore it within 30 days.`}
-        confirmLabel="🗑️ Move to Trash"
-        cancelLabel="Cancel"
-        confirmColor="#C62828"
+        title="PURGE SECTOR VECTOR?"
+        message={`"${deleteTarget?.name}" will be flagged for deletion and archived.`}
+        confirmLabel="🗑️ CONFIRM PURGE"
+        cancelLabel="CANCEL"
+        confirmColor={TACTICAL_THEME.alert}
         isDestructive
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteTarget(null)}
@@ -547,113 +495,189 @@ export default function FieldsPage() {
   );
 }
 
-// ════════════════════════════════════════════════════════════════
-// STYLES
-// ════════════════════════════════════════════════════════════════
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  container: { flex: 1, backgroundColor: TACTICAL_THEME.bgBase },
 
-  // Loading
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8F9FA' },
-  loadingText: { marginTop: 12, fontSize: 14, color: '#888' },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: TACTICAL_THEME.bgBase,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 11,
+    color: TACTICAL_THEME.radar,
+    fontFamily: TACTICAL_THEME.fontMono,
+    fontWeight: '700',
+    letterSpacing: '1px',
+  },
 
   // Header Bar
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#ffffff',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: TACTICAL_THEME.bgPanelSolid,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: TACTICAL_THEME.border,
     zIndex: 100,
   },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: '#1a1a1a' },
-  headerActions: { flexDirection: 'row', gap: 8 },
+  headerIcon: { fontSize: 20 },
+  headerTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: TACTICAL_THEME.textPrimary,
+    fontFamily: TACTICAL_THEME.fontMono,
+    letterSpacing: '0.5px',
+  },
+  headerActions: { flexDirection: 'row', gap: 10 },
   headerBtn: {
-    backgroundColor: '#1976D2',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: 'rgba(0, 245, 160, 0.12)',
+    borderWidth: 1,
+    borderColor: TACTICAL_THEME.radar,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 5,
   },
-  headerBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  headerBtnText: {
+    color: TACTICAL_THEME.radar,
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: TACTICAL_THEME.fontMono,
+  },
   saveBoundaryBtn: {
-    backgroundColor: '#FF9800',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: 'rgba(255, 179, 0, 0.15)',
+    borderWidth: 1,
+    borderColor: TACTICAL_THEME.telemetry,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 5,
   },
-  saveBoundaryText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  saveBoundaryText: {
+    color: TACTICAL_THEME.telemetry,
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: TACTICAL_THEME.fontMono,
+  },
 
-  // Map Area
-  mapArea: { flex: 1, position: 'relative' },
-
-  // Draw/Edit Actions (floating bottom)
+  // Draw/Edit Actions (floating bottom HUD)
   drawActions: {
     position: 'absolute',
-    bottom: 16,
+    bottom: 20,
     left: '50%',
-    transform: [{ translateX: -180 }],
+    transform: [{ translateX: -190 }],
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
+    backgroundColor: 'rgba(13, 19, 32, 0.94)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: TACTICAL_THEME.border,
     paddingHorizontal: 8,
-    paddingVertical: 8,
+    paddingVertical: 6,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.6,
+    shadowRadius: 16,
+    elevation: 8,
     zIndex: 1000,
     gap: 8,
   },
-  drawUndoBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#F5F5F5' },
-  drawFinishBtn: { paddingHorizontal: 18, paddingVertical: 8, borderRadius: 8, backgroundColor: '#4CAF50' },
-  drawFinishText: { color: '#fff', fontSize: 13, fontWeight: '600' },
-  drawCancelBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#FFEBEE' },
-  drawActionText: { fontSize: 13, color: '#333', fontWeight: '500' },
+  drawUndoBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: TACTICAL_THEME.border,
+  },
+  drawFinishBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 4,
+    backgroundColor: TACTICAL_THEME.radar,
+  },
+  drawFinishText: {
+    color: '#06090E',
+    fontSize: 11,
+    fontWeight: '900',
+    fontFamily: TACTICAL_THEME.fontMono,
+  },
+  drawCancelBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 46, 84, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 46, 84, 0.3)',
+  },
+  drawActionText: {
+    fontSize: 10.5,
+    color: TACTICAL_THEME.textSecondary,
+    fontWeight: '700',
+    fontFamily: TACTICAL_THEME.fontMono,
+  },
+  drawCancelText: {
+    fontSize: 10.5,
+    color: TACTICAL_THEME.alert,
+    fontWeight: '700',
+    fontFamily: TACTICAL_THEME.fontMono,
+  },
 
-  // Bottom KPI Bar
+  // Bottom Telemetry KPI Bar
   kpiBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: '#ffffff',
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+    backgroundColor: TACTICAL_THEME.bgPanelSolid,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    gap: 20,
+    borderTopColor: TACTICAL_THEME.border,
+    gap: 28,
   },
   kpiItem: { alignItems: 'center' },
-  kpiValue: { fontSize: 18, fontWeight: '700', color: '#1a1a1a' },
-  kpiLabel: { fontSize: 10, color: '#888', marginTop: 2 },
-  kpiDivider: { width: 1, height: 24, backgroundColor: '#E0E0E0' },
+  kpiValue: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: TACTICAL_THEME.textPrimary,
+    fontFamily: TACTICAL_THEME.fontMono,
+  },
+  kpiLabel: {
+    fontSize: 8.5,
+    color: TACTICAL_THEME.textMuted,
+    marginTop: 1,
+    fontWeight: '700',
+    fontFamily: TACTICAL_THEME.fontMono,
+    letterSpacing: 0.8,
+  },
+  kpiDivider: { width: 1, height: 20, backgroundColor: TACTICAL_THEME.borderSubtle },
 
-  // Toast
+  // Toast HUD
   toast: {
     position: 'absolute',
-    bottom: 60,
+    bottom: 50,
     left: 20,
     right: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: '#333',
+    paddingVertical: 10,
+    borderRadius: 6,
+    backgroundColor: TACTICAL_THEME.bgPanelElevated,
+    borderWidth: 1,
+    borderColor: TACTICAL_THEME.radar,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
     elevation: 8,
     zIndex: 2000,
   },
-  toastError: { backgroundColor: '#C62828' },
-  toastSuccess: { backgroundColor: '#2E7D32' },
-  toastText: { color: '#fff', fontSize: 13, flex: 1 },
-  toastDismiss: { color: '#fff', fontSize: 16, fontWeight: '700', marginLeft: 12 },
+  toastError: { borderColor: TACTICAL_THEME.alert, backgroundColor: TACTICAL_THEME.alertMuted },
+  toastSuccess: { borderColor: TACTICAL_THEME.radar, backgroundColor: TACTICAL_THEME.radarMuted },
+  toastText: { color: TACTICAL_THEME.textPrimary, fontSize: 12, flex: 1, fontFamily: TACTICAL_THEME.fontMono },
+  toastDismiss: { color: TACTICAL_THEME.textMuted, fontSize: 14, fontWeight: '700', marginLeft: 12 },
 });

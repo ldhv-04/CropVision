@@ -1,25 +1,25 @@
 /**
- * MapToolbar — Floating toolbar for map tools (left edge).
+ * MapToolbar — Tactical Floating HUD Toolbar
  *
- * Tools: Pan/Select, Draw Polygon, Edit Boundary, Measure, Current Location
+ * Direction 3: Tactical Agronomy Command
  */
 
 import React, { useCallback } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { TACTICAL_THEME } from '../../constants/tacticalTheme';
 
 const TOOLS = [
-  { id: 'pan', icon: '🖐️', label: 'Pan', shortcut: 'V' },
-  { id: 'draw', icon: '✏️', label: 'Draw', shortcut: 'D' },
-  { id: 'edit', icon: '🔧', label: 'Edit', shortcut: 'E' },
-  { id: 'measure', icon: '📏', label: 'Measure', shortcut: 'M' },
-  { id: 'locate', icon: '📍', label: 'My Location', shortcut: 'L' },
+  { id: 'pan', icon: '🖐️', label: 'PAN / RETICLE', shortcut: 'V' },
+  { id: 'draw', icon: '✏️', label: 'DRAW BOUNDARY', shortcut: 'D' },
+  { id: 'edit', icon: '🔧', label: 'EDIT VERTICES', shortcut: 'E' },
+  { id: 'measure', icon: '📏', label: 'GEO-MEASURE', shortcut: 'M' },
+  { id: 'locate', icon: '📍', label: 'GPS FIX', shortcut: 'L' },
 ];
 
 export default function MapToolbar({ activeTool, onToolChange }) {
   const handlePress = useCallback(
     (toolId) => {
       if (toolId === 'locate') {
-        // TODO: Geolocation integration
         return;
       }
       onToolChange(toolId === activeTool ? 'pan' : toolId);
@@ -39,10 +39,13 @@ export default function MapToolbar({ activeTool, onToolChange }) {
             accessibilityLabel={tool.label}
             accessibilityRole="button"
           >
-            <Text style={styles.icon}>{tool.icon}
-              
+            <Text style={styles.icon}>{tool.icon}</Text>
+            <Text style={[styles.label, isActive && styles.labelActive]}>
+              {tool.label}
             </Text>
-            {<Text style={styles.label}>{tool.label}</Text>} 
+            <Text style={[styles.shortcut, isActive && styles.shortcutActive]}>
+              [{tool.shortcut}]
+            </Text>
           </TouchableOpacity>
         );
       })}
@@ -53,40 +56,60 @@ export default function MapToolbar({ activeTool, onToolChange }) {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    left: 12,
-    top: 60,
-    backgroundColor: '#ffffff',
+    left: 14,
+    top: 14,
+    backgroundColor: 'rgba(13, 19, 32, 0.92)',
     borderRadius: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 5,
+    borderWidth: 1,
+    borderColor: TACTICAL_THEME.border,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 8,
     zIndex: 1000,
-    gap: 2,
+    gap: 3,
   },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 6,
-    minWidth: 40,
+    paddingVertical: 7,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    backgroundColor: 'transparent',
   },
   buttonActive: {
-    backgroundColor: '#ffffff',
+    backgroundColor: 'rgba(0, 245, 160, 0.12)',
+    borderColor: TACTICAL_THEME.radar,
   },
   icon: {
-    fontSize: 18,
+    fontSize: 14,
     textAlign: 'center',
-    width: 24,
+    width: 22,
   },
   label: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#000000',
+    fontSize: 10,
+    fontWeight: '700',
+    color: TACTICAL_THEME.textSecondary,
+    fontFamily: TACTICAL_THEME.fontMono,
     marginLeft: 6,
+    letterSpacing: 0.5,
+  },
+  labelActive: {
+    color: TACTICAL_THEME.radar,
+    fontWeight: '800',
+  },
+  shortcut: {
+    fontSize: 8,
+    color: TACTICAL_THEME.textMuted,
+    fontFamily: TACTICAL_THEME.fontMono,
+    marginLeft: 8,
+  },
+  shortcutActive: {
+    color: TACTICAL_THEME.radar,
   },
 });

@@ -1,25 +1,23 @@
 /**
- * FieldExplorerListItem — Single field item in the explorer list.
+ * FieldExplorerListItem — Tactical Cadastral Field Item
  *
- * Displays field name, crop type, status, area, and code.
- * Supports click-to-select, hover-to-highlight, and scroll-into-view.
- *
- * Debug logs: [Explorer]
+ * Direction 3: Tactical Agronomy Command
  */
 
 import React, { useRef, useEffect, useCallback } from 'react';
 import { extractPolygonCoords, calculateAreaHectares, formatArea } from '../../../utils/fieldGeometry';
+import { TACTICAL_THEME } from '../../../constants/tacticalTheme';
 
 const STATUS_COLORS = {
-  ACTIVE: '#4CAF50',
-  INACTIVE: '#9E9E9E',
-  FALLOW: '#795548',
+  ACTIVE: TACTICAL_THEME.radar,
+  INACTIVE: TACTICAL_THEME.textMuted,
+  FALLOW: TACTICAL_THEME.telemetry,
 };
 
 const STATUS_LABELS = {
-  ACTIVE: 'Active',
-  INACTIVE: 'Inactive',
-  FALLOW: 'Fallow',
+  ACTIVE: 'ACT',
+  INACTIVE: 'OFF',
+  FALLOW: 'FLW',
 };
 
 export default function FieldExplorerListItem({
@@ -33,10 +31,9 @@ export default function FieldExplorerListItem({
 }) {
   const internalRef = useRef(null);
 
-  // Scroll into view when selected from map (Map → List sync)
+  // Scroll into view when selected from map
   useEffect(() => {
     if (isSelected && internalRef.current) {
-      console.log('[Explorer] List selection sync — scrolling to:', field.id);
       internalRef.current.scrollIntoView({
         behavior: 'smooth',
         block: 'nearest',
@@ -45,9 +42,8 @@ export default function FieldExplorerListItem({
   }, [isSelected, field.id]);
 
   const handleClick = useCallback(() => {
-    console.log('[Explorer] Field selected:', field.id, field.name);
     onSelect(field.id);
-  }, [field.id, field.name, onSelect]);
+  }, [field.id, onSelect]);
 
   const handleMouseEnter = useCallback(() => {
     onHoverStart(field.id);
@@ -61,7 +57,7 @@ export default function FieldExplorerListItem({
   const coords = extractPolygonCoords(field.boundary);
   const area = calculateAreaHectares(coords);
   const statusColor = STATUS_COLORS[field.status] || STATUS_COLORS.ACTIVE;
-  const statusLabel = STATUS_LABELS[field.status] || 'Active';
+  const statusLabel = STATUS_LABELS[field.status] || 'ACT';
 
   return (
     <div
@@ -75,85 +71,89 @@ export default function FieldExplorerListItem({
       style={{
         display: 'flex',
         alignItems: 'center',
-        padding: '10px 12px',
+        padding: '9px 12px',
         cursor: 'pointer',
         backgroundColor: isSelected
-          ? '#E3F2FD'
+          ? 'rgba(0, 245, 160, 0.08)'
           : isHovered
-          ? '#F5F5F5'
+          ? 'rgba(255, 255, 255, 0.03)'
           : 'transparent',
-        borderLeft: isSelected ? '3px solid #1976D2' : '3px solid transparent',
-        borderBottom: '1px solid #F0F0F0',
-        transition: 'background-color 0.15s ease, border-color 0.15s ease',
+        borderLeft: isSelected ? `3px solid ${TACTICAL_THEME.radar}` : '3px solid transparent',
+        borderBottom: `1px solid ${TACTICAL_THEME.borderSubtle}`,
+        transition: 'all 0.15s ease',
         gap: 10,
-        minHeight: 56,
+        minHeight: 52,
       }}
       data-testid={`explorer-item-${field.id}`}
     >
       {/* Status indicator dot */}
       <div
         style={{
-          width: 8,
-          height: 8,
+          width: 7,
+          height: 7,
           borderRadius: '50%',
           backgroundColor: statusColor,
+          boxShadow: isSelected ? `0 0 6px ${statusColor}` : 'none',
           flexShrink: 0,
         }}
       />
 
-      {/* Field info */}
+      {/* Main Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontSize: 13,
-            fontWeight: isSelected ? 600 : 500,
-            color: '#1a1a1a',
-            whiteSpace: 'nowrap',
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+          <div style={{
+            fontSize: 12,
+            fontWeight: isSelected ? 800 : 600,
+            color: isSelected ? TACTICAL_THEME.textPrimary : TACTICAL_THEME.textSecondary,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
-          }}
-        >
-          {field.name || 'Unnamed Field'}
+            whiteSpace: 'nowrap',
+          }}>
+            {field.name}
+          </div>
+          {field.code && (
+            <span style={{
+              fontSize: 8.5,
+              fontWeight: 800,
+              color: TACTICAL_THEME.satellite,
+              backgroundColor: 'rgba(0, 210, 255, 0.1)',
+              padding: '1px 4px',
+              borderRadius: 2,
+              fontFamily: TACTICAL_THEME.fontMono,
+              flexShrink: 0,
+            }}>
+              {field.code}
+            </span>
+          )}
         </div>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            marginTop: 2,
-          }}
-        >
-          {field.crop_type && (
-            <span style={{ fontSize: 11, color: '#666' }}>
-              🌱 {field.crop_type}
-            </span>
-          )}
-          {field.field_code && (
-            <span style={{ fontSize: 10, color: '#999', fontFamily: 'monospace' }}>
-              #{field.field_code}
-            </span>
-          )}
+
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          marginTop: 2,
+          fontSize: 10,
+          color: TACTICAL_THEME.textMuted,
+          fontFamily: TACTICAL_THEME.fontMono,
+        }}>
+          <span style={{ color: TACTICAL_THEME.textSecondary }}>{field.crop_type || 'Rice'}</span>
+          <span>•</span>
+          <span>{formatArea(area)}</span>
         </div>
       </div>
 
-      {/* Area & status badge */}
-      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: '#333' }}>
-          {formatArea(area)}
-        </div>
-        <div
-          style={{
-            fontSize: 9,
-            color: statusColor,
-            fontWeight: 600,
-            marginTop: 1,
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-          }}
-        >
-          {statusLabel}
-        </div>
-      </div>
+      {/* Status Tag */}
+      <span style={{
+        fontSize: 8,
+        fontWeight: 800,
+        color: statusColor,
+        backgroundColor: `${statusColor}15`,
+        padding: '2px 4px',
+        borderRadius: 3,
+        fontFamily: TACTICAL_THEME.fontMono,
+      }}>
+        {statusLabel}
+      </span>
     </div>
   );
 }

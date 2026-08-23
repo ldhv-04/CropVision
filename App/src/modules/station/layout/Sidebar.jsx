@@ -1,28 +1,23 @@
 /**
- * Sidebar — SoilzePro Left Navigation
+ * Sidebar — Tactical Agronomy Command Rail
  *
- * 260px fixed sidebar with:
- * - Logo/brand header
- * - Main navigation (5 sections per SoilzePro)
- * - Sub-navigation for analytics pages
- * - User profile section at bottom
- *
- * Source of truth: soilzepro-research/navigation-architecture.md
+ * Direction 3: Tactical Agronomy Command & Mission Control
+ * 260px fixed width command sidebar with high-contrast radar styling.
  */
 
+import React from 'react';
 import { router, usePathname } from 'expo-router';
-import { useTheme } from '../../@core/context/ThemeContext';
 import { useAuthStore } from '../../@core/auth/useAuthStore';
-import { SHADOWS } from '../../@core/constants/theme';
 import { STATION_NAV_ITEMS, getStationRouteMeta } from '../navigation';
+import { TACTICAL_THEME } from '../constants/tacticalTheme';
 
 export function Sidebar() {
-  const { colors } = useTheme();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const pathname = usePathname();
   const activeItem = getStationRouteMeta(pathname);
   const isAdmin = user?.role === 'admin';
+
   const primaryItems = STATION_NAV_ITEMS.filter(
     (item) => item.section === 'primary' && item.visibility !== 'hidden',
   );
@@ -39,40 +34,64 @@ export function Sidebar() {
     height: '100vh',
     display: 'flex',
     flexDirection: 'column',
-    backgroundColor: colors.surface,
-    borderRight: `1px solid ${colors.border}`,
-    boxShadow: SHADOWS.card,
+    backgroundColor: TACTICAL_THEME.bgPanelSolid,
+    borderRight: `1px solid ${TACTICAL_THEME.border}`,
+    boxShadow: TACTICAL_THEME.shadowPanel,
     overflow: 'hidden',
     zIndex: 30,
+    userSelect: 'none',
   };
 
   const brandAreaStyle = {
     display: 'flex',
     alignItems: 'center',
-    gap: 10,
-    padding: '20px 20px 16px',
-    borderBottom: `1px solid ${colors.border}`,
-    background: colors.gradientPrimary,
+    gap: 12,
+    padding: '18px 20px',
+    borderBottom: `1px solid ${TACTICAL_THEME.border}`,
+    background: 'linear-gradient(180deg, rgba(0, 245, 160, 0.06) 0%, rgba(6, 9, 14, 0.4) 100%)',
   };
 
-  const brandIconStyle = {
-    fontSize: 28,
-    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
+  const brandLogoStyle = {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 245, 160, 0.12)',
+    border: `1px solid ${TACTICAL_THEME.radar}`,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 18,
+    color: TACTICAL_THEME.radar,
+    boxShadow: '0 0 10px rgba(0, 245, 160, 0.25)',
   };
 
   const brandNameStyle = {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: 800,
-    color: '#ffffff',
-    letterSpacing: '0.5px',
-    fontFamily: '"Inter", "Outfit", system-ui, sans-serif',
+    color: TACTICAL_THEME.textPrimary,
+    letterSpacing: '0.8px',
+    fontFamily: TACTICAL_THEME.fontMono,
+    lineHeight: 1.2,
   };
 
   const brandSubStyle = {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.6)',
-    fontWeight: 500,
-    fontFamily: '"Inter", "Outfit", system-ui, sans-serif',
+    fontSize: 9,
+    color: TACTICAL_THEME.radar,
+    fontWeight: 700,
+    letterSpacing: '1px',
+    textTransform: 'uppercase',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 5,
+  };
+
+  const pulseDotStyle = {
+    width: 5,
+    height: 5,
+    borderRadius: '50%',
+    backgroundColor: TACTICAL_THEME.radar,
+    boxShadow: '0 0 6px #00F5A0',
+    display: 'inline-block',
   };
 
   const scrollAreaStyle = {
@@ -80,18 +99,21 @@ export function Sidebar() {
     overflowY: 'auto',
     display: 'flex',
     flexDirection: 'column',
-    padding: '12px 12px 0',
-    gap: 2,
+    padding: '12px 10px',
+    gap: 3,
   };
 
   const sectionLabelStyle = {
-    fontSize: 10,
-    fontWeight: 700,
-    color: colors.textMuted,
+    fontSize: 9,
+    fontWeight: 800,
+    color: TACTICAL_THEME.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 1.2,
-    padding: '16px 12px 6px',
-    fontFamily: '"Inter", "Outfit", system-ui, sans-serif',
+    letterSpacing: '1.4px',
+    padding: '14px 12px 6px',
+    fontFamily: TACTICAL_THEME.fontMono,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   };
 
   const renderItem = (item) => {
@@ -99,26 +121,29 @@ export function Sidebar() {
     const itemStyle = {
       display: 'flex',
       alignItems: 'center',
-      gap: 10,
-      padding: '10px 12px',
-      borderRadius: 10,
+      gap: 12,
+      padding: '9px 12px',
+      borderRadius: 6,
       border: 'none',
       width: '100%',
       textAlign: 'left',
       cursor: 'pointer',
-      fontSize: 13,
+      fontSize: 12.5,
       fontWeight: isActive ? 700 : 500,
-      color: isActive ? colors.primaryGlow : colors.textSecondary,
-      backgroundColor: isActive ? `${colors.primary}20` : 'transparent',
+      color: isActive ? TACTICAL_THEME.radar : TACTICAL_THEME.textSecondary,
+      backgroundColor: isActive ? 'rgba(0, 245, 160, 0.08)' : 'transparent',
+      borderLeft: isActive ? `3px solid ${TACTICAL_THEME.radar}` : '3px solid transparent',
       transition: 'all 0.15s ease',
-      fontFamily: '"Inter", "Outfit", system-ui, sans-serif',
+      fontFamily: TACTICAL_THEME.fontFamily,
+      position: 'relative',
     };
 
     const iconStyle = {
-      fontSize: 16,
-      width: 22,
+      fontSize: 15,
+      width: 20,
       textAlign: 'center',
       flexShrink: 0,
+      filter: isActive ? 'drop-shadow(0 0 6px rgba(0, 245, 160, 0.6))' : 'none',
     };
 
     const labelStyle = {
@@ -130,17 +155,8 @@ export function Sidebar() {
 
     const descStyle = {
       fontSize: 9,
-      color: colors.textMuted,
+      color: TACTICAL_THEME.textMuted,
       fontWeight: 400,
-      display: isActive ? 'none' : 'block',
-    };
-
-    const activeIndicatorStyle = {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: colors.primaryGlow,
-      flexShrink: 0,
     };
 
     return (
@@ -152,14 +168,14 @@ export function Sidebar() {
         data-testid={`nav-${item.key}`}
         onMouseEnter={(e) => {
           if (!isActive) {
-            e.currentTarget.style.backgroundColor = `${colors.surfaceHover}`;
-            e.currentTarget.style.color = colors.textPrimary;
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
+            e.currentTarget.style.color = TACTICAL_THEME.textPrimary;
           }
         }}
         onMouseLeave={(e) => {
           if (!isActive) {
             e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = colors.textSecondary;
+            e.currentTarget.style.color = TACTICAL_THEME.textSecondary;
           }
         }}
       >
@@ -170,110 +186,137 @@ export function Sidebar() {
             <div style={descStyle}>{item.subtitle}</div>
           )}
         </div>
-        {isActive && <span style={activeIndicatorStyle} />}
+        {isActive && (
+          <span style={{
+            fontSize: 8,
+            fontWeight: 800,
+            color: TACTICAL_THEME.radar,
+            backgroundColor: 'rgba(0, 245, 160, 0.15)',
+            padding: '2px 5px',
+            borderRadius: 3,
+            fontFamily: TACTICAL_THEME.fontMono,
+          }}>LIVE</span>
+        )}
       </button>
     );
   };
 
   const bottomSectionStyle = {
     padding: '12px',
-    borderTop: `1px solid ${colors.border}`,
+    borderTop: `1px solid ${TACTICAL_THEME.border}`,
+    backgroundColor: 'rgba(6, 9, 14, 0.5)',
     display: 'flex',
     flexDirection: 'column',
-    gap: 4,
+    gap: 6,
   };
 
   const userInfoStyle = {
     display: 'flex',
     alignItems: 'center',
     gap: 10,
-    padding: '10px 12px',
-    marginBottom: 4,
+    padding: '8px 10px',
+    borderRadius: 6,
+    backgroundColor: 'rgba(27, 37, 55, 0.3)',
+    border: `1px solid ${TACTICAL_THEME.borderSubtle}`,
   };
 
   const avatarStyle = {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: `${colors.primary}40`,
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    backgroundColor: 'rgba(0, 210, 255, 0.15)',
+    border: `1px solid ${TACTICAL_THEME.satellite}`,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: 14,
-    fontWeight: 700,
-    color: colors.primaryGlow,
+    fontSize: 13,
+    fontWeight: 800,
+    color: TACTICAL_THEME.satellite,
+    fontFamily: TACTICAL_THEME.fontMono,
     flexShrink: 0,
   };
 
   const userNameStyle = {
-    fontSize: 13,
-    fontWeight: 600,
-    color: colors.textPrimary,
-    fontFamily: '"Inter", "Outfit", system-ui, sans-serif',
+    fontSize: 12,
+    fontWeight: 700,
+    color: TACTICAL_THEME.textPrimary,
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
   };
 
   const userRoleStyle = {
-    fontSize: 10,
-    color: colors.textMuted,
-    fontWeight: 500,
-    fontFamily: '"Inter", "Outfit", system-ui, sans-serif',
+    fontSize: 9,
+    color: TACTICAL_THEME.textMuted,
+    fontWeight: 600,
+    fontFamily: TACTICAL_THEME.fontMono,
+    letterSpacing: '0.5px',
   };
 
   const logoutBtnStyle = {
     display: 'flex',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
-    padding: '9px 12px',
-    borderRadius: 10,
-    border: `1px solid ${colors.danger}30`,
-    backgroundColor: `${colors.danger}10`,
-    color: colors.danger,
-    fontSize: 13,
-    fontWeight: 600,
+    padding: '8px 12px',
+    borderRadius: 6,
+    border: `1px solid rgba(255, 46, 84, 0.3)`,
+    backgroundColor: 'rgba(255, 46, 84, 0.08)',
+    color: TACTICAL_THEME.alert,
+    fontSize: 12,
+    fontWeight: 700,
     cursor: 'pointer',
     width: '100%',
-    textAlign: 'left',
-    fontFamily: '"Inter", "Outfit", system-ui, sans-serif',
+    fontFamily: TACTICAL_THEME.fontFamily,
     transition: 'all 0.15s ease',
   };
 
   return (
     <aside style={sidebarStyle} data-testid="soilzepro-sidebar">
-      {/* Brand */}
+      {/* Tactical Brand Header */}
       <div style={brandAreaStyle}>
-        <span style={brandIconStyle}>🌿</span>
+        <div style={brandLogoStyle}>📡</div>
         <div>
-          <div style={brandNameStyle}>CropVision</div>
-          <div style={brandSubStyle}>{isAdmin ? 'Admin Console' : 'Smart Farming'} · AI</div>
+          <div style={brandNameStyle}>CROPVISION</div>
+          <div style={brandSubStyle}>
+            <span style={pulseDotStyle} />
+            {isAdmin ? 'COMMAND // ADMIN' : 'STATION // SCOUT'}
+          </div>
         </div>
       </div>
 
-      {/* Navigation */}
+      {/* Navigation Sections */}
       <div style={scrollAreaStyle}>
-        <div style={sectionLabelStyle}>Main</div>
+        <div style={sectionLabelStyle}>
+          <span>TACTICAL OPERATIONS</span>
+          <span style={{ fontSize: 7, color: TACTICAL_THEME.radar }}>● READY</span>
+        </div>
         {primaryItems.map(renderItem)}
 
-        <div style={sectionLabelStyle}>Intelligence</div>
+        <div style={sectionLabelStyle}>
+          <span>TELEMETRY & INTEL</span>
+          <span style={{ fontSize: 7, color: TACTICAL_THEME.satellite }}>● SYNC</span>
+        </div>
         {intelligenceItems.map(renderItem)}
       </div>
 
-      {/* Bottom Section */}
+      {/* Bottom Console Section */}
       <div style={bottomSectionStyle}>
-        {/* Settings */}
+        {/* Settings / Controls */}
         {bottomItems.map(renderItem)}
 
-        {/* User Info */}
+        {/* Commander Info */}
         <div style={userInfoStyle}>
           <div style={avatarStyle}>
             {(user?.fullName || user?.email || 'A').charAt(0).toUpperCase()}
           </div>
-          <div>
-            <div style={userNameStyle}>{user?.fullName || user?.email || 'Admin'}</div>
-            <div style={userRoleStyle}>{isAdmin ? 'Administrator' : 'User'}</div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={userNameStyle}>{user?.fullName || user?.email || 'Field Commander'}</div>
+            <div style={userRoleStyle}>{isAdmin ? 'SYS_ADMIN // LEVEL 4' : 'FIELD_OPERATOR'}</div>
           </div>
         </div>
 
-        {/* Logout */}
+        {/* Terminate Session */}
         <button
           onClick={async () => {
             await logout();
@@ -282,13 +325,15 @@ export function Sidebar() {
           style={logoutBtnStyle}
           data-testid="btn-logout"
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = `${colors.danger}20`;
+            e.currentTarget.style.backgroundColor = 'rgba(255, 46, 84, 0.18)';
+            e.currentTarget.style.borderColor = TACTICAL_THEME.alert;
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = `${colors.danger}10`;
+            e.currentTarget.style.backgroundColor = 'rgba(255, 46, 84, 0.08)';
+            e.currentTarget.style.borderColor = 'rgba(255, 46, 84, 0.3)';
           }}
         >
-          <span>🚪</span> Đăng xuất
+          <span>⏻</span> TERMINATE SESSION
         </button>
       </div>
     </aside>

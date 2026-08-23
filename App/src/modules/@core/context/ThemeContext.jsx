@@ -1,57 +1,91 @@
 /**
- * ThemeContext — Global dark / light mode system.
+ * ThemeContext — Global Theme & Contrast System
  *
- * Provides:
- *   - `colors`      — active palette (DARK_COLORS or LIGHT_COLORS)
- *   - `isDark`      — boolean
- *   - `toggleTheme` — flip between modes
- *
- * Persists the preference to localStorage (web) so it survives refresh.
- *
- * Usage:
- *   import { useTheme } from './ThemeContext';
- *   const { colors, isDark, toggleTheme } = useTheme();
+ * Supports 3 Contrast Modes:
+ *   - 'dark':     OLED Pitch Dark (Battery saver, thermal efficiency)
+ *   - 'sunlight': Extreme High-Contrast White (Direct sunlight outdoor)
+ *   - 'natural':  Soft Agronomic Sage (Indoor comfortable)
  */
 
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { DARK_COLORS, LIGHT_COLORS } from '../constants/theme';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { Platform } from 'react-native';
+import { THEME_MODES, MOBILE_PALETTES } from '../../agrivision/constants/mobileTheme';
 
-const STORAGE_KEY = 'cropvision_theme';
+const STORAGE_KEY = 'cropvision_mobile_theme_mode';
 
 const ThemeContext = createContext({
-  colors: DARK_COLORS,
+  themeMode: THEME_MODES.DARK,
+  colors: MOBILE_PALETTES[THEME_MODES.DARK],
   isDark: true,
+  isSunlight: false,
+  isNatural: false,
+  setThemeMode: () => {},
   toggleTheme: () => {},
 });
 
 export function ThemeProvider({ children }) {
-  const [isDark, setIsDark] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = window.localStorage?.getItem(STORAGE_KEY);
-      if (saved !== null) return saved === 'dark';
-      // Respect OS preference as default
-      return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? true;
-    }
-    return true;
-  });
+  const [themeMode, setThemeModeState] = useState(THEME_MODES.DARK);
 
-  // Sync CSS custom properties to <html> for any future CSS usage
+  // Load saved theme on mount
   useEffect(() => {
-    if (typeof document === 'undefined') return;
-    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-    document.body.style.backgroundColor = isDark
-      ? DARK_COLORS.background
-      : LIGHT_COLORS.background;
-    try {
-      window.localStorage.setItem(STORAGE_KEY, isDark ? 'dark' : 'light');
-    } catch (_) {}
-  }, [isDark]);
+    async function loadTheme() {
+      try {
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          const saved = window.localStorage?.getItem(STORAGE_KEY);
+          if (saved && MOBILE_PALETTES[saved]) {
+            setThemeModeState(saved);
+            return;
+          }
+        } else {
+          const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+          const saved = await AsyncStorage.getItem(STORAGE_KEY);
+          if (saved && MOBILE_PALETTES[saved]) {
+            setThemeModeState(saved);
+            return;
+          }
+        }
+      } catch (_) {}
+    }
+    loadTheme();
+  }, []);
 
-  const toggleTheme = useCallback(() => setIsDark((v) => !v), []);
+  // Save theme on change
+  const setThemeMode = useCallback(async (mode) => {
+    if (!MOBILE_PALETTES[mode]) return;
+    setThemeModeState(mode);
+
+    try {
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.localStorage?.setItem(STORAGE_KEY, mode);
+        document.documentElement.setAttribute('data-theme', mode);
+        document.body.style.backgroundColor = MOBILE_PALETTES[mode].background;
+      } else {
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        await AsyncStorage.setItem(STORAGE_KEY, mode);
+      }
+    } catch (_) {}
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setThemeModeState((curr) => {
+      const next = curr === THEME_MODES.DARK ? THEME_MODES.SUNLIGHT : THEME_MODES.DARK;
+      setThemeMode(next);
+      return next;
+    });
+  }, [setThemeMode]);
+
+  const activeColors = MOBILE_PALETTES[themeMode] || MOBILE_PALETTES[THEME_MODES.DARK];
+  const isDark = themeMode === THEME_MODES.DARK;
+  const isSunlight = themeMode === THEME_MODES.SUNLIGHT;
+  const isNatural = themeMode === THEME_MODES.NATURAL;
 
   const value = {
-    colors: isDark ? DARK_COLORS : LIGHT_COLORS,
+    themeMode,
+    colors: activeColors,
     isDark,
+    isSunlight,
+    isNatural,
+    setThemeMode,
     toggleTheme,
   };
 
@@ -62,7 +96,8 @@ export function ThemeProvider({ children }) {
   );
 }
 
-/** Convenience hook — use this everywhere instead of importing COLORS directly. */
 export function useTheme() {
   return useContext(ThemeContext);
 }
+
+export default ThemeContext;

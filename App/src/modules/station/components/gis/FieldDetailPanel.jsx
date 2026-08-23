@@ -1,18 +1,18 @@
 /**
- * FieldDetailPanel — Right side panel showing field details.
+ * FieldDetailPanel — Tactical Cadastral Dossier Panel
  *
- * Shows: field header, KPI mini-cards, growth stage, recent activities,
- * and quick action buttons (Edit, Delete, View Zones).
+ * Direction 3: Tactical Agronomy Command
  */
 
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, ScrollView } from 'react-native';
 import { extractPolygonCoords, calculateAreaHectares, calculateCentroid, formatArea, formatCoords } from '../../utils/fieldGeometry';
+import { TACTICAL_THEME } from '../../constants/tacticalTheme';
 
 const STATUS_BADGES = {
-  ACTIVE: { bg: '#E8F5E9', color: '#2E7D32', label: 'Active' },
-  INACTIVE: { bg: '#F5F5F5', color: '#616161', label: 'Inactive' },
-  FALLOW: { bg: '#EFEBE9', color: '#5D4037', label: 'Fallow' },
+  ACTIVE: { bg: 'rgba(0, 245, 160, 0.15)', color: TACTICAL_THEME.radar, label: 'NOMINAL / ACTIVE' },
+  INACTIVE: { bg: 'rgba(255, 255, 255, 0.05)', color: TACTICAL_THEME.textMuted, label: 'INACTIVE' },
+  FALLOW: { bg: 'rgba(255, 179, 0, 0.15)', color: TACTICAL_THEME.telemetry, label: 'FALLOW CYCLE' },
 };
 
 const GROWTH_STAGES = [
@@ -37,16 +37,19 @@ export default function FieldDetailPanel({ field, onClose, onEdit, onDelete, onS
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <Text style={styles.fieldName} numberOfLines={1}>{field.name}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.kicker}>SECTOR DOSSIER</Text>
+            <Text style={styles.fieldName} numberOfLines={1}>{field.name}</Text>
+          </View>
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
             <Text style={styles.closeText}>✕</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.badges}>
-          <View style={[styles.badge, { backgroundColor: badge.bg }]}>
+          <View style={[styles.badge, { backgroundColor: badge.bg, borderColor: badge.color }]}>
             <Text style={[styles.badgeText, { color: badge.color }]}>{badge.label}</Text>
           </View>
-          <Text style={styles.cropLabel}>🌱 {field.crop_type}</Text>
+          <Text style={styles.cropLabel}>🌱 {field.crop_type || 'Rice'}</Text>
         </View>
       </View>
 
@@ -55,27 +58,29 @@ export default function FieldDetailPanel({ field, onClose, onEdit, onDelete, onS
         <View style={styles.kpiRow}>
           <View style={styles.kpiCard}>
             <Text style={styles.kpiValue}>{formatArea(area)}</Text>
-            <Text style={styles.kpiLabel}>Area</Text>
+            <Text style={styles.kpiLabel}>AREA EXTENT</Text>
           </View>
           <View style={styles.kpiCard}>
-            <Text style={styles.kpiValue}>{coords.length}</Text>
-            <Text style={styles.kpiLabel}>Vertices</Text>
+            <Text style={[styles.kpiValue, { color: TACTICAL_THEME.satellite }]}>{coords.length}</Text>
+            <Text style={styles.kpiLabel}>VERTICES</Text>
           </View>
           <View style={styles.kpiCard}>
             <Text style={styles.kpiValue}>{growthInfo.icon}</Text>
-            <Text style={styles.kpiLabel}>{growthInfo.label}</Text>
+            <Text style={styles.kpiLabel}>{growthInfo.label.toUpperCase()}</Text>
           </View>
         </View>
 
-        {/* Centroid */}
+        {/* Centroid Coordinates */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Center Point</Text>
-          <Text style={styles.coordText}>{formatCoords(centroid[0], centroid[1])}</Text>
+          <Text style={styles.sectionTitle}>CENTROID GPS COORDINATES</Text>
+          <View style={styles.coordBox}>
+            <Text style={styles.coordText}>{formatCoords(centroid[0], centroid[1])}</Text>
+          </View>
         </View>
 
         {/* Growth Stage Timeline */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Growth Stage</Text>
+          <Text style={styles.sectionTitle}>PHENOLOGICAL PHASES</Text>
           <View style={styles.timeline}>
             {GROWTH_STAGES.map((stage, i) => {
               const isActive = stage.id === field.growth_stage;
@@ -107,7 +112,7 @@ export default function FieldDetailPanel({ field, onClose, onEdit, onDelete, onS
         {/* Planting Date */}
         {field.planting_date && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Planting Date</Text>
+            <Text style={styles.sectionTitle}>CULTIVATION START</Text>
             <Text style={styles.detailText}>📅 {field.planting_date}</Text>
           </View>
         )}
@@ -115,30 +120,30 @@ export default function FieldDetailPanel({ field, onClose, onEdit, onDelete, onS
         {/* Notes */}
         {field.notes && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Notes</Text>
+            <Text style={styles.sectionTitle}>SCOUT OBSERVATIONS</Text>
             <Text style={styles.detailText}>{field.notes}</Text>
           </View>
         )}
 
         {/* Created */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Created</Text>
+          <Text style={styles.sectionTitle}>REGISTERED AT</Text>
           <Text style={styles.detailText}>
-            {field.created_at ? new Date(field.created_at).toLocaleDateString() : '—'}
+            {field.created_at ? new Date(field.created_at).toLocaleString('vi-VN') : '—'}
           </Text>
         </View>
       </ScrollView>
 
-      {/* Actions */}
+      {/* Actions HUD */}
       <View style={styles.actions}>
         <TouchableOpacity style={styles.editBtn} onPress={onStartEditing}>
-          <Text style={styles.editBtnText}>✏️ Edit Boundary</Text>
+          <Text style={styles.editBtnText}>✏️ EDIT BOUNDARY VECTORS</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.zonesBtn} onPress={onConfigureZones}>
-          <Text style={styles.zonesBtnText}>🗺️ Configure Zones</Text>
+          <Text style={styles.zonesBtnText}>🗺️ CONFIGURE CULTIVATION ZONES</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.deleteBtn} onPress={onDelete}>
-          <Text style={styles.deleteBtnText}>🗑️ Delete</Text>
+          <Text style={styles.deleteBtnText}>🗑️ PURGE SECTOR</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -152,53 +157,223 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 320,
-    backgroundColor: '#ffffff',
+    backgroundColor: TACTICAL_THEME.bgPanelSolid,
+    borderLeftWidth: 1,
+    borderLeftColor: TACTICAL_THEME.border,
     shadowColor: '#000',
-    shadowOffset: { width: -3, height: 0 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: -6, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 12,
     zIndex: 1100,
   },
   header: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: TACTICAL_THEME.border,
+    backgroundColor: 'rgba(6, 9, 14, 0.4)',
   },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  kicker: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: TACTICAL_THEME.satellite,
+    fontFamily: TACTICAL_THEME.fontMono,
+    letterSpacing: 1.2,
+    marginBottom: 2,
+  },
+  fieldName: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: TACTICAL_THEME.textPrimary,
+  },
+  closeBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: TACTICAL_THEME.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeText: {
+    fontSize: 12,
+    color: TACTICAL_THEME.textSecondary,
+    fontWeight: '700',
+  },
+  badges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 8,
+  },
+  badge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 3,
+    borderWidth: 1,
+  },
+  badgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    fontFamily: TACTICAL_THEME.fontMono,
+  },
+  cropLabel: {
+    fontSize: 11,
+    color: TACTICAL_THEME.textSecondary,
+    fontWeight: '600',
+  },
+  body: {
+    flex: 1,
+    padding: 16,
+  },
+  kpiRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  kpiCard: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    borderWidth: 1,
+    borderColor: TACTICAL_THEME.border,
+    borderRadius: 6,
+    padding: 8,
     alignItems: 'center',
   },
-  fieldName: { fontSize: 18, fontWeight: '700', color: '#1a1a1a', flex: 1 },
-  closeBtn: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#F5F5F5', alignItems: 'center', justifyContent: 'center' },
-  closeText: { fontSize: 14, color: '#666' },
-  badges: { flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 8 },
-  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-  badgeText: { fontSize: 11, fontWeight: '600' },
-  cropLabel: { fontSize: 12, color: '#666' },
-  body: { flex: 1, padding: 16 },
-  kpiRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  kpiCard: { flex: 1, backgroundColor: '#F8F9FA', borderRadius: 8, padding: 10, alignItems: 'center' },
-  kpiValue: { fontSize: 16, fontWeight: '700', color: '#1a1a1a' },
-  kpiLabel: { fontSize: 10, color: '#888', marginTop: 2 },
-  section: { marginBottom: 16 },
-  sectionTitle: { fontSize: 11, fontWeight: '700', color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
-  coordText: { fontSize: 13, color: '#333', fontFamily: 'monospace' },
-  detailText: { fontSize: 13, color: '#444', lineHeight: 20 },
-  timeline: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  timelineItem: { alignItems: 'center', width: 42 },
-  timelineDot: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F0F0F0', alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
-  timelineDotActive: { backgroundColor: '#E3F2FD', borderWidth: 2, borderColor: '#1976D2' },
-  timelineDotPast: { backgroundColor: '#E8F5E9' },
-  timelineIcon: { fontSize: 14 },
-  timelineLabel: { fontSize: 8, color: '#999', textAlign: 'center' },
-  timelineLabelActive: { color: '#1565C0', fontWeight: '600' },
-  actions: { padding: 12, borderTopWidth: 1, borderTopColor: '#F0F0F0', gap: 8 },
-  editBtn: { backgroundColor: '#1976D2', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
-  editBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' },
-  zonesBtn: { backgroundColor: '#E3F2FD', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
-  zonesBtnText: { color: '#1565C0', fontSize: 13, fontWeight: '600' },
-  deleteBtn: { backgroundColor: '#FFEBEE', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
-  deleteBtnText: { color: '#C62828', fontSize: 13, fontWeight: '600' },
+  kpiValue: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: TACTICAL_THEME.radar,
+    fontFamily: TACTICAL_THEME.fontMono,
+  },
+  kpiLabel: {
+    fontSize: 8,
+    color: TACTICAL_THEME.textMuted,
+    marginTop: 2,
+    fontWeight: '700',
+    fontFamily: TACTICAL_THEME.fontMono,
+  },
+  section: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: TACTICAL_THEME.textMuted,
+    fontFamily: TACTICAL_THEME.fontMono,
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+  coordBox: {
+    padding: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(0, 210, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 210, 255, 0.2)',
+  },
+  coordText: {
+    fontSize: 11,
+    color: TACTICAL_THEME.satellite,
+    fontFamily: TACTICAL_THEME.fontMono,
+    fontWeight: '700',
+  },
+  detailText: {
+    fontSize: 12,
+    color: TACTICAL_THEME.textSecondary,
+    lineHeight: 18,
+  },
+  timeline: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  timelineItem: {
+    alignItems: 'center',
+    width: 40,
+  },
+  timelineDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: TACTICAL_THEME.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  timelineDotActive: {
+    backgroundColor: 'rgba(0, 245, 160, 0.15)',
+    borderColor: TACTICAL_THEME.radar,
+  },
+  timelineDotPast: {
+    backgroundColor: 'rgba(0, 245, 160, 0.05)',
+  },
+  timelineIcon: {
+    fontSize: 12,
+  },
+  timelineLabel: {
+    fontSize: 7.5,
+    color: TACTICAL_THEME.textMuted,
+    textAlign: 'center',
+  },
+  timelineLabelActive: {
+    color: TACTICAL_THEME.radar,
+    fontWeight: '700',
+  },
+  actions: {
+    padding: 14,
+    borderTopWidth: 1,
+    borderTopColor: TACTICAL_THEME.border,
+    backgroundColor: 'rgba(6, 9, 14, 0.6)',
+    gap: 8,
+  },
+  editBtn: {
+    backgroundColor: 'rgba(0, 210, 255, 0.12)',
+    borderWidth: 1,
+    borderColor: TACTICAL_THEME.satellite,
+    paddingVertical: 9,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  editBtnText: {
+    color: TACTICAL_THEME.satellite,
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: TACTICAL_THEME.fontMono,
+  },
+  zonesBtn: {
+    backgroundColor: 'rgba(0, 245, 160, 0.12)',
+    borderWidth: 1,
+    borderColor: TACTICAL_THEME.radar,
+    paddingVertical: 9,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  zonesBtnText: {
+    color: TACTICAL_THEME.radar,
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: TACTICAL_THEME.fontMono,
+  },
+  deleteBtn: {
+    backgroundColor: 'rgba(255, 46, 84, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 46, 84, 0.3)',
+    paddingVertical: 9,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  deleteBtnText: {
+    color: TACTICAL_THEME.alert,
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: TACTICAL_THEME.fontMono,
+  },
 });

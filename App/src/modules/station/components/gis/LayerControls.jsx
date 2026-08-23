@@ -1,47 +1,47 @@
 /**
- * LayerControls — Floating map layer switcher (top-right).
+ * LayerControls — Tactical Floating Map Layer HUD
  *
- * Toggles: Base map (OSM/Satellite/Terrain), overlay layers, opacity.
- * Also includes Administrative Boundary Layer toggles for province/district/ward.
+ * Direction 3: Tactical Agronomy Command
  */
 
 import React, { useState, useCallback } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Switch } from 'react-native';
+import { TACTICAL_THEME } from '../../constants/tacticalTheme';
 
 const BASE_MAPS = [
-  { id: 'osm', label: 'OSM', icon: '🗺️' },
-  { id: 'satellite', label: 'Satellite', icon: '🛰️' },
-  { id: 'terrain', label: 'Terrain', icon: '⛰️' },
+  { id: 'osm', label: 'VECTOR STREETS', icon: '🗺️' },
+  { id: 'satellite', label: 'SATELLITE RECON', icon: '🛰️' },
+  { id: 'terrain', label: 'TOPOGRAPHIC', icon: '⛰️' },
 ];
 
 const OVERLAYS = [
-  { id: 'fields', label: 'Field Boundaries', icon: '📐' },
-  { id: 'zones', label: 'Sub-Zones', icon: '🔲' },
-  { id: 'sensors', label: 'IoT Sensors', icon: '📡' },
-  { id: 'heatmap', label: 'Heatmap', icon: '🌡️' },
+  { id: 'fields', label: 'Field Vectors', icon: '📐' },
+  { id: 'zones', label: 'Cultivation Sub-Zones', icon: '🔲' },
+  { id: 'sensors', label: 'IoT Telemetry Nodes', icon: '📡' },
+  { id: 'heatmap', label: 'Spore Dispersion Heatmap', icon: '🌡️' },
 ];
 
 const ADMIN_LAYERS = [
   {
     id: 'province',
     label: 'Tỉnh/Thành phố',
-    labelEN: 'Province',
+    labelEN: 'Province Boundary',
     icon: '🗺️',
     color: '#E65100',
   },
   {
     id: 'district',
     label: 'Huyện/Quận',
-    labelEN: 'District',
+    labelEN: 'District Boundary',
     icon: '🔶',
-    color: '#1565C0',
+    color: '#00D2FF',
   },
   {
     id: 'ward',
     label: 'Xã/Phường',
-    labelEN: 'Ward',
+    labelEN: 'Ward Grid',
     icon: '🔷',
-    color: '#2E7D32',
+    color: '#00F5A0',
     note: '~30MB',
   },
 ];
@@ -53,17 +53,17 @@ export default function LayerControls({ layers, adminLayers, onLayerChange, onAd
 
   return (
     <View style={styles.container}>
-      {/* Toggle button */}
+      {/* Toggle HUD button */}
       <TouchableOpacity style={styles.toggleBtn} onPress={toggleExpand}>
         <Text style={styles.toggleIcon}>🗂️</Text>
-        <Text style={styles.toggleLabel}>Layers</Text>
+        <Text style={styles.toggleLabel}>GEO-LAYERS</Text>
       </TouchableOpacity>
 
-      {/* Expanded panel */}
+      {/* Expanded tactical panel */}
       {isExpanded && (
         <View style={styles.panel}>
           {/* Base Maps */}
-          <Text style={styles.sectionTitle}>Base Map</Text>
+          <Text style={styles.sectionTitle}>BASE VECTOR RASTER</Text>
           {BASE_MAPS.map((bm) => (
             <TouchableOpacity
               key={bm.id}
@@ -86,7 +86,7 @@ export default function LayerControls({ layers, adminLayers, onLayerChange, onAd
           <View style={styles.divider} />
 
           {/* Overlay Layers */}
-          <Text style={styles.sectionTitle}>Overlays</Text>
+          <Text style={styles.sectionTitle}>TACTICAL OVERLAYS</Text>
           {OVERLAYS.map((overlay) => (
             <View key={overlay.id} style={styles.overlayRow}>
               <Text style={styles.overlayIcon}>{overlay.icon}</Text>
@@ -94,39 +94,35 @@ export default function LayerControls({ layers, adminLayers, onLayerChange, onAd
               <Switch
                 value={layers[overlay.id]}
                 onValueChange={(val) => onLayerChange(overlay.id, val)}
-                trackColor={{ false: '#ccc', true: '#90CAF9' }}
-                thumbColor={layers[overlay.id] ? '#1976D2' : '#f4f3f4'}
+                trackColor={{ false: '#1E293B', true: 'rgba(0, 245, 160, 0.4)' }}
+                thumbColor={layers[overlay.id] ? TACTICAL_THEME.radar : '#64748B'}
                 style={styles.switch}
               />
             </View>
           ))}
 
-          {/* Divider */}
-          <View style={styles.divider} />
-
-          {/* Administrative Boundary Layers */}
-          <Text style={styles.sectionTitle}>Ranh giới hành chính</Text>
-          {ADMIN_LAYERS.map((layer) => {
-            const isEnabled = adminLayers?.[layer.id] ?? false;
-            return (
-              <View key={layer.id} style={styles.overlayRow}>
-                <View style={[styles.adminDot, { backgroundColor: layer.color }]} />
-                <View style={styles.adminLabelContainer}>
-                  <Text style={styles.overlayLabel}>{layer.label}</Text>
-                  {layer.note && (
-                    <Text style={styles.adminNote}>{layer.note}</Text>
-                  )}
+          {/* Administrative Layers */}
+          {adminLayers && onAdminLayerToggle && (
+            <>
+              <View style={styles.divider} />
+              <Text style={styles.sectionTitle}>ADMIN JURISDICTION (VN)</Text>
+              {ADMIN_LAYERS.map((al) => (
+                <View key={al.id} style={styles.overlayRow}>
+                  <Text style={styles.overlayIcon}>{al.icon}</Text>
+                  <Text style={styles.overlayLabel}>
+                    {al.label} {al.note && <Text style={styles.note}>{al.note}</Text>}
+                  </Text>
+                  <Switch
+                    value={adminLayers[al.id]}
+                    onValueChange={() => onAdminLayerToggle(al.id)}
+                    trackColor={{ false: '#1E293B', true: 'rgba(0, 210, 255, 0.4)' }}
+                    thumbColor={adminLayers[al.id] ? TACTICAL_THEME.satellite : '#64748B'}
+                    style={styles.switch}
+                  />
                 </View>
-                <Switch
-                  value={isEnabled}
-                  onValueChange={() => onAdminLayerToggle && onAdminLayerToggle(layer.id)}
-                  trackColor={{ false: '#ccc', true: `${layer.color}44` }}
-                  thumbColor={isEnabled ? layer.color : '#f4f3f4'}
-                  style={styles.switch}
-                />
-              </View>
-            );
-          })}
+              ))}
+            </>
+          )}
         </View>
       )}
     </View>
@@ -136,87 +132,107 @@ export default function LayerControls({ layers, adminLayers, onLayerChange, onAd
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    right: 12,
-    top: 12,
+    right: 14,
+    top: 14,
     zIndex: 1000,
     alignItems: 'flex-end',
   },
   toggleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: 'rgba(13, 19, 32, 0.92)',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: TACTICAL_THEME.border,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  toggleIcon: { fontSize: 16, marginRight: 6 },
-  toggleLabel: { fontSize: 13, fontWeight: '600', color: '#333' },
-  panel: {
-    marginTop: 6,
-    backgroundColor: '#ffffff',
-    borderRadius: 10,
-    padding: 12,
-    width: 240,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
     elevation: 6,
+    gap: 6,
+  },
+  toggleIcon: { fontSize: 13 },
+  toggleLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: TACTICAL_THEME.radar,
+    fontFamily: TACTICAL_THEME.fontMono,
+    letterSpacing: 1,
+  },
+  panel: {
+    marginTop: 8,
+    backgroundColor: TACTICAL_THEME.bgPanelSolid,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: TACTICAL_THEME.border,
+    padding: 12,
+    width: 230,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 8,
   },
   sectionTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#888',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontSize: 8.5,
+    fontWeight: '800',
+    color: TACTICAL_THEME.textMuted,
+    fontFamily: TACTICAL_THEME.fontMono,
+    letterSpacing: 1,
     marginBottom: 6,
   },
   baseMapOption: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 5,
     paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 6,
+    borderRadius: 4,
     marginBottom: 2,
+    gap: 8,
   },
   baseMapActive: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: 'rgba(0, 245, 160, 0.1)',
+    borderWidth: 1,
+    borderColor: TACTICAL_THEME.radar,
   },
-  baseMapIcon: { fontSize: 16, marginRight: 8 },
-  baseMapLabel: { fontSize: 13, color: '#444' },
-  baseMapLabelActive: { color: '#1565C0', fontWeight: '600' },
+  baseMapIcon: { fontSize: 12 },
+  baseMapLabel: {
+    fontSize: 10,
+    color: TACTICAL_THEME.textSecondary,
+    fontFamily: TACTICAL_THEME.fontMono,
+    fontWeight: '600',
+  },
+  baseMapLabelActive: {
+    color: TACTICAL_THEME.radar,
+    fontWeight: '800',
+  },
   divider: {
     height: 1,
-    backgroundColor: '#E0E0E0',
-    marginVertical: 10,
+    backgroundColor: TACTICAL_THEME.borderSubtle,
+    marginVertical: 8,
   },
   overlayRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: 4,
   },
-  overlayIcon: { fontSize: 14, marginRight: 8, width: 20, textAlign: 'center' },
-  overlayLabel: { flex: 1, fontSize: 13, color: '#444' },
-  switch: { transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] },
-  // Admin layer specific
-  adminDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
-  },
-  adminLabelContainer: {
+  overlayIcon: { fontSize: 12, width: 20 },
+  overlayLabel: {
     flex: 1,
-    flexDirection: 'column',
-  },
-  adminNote: {
     fontSize: 10,
-    color: '#aaa',
-    marginTop: 1,
+    color: TACTICAL_THEME.textSecondary,
+    fontFamily: TACTICAL_THEME.fontFamily,
+    fontWeight: '500',
+  },
+  note: {
+    fontSize: 8,
+    color: TACTICAL_THEME.textMuted,
+    fontFamily: TACTICAL_THEME.fontMono,
+  },
+  switch: {
+    transform: [{ scaleX: 0.75 }, { scaleY: 0.75 }],
   },
 });

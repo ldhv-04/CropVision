@@ -1,14 +1,12 @@
 /**
- * FieldExplorerList — Scrollable list of field items.
+ * FieldExplorerList — Tactical Scrollable Field Ledger
  *
- * Renders filtered fields with virtualized-style rendering.
- * Handles selection sync from map (scroll-into-view).
- *
- * Debug logs: [Explorer]
+ * Direction 3: Tactical Agronomy Command
  */
 
 import React, { useCallback, useMemo, useRef, createRef } from 'react';
 import FieldExplorerListItem from './FieldExplorerListItem';
+import { TACTICAL_THEME } from '../../../constants/tacticalTheme';
 
 export default function FieldExplorerList({
   fields,
@@ -19,7 +17,6 @@ export default function FieldExplorerList({
 }) {
   const itemRefs = useRef({});
 
-  // Build refs for each field
   const getFieldRef = useCallback((id) => {
     if (!itemRefs.current[id]) {
       itemRefs.current[id] = createRef();
@@ -29,7 +26,6 @@ export default function FieldExplorerList({
     };
   }, []);
 
-  // Summary stats
   const stats = useMemo(() => {
     const active = fields.filter((f) => f.status === 'ACTIVE' || !f.status).length;
     return { total: fields.length, active };
@@ -45,15 +41,16 @@ export default function FieldExplorerList({
           alignItems: 'center',
           justifyContent: 'center',
           padding: 24,
-          color: '#999',
+          color: TACTICAL_THEME.textMuted,
+          fontFamily: TACTICAL_THEME.fontMono,
         }}
       >
-        <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
-        <div style={{ fontSize: 13, fontWeight: 500, color: '#666' }}>
-          No fields found
+        <div style={{ fontSize: 24, marginBottom: 8 }}>⌕</div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: TACTICAL_THEME.textSecondary }}>
+          [NO SECTOR MATCHES]
         </div>
-        <div style={{ fontSize: 11, color: '#999', marginTop: 4, textAlign: 'center' }}>
-          Try adjusting your search or filters
+        <div style={{ fontSize: 10, color: TACTICAL_THEME.textMuted, marginTop: 4, textAlign: 'center' }}>
+          Adjust search query or filter flags
         </div>
       </div>
     );
@@ -65,15 +62,19 @@ export default function FieldExplorerList({
       <div
         style={{
           padding: '6px 12px',
-          fontSize: 11,
-          color: '#888',
-          fontWeight: 500,
-          borderBottom: '1px solid #F0F0F0',
-          backgroundColor: '#FAFAFA',
+          fontSize: 9.5,
+          color: TACTICAL_THEME.textMuted,
+          fontWeight: 700,
+          borderBottom: `1px solid ${TACTICAL_THEME.borderSubtle}`,
+          backgroundColor: 'rgba(6, 9, 14, 0.4)',
           flexShrink: 0,
+          fontFamily: TACTICAL_THEME.fontMono,
+          display: 'flex',
+          justifyContent: 'space-between',
         }}
       >
-        {stats.total} field{stats.total !== 1 ? 's' : ''} · {stats.active} active
+        <span>COUNT: {stats.total} SECTORS</span>
+        <span style={{ color: TACTICAL_THEME.radar }}>{stats.active} NOMINAL</span>
       </div>
 
       {/* Scrollable list */}

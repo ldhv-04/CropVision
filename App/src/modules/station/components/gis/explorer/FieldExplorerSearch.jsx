@@ -1,25 +1,20 @@
 /**
- * FieldExplorerSearch — Search input with 300ms debounce.
+ * FieldExplorerSearch — Tactical Cadastral Search Input
  *
- * Searches by field name, crop type, and field code.
- * Stores search state globally in Zustand.
- *
- * Debug logs: [Explorer]
+ * Direction 3: Tactical Agronomy Command
  */
 
 import React, { useEffect, useRef, useCallback, useState } from 'react';
+import { TACTICAL_THEME } from '../../../constants/tacticalTheme';
 
 export default function FieldExplorerSearch({ searchQuery, onSearchChange }) {
   const [localValue, setLocalValue] = useState(searchQuery);
   const debounceTimerRef = useRef(null);
-  const isInitialMount = useRef(true);
 
-  // Sync local value from store when it changes externally (e.g., clearFilters)
   useEffect(() => {
     if (searchQuery !== localValue) {
       setLocalValue(searchQuery);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
   const handleChange = useCallback(
@@ -27,7 +22,6 @@ export default function FieldExplorerSearch({ searchQuery, onSearchChange }) {
       const value = e.target.value;
       setLocalValue(value);
 
-      // Debounce: 300ms
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
@@ -49,7 +43,6 @@ export default function FieldExplorerSearch({ searchQuery, onSearchChange }) {
     onSearchChange('');
   }, [onSearchChange]);
 
-  // Cleanup debounce timer on unmount
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current) {
@@ -61,8 +54,9 @@ export default function FieldExplorerSearch({ searchQuery, onSearchChange }) {
   return (
     <div
       style={{
-        padding: '8px 12px',
-        borderBottom: '1px solid #F0F0F0',
+        padding: '8px 10px',
+        borderBottom: `1px solid ${TACTICAL_THEME.borderSubtle}`,
+        backgroundColor: TACTICAL_THEME.bgPanelSolid,
         flexShrink: 0,
       }}
     >
@@ -70,17 +64,17 @@ export default function FieldExplorerSearch({ searchQuery, onSearchChange }) {
         style={{
           display: 'flex',
           alignItems: 'center',
-          backgroundColor: '#F5F5F5',
-          borderRadius: 8,
-          padding: '0 10px',
-          border: '1px solid #E0E0E0',
+          backgroundColor: TACTICAL_THEME.bgInput,
+          borderRadius: 6,
+          padding: '0 8px',
+          border: `1px solid ${TACTICAL_THEME.border}`,
           transition: 'border-color 0.15s ease',
         }}
       >
-        <span style={{ fontSize: 14, color: '#999', marginRight: 6 }}>🔍</span>
+        <span style={{ fontSize: 12, color: TACTICAL_THEME.textMuted, marginRight: 6 }}>⌕</span>
         <input
           type="text"
-          placeholder="Search fields, crops, codes..."
+          placeholder="Filter fields, crops, codes..."
           value={localValue}
           onChange={handleChange}
           style={{
@@ -88,25 +82,23 @@ export default function FieldExplorerSearch({ searchQuery, onSearchChange }) {
             border: 'none',
             outline: 'none',
             backgroundColor: 'transparent',
-            fontSize: 13,
-            padding: '8px 0',
-            color: '#333',
-            fontFamily: 'inherit',
+            fontSize: 11.5,
+            padding: '6px 0',
+            color: TACTICAL_THEME.textPrimary,
+            fontFamily: TACTICAL_THEME.fontFamily,
           }}
         />
         {localValue && (
           <button
             onClick={handleClear}
             style={{
-              background: 'none',
               border: 'none',
+              backgroundColor: 'transparent',
+              color: TACTICAL_THEME.textMuted,
               cursor: 'pointer',
-              padding: '2px 4px',
-              fontSize: 14,
-              color: '#999',
-              lineHeight: 1,
+              fontSize: 12,
+              padding: 4,
             }}
-            title="Clear search"
           >
             ✕
           </button>

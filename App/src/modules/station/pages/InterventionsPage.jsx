@@ -1,46 +1,34 @@
 /**
- * InterventionsPage — SoilzePro Intervention Log
+ * InterventionsPage — Tactical Intervention & Treatment Log
  *
- * Wireframe: soilzepro-research/markdown-wireframes.md (Intervention)
- * Action log tracking all farm interventions with timeline view
+ * Direction 3: Tactical Agronomy Command & Mission Control
+ * Agronomic countermeasures and chemical/biological intervention registry.
  */
 
-import { useState } from 'react';
-import { useTheme } from '../../@core/context/ThemeContext';
-import { SHADOWS } from '../../@core/constants/theme';
+import React, { useState } from 'react';
+import { TACTICAL_THEME } from '../constants/tacticalTheme';
 
 const MOCK_INTERVENTIONS = [
-  { id: 1, title: 'Fungicide Application - Zone A3', type: 'treatment', field: 'Field Alpha', status: 'completed', priority: 'high', assignedTo: 'Nguyen Van A', scheduledDate: '2026-05-30', completedDate: '2026-05-30', notes: 'Applied Mancozeb 75WP at 2.5g/L. Covered 2.3ha of affected area.', cost: '$180', icon: '🧪' },
-  { id: 2, title: 'Irrigation Increase - Field Epsilon', type: 'irrigation', field: 'Field Epsilon', status: 'in_progress', priority: 'high', assignedTo: 'Tran Thi B', scheduledDate: '2026-05-31', completedDate: null, notes: 'Adjusted sprinkler system to increase output by 30%. Monitoring soil moisture hourly.', cost: '$45', icon: '💧' },
-  { id: 3, title: 'Soil Liming - Field Gamma', type: 'soil_amendment', field: 'Field Gamma', status: 'scheduled', priority: 'medium', assignedTo: 'Le Van C', scheduledDate: '2026-06-02', completedDate: null, notes: 'Agricultural lime at 2 tons/ha. Equipment reserved.', cost: '$320', icon: '🌱' },
-  { id: 4, title: 'Pest Trap Installation - Field Beta', type: 'monitoring', field: 'Field Beta', status: 'completed', priority: 'medium', assignedTo: 'Nguyen Van A', scheduledDate: '2026-05-28', completedDate: '2026-05-28', notes: 'Installed 12 pheromone traps across Zone B2. Baseline count: 15 moths/trap.', cost: '$95', icon: '🐛' },
-  { id: 5, title: 'Nutrient Spray - Field Delta', type: 'fertilization', field: 'Field Delta', status: 'completed', priority: 'low', assignedTo: 'Pham Thi D', scheduledDate: '2026-05-25', completedDate: '2026-05-25', notes: 'Foliar NPK spray (20-20-20) at 3g/L. Applied during cool hours.', cost: '$120', icon: '🌿' },
-  { id: 6, title: 'Harvest - Field Delta Zone D1', type: 'harvest', field: 'Field Delta', status: 'scheduled', priority: 'low', assignedTo: 'Team Alpha', scheduledDate: '2026-06-03', completedDate: null, notes: 'Estimated yield: 8 tons. Labor team confirmed.', cost: '$450', icon: '🍈' },
+  { id: 1, title: 'Targeted Fungicide Spray - Zone A3', type: 'treatment', field: 'Sector Alpha', status: 'completed', priority: 'high', assignedTo: 'Nguyen Van A', scheduledDate: '2026-05-30', completedDate: '2026-05-30', notes: 'Applied Mancozeb 75WP at 2.5g/L. Covered 2.3ha of affected blast cluster.', cost: '$180', icon: '🧪' },
+  { id: 2, title: 'Precision Irrigation Protocol - Sector E', type: 'irrigation', field: 'Sector Epsilon', status: 'in_progress', priority: 'high', assignedTo: 'Tran Thi B', scheduledDate: '2026-05-31', completedDate: null, notes: 'Subsurface drip rate increased +30% to counter heat index.', cost: '$45', icon: '💧' },
+  { id: 3, title: 'Rhizosphere Liming Amendment - Sector Gamma', type: 'soil_amendment', field: 'Sector Gamma', status: 'scheduled', priority: 'medium', assignedTo: 'Le Van C', scheduledDate: '2026-06-02', completedDate: null, notes: 'Agricultural lime at 2 tons/ha to neutralize acidic soil.', cost: '$320', icon: '🌱' },
+  { id: 4, title: 'Pheromone Trap Array Deployment - Sector Beta', type: 'monitoring', field: 'Sector Beta', status: 'completed', priority: 'medium', assignedTo: 'Nguyen Van A', scheduledDate: '2026-05-28', completedDate: '2026-05-28', notes: 'Installed 12 traps across Zone B2. Baseline: 15 moths/trap.', cost: '$95', icon: '🐛' },
+  { id: 5, title: 'Foliar Micronutrient Application - Sector Delta', type: 'fertilization', field: 'Sector Delta', status: 'completed', priority: 'low', assignedTo: 'Pham Thi D', scheduledDate: '2026-05-25', completedDate: '2026-05-25', notes: 'NPK (20-20-20) + Zinc chelate applied at dusk.', cost: '$120', icon: '🌿' },
+  { id: 6, title: 'Harvest Vector Mobilization - Sector Delta', type: 'harvest', field: 'Sector Delta', status: 'scheduled', priority: 'low', assignedTo: 'Team Alpha', scheduledDate: '2026-06-03', completedDate: null, notes: 'Estimated yield: 8.4 tons paddy grain.', cost: '$450', icon: '🍈' },
 ];
 
 const STATUS_COLORS = {
-  scheduled: '#38bdf8',
-  in_progress: '#f59e0b',
-  completed: '#4ade80',
-  cancelled: '#ef4444',
-};
-
-const TYPE_LABELS = {
-  treatment: 'Treatment',
-  irrigation: 'Irrigation',
-  soil_amendment: 'Soil Amendment',
-  monitoring: 'Monitoring',
-  fertilization: 'Fertilization',
-  harvest: 'Harvest',
+  scheduled: TACTICAL_THEME.satellite,
+  in_progress: TACTICAL_THEME.telemetry,
+  completed: TACTICAL_THEME.radar,
+  cancelled: TACTICAL_THEME.alert,
 };
 
 export default function InterventionsPage() {
-  const { colors } = useTheme();
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterType, setFilterType] = useState('all');
-  const [viewMode, setViewMode] = useState('list');
 
-  const filtered = MOCK_INTERVENTIONS.filter(i => {
+  const filtered = MOCK_INTERVENTIONS.filter((i) => {
     if (filterStatus !== 'all' && i.status !== filterStatus) return false;
     if (filterType !== 'all' && i.type !== filterType) return false;
     return true;
@@ -49,107 +37,139 @@ export default function InterventionsPage() {
   const totalCost = MOCK_INTERVENTIONS.reduce((sum, i) => sum + parseInt(i.cost.replace('$', '')), 0);
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }} data-testid="interventions-page">
-      {/* Summary */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+    <div style={{
+      flex: 1,
+      overflowY: 'auto',
+      padding: '24px 28px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 20,
+    }} data-testid="interventions-page">
+      {/* Summary KPI Row */}
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
         {[
-          { label: 'Total Interventions', value: MOCK_INTERVENTIONS.length, icon: '🔧', color: colors.info },
-          { label: 'Completed', value: MOCK_INTERVENTIONS.filter(i => i.status === 'completed').length, icon: '✅', color: colors.success },
-          { label: 'In Progress', value: MOCK_INTERVENTIONS.filter(i => i.status === 'in_progress').length, icon: '⏳', color: colors.warning },
-          { label: 'Total Cost', value: `$${totalCost}`, icon: '💰', color: colors.primaryGlow },
+          { label: 'TOTAL DISPATCHES', value: MOCK_INTERVENTIONS.length, icon: '🔧', color: TACTICAL_THEME.satellite },
+          { label: 'EXECUTED / RESOLVED', value: MOCK_INTERVENTIONS.filter((i) => i.status === 'completed').length, icon: '✅', color: TACTICAL_THEME.radar },
+          { label: 'IN OPERATION', value: MOCK_INTERVENTIONS.filter((i) => i.status === 'in_progress').length, icon: '⏳', color: TACTICAL_THEME.telemetry },
+          { label: 'TOTAL EXPENDITURE', value: `$${totalCost}`, icon: '💰', color: TACTICAL_THEME.textPrimary },
         ].map((stat, i) => (
           <div key={i} style={{
-            flex: '1 1 150px', padding: '14px 16px', borderRadius: 10,
-            backgroundColor: `${stat.color}10`, border: `1px solid ${stat.color}30`,
-            display: 'flex', alignItems: 'center', gap: 10,
+            flex: '1 1 180px',
+            padding: '16px 18px',
+            borderRadius: 8,
+            backgroundColor: TACTICAL_THEME.bgPanel,
+            border: `1px solid ${TACTICAL_THEME.border}`,
+            boxShadow: TACTICAL_THEME.shadowPanel,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
           }}>
-            <span style={{ fontSize: 20 }}>{stat.icon}</span>
+            <span style={{ fontSize: 22 }}>{stat.icon}</span>
             <div>
-              <div style={{ fontSize: 11, color: colors.textMuted, fontWeight: 600 }}>{stat.label}</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: stat.color }}>{stat.value}</div>
+              <div style={{ fontSize: 9, color: TACTICAL_THEME.textMuted, fontWeight: 800, fontFamily: TACTICAL_THEME.fontMono }}>{stat.label}</div>
+              <div style={{ fontSize: 20, fontWeight: 900, color: stat.color, fontFamily: TACTICAL_THEME.fontMono, marginTop: 2 }}>{stat.value}</div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Filters */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          {['all', 'scheduled', 'in_progress', 'completed'].map(s => (
-            <button key={s} onClick={() => setFilterStatus(s)} style={{
-              padding: '5px 10px', borderRadius: 6,
-              border: `1px solid ${filterStatus === s ? colors.primary : colors.border}`,
-              backgroundColor: filterStatus === s ? `${colors.primary}20` : 'transparent',
-              color: filterStatus === s ? colors.primaryGlow : colors.textSecondary,
-              fontSize: 11, fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize',
-              fontFamily: '"Inter", "Outfit", system-ui, sans-serif',
-            }}>{s.replace('_', ' ')}</button>
-          ))}
+      {/* Filters & Action Bar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {['all', 'scheduled', 'in_progress', 'completed'].map((s) => {
+            const isActive = filterStatus === s;
+            const color = STATUS_COLORS[s] || TACTICAL_THEME.textPrimary;
+            return (
+              <button
+                key={s}
+                onClick={() => setFilterStatus(s)}
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: 4,
+                  border: `1px solid ${isActive ? color : TACTICAL_THEME.border}`,
+                  backgroundColor: isActive ? `${color}15` : 'transparent',
+                  color: isActive ? color : TACTICAL_THEME.textSecondary,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  textTransform: 'uppercase',
+                  fontFamily: TACTICAL_THEME.fontMono,
+                }}
+              >
+                {s.replace('_', ' ')}
+              </button>
+            );
+          })}
         </div>
-        <button onClick={() => {
-          // Add new intervention placeholder
-        }} style={{
-          padding: '8px 16px', borderRadius: 8, border: 'none',
-          backgroundColor: colors.primary, color: '#fff', fontSize: 12, fontWeight: 600,
-          cursor: 'pointer', fontFamily: '"Inter", "Outfit", system-ui, sans-serif',
-        }}>+ New Intervention</button>
+
+        <button
+          style={{
+            padding: '8px 16px',
+            borderRadius: 5,
+            border: `1px solid ${TACTICAL_THEME.radar}`,
+            backgroundColor: 'rgba(0, 245, 160, 0.12)',
+            color: TACTICAL_THEME.radar,
+            fontSize: 11,
+            fontWeight: 800,
+            cursor: 'pointer',
+            fontFamily: TACTICAL_THEME.fontMono,
+          }}
+        >
+          + DISPATCH INTERVENTION
+        </button>
       </div>
 
-      {/* Intervention List */}
+      {/* Intervention Log Table */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {filtered.map(intervention => {
-          const statusColor = STATUS_COLORS[intervention.status];
+        {filtered.map((item) => {
+          const statusColor = STATUS_COLORS[item.status] || TACTICAL_THEME.textSecondary;
           return (
-            <div key={intervention.id} style={{
-              padding: '18px 20px', borderRadius: 12,
-              backgroundColor: colors.surface, border: `1px solid ${colors.border}`,
-              boxShadow: SHADOWS.card, transition: 'all 0.15s',
-            }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = colors.primary; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = colors.border; }}
+            <div
+              key={item.id}
+              style={{
+                padding: '16px 20px',
+                borderRadius: 8,
+                backgroundColor: TACTICAL_THEME.bgPanel,
+                border: `1px solid ${TACTICAL_THEME.border}`,
+                boxShadow: TACTICAL_THEME.shadowPanel,
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                gap: 16,
+              }}
             >
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-                <div style={{
-                  width: 42, height: 42, borderRadius: 10, flexShrink: 0,
-                  backgroundColor: `${statusColor}15`, border: `1px solid ${statusColor}30`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
-                }}>{intervention.icon}</div>
-
+              <div style={{ display: 'flex', gap: 14, flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: 24, marginTop: 2 }}>{item.icon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: TACTICAL_THEME.textPrimary }}>{item.title}</span>
                     <span style={{
-                      padding: '2px 8px', borderRadius: 4, fontSize: 9, fontWeight: 700,
-                      backgroundColor: `${statusColor}20`, color: statusColor,
-                      textTransform: 'uppercase', letterSpacing: 0.5,
-                    }}>{intervention.status.replace('_', ' ')}</span>
-                    <span style={{
-                      padding: '2px 8px', borderRadius: 4, fontSize: 9, fontWeight: 700,
-                      backgroundColor: `${colors.info}15`, color: colors.info,
-                      textTransform: 'uppercase', letterSpacing: 0.5,
-                    }}>{TYPE_LABELS[intervention.type]}</span>
-                    <span style={{
-                      padding: '2px 8px', borderRadius: 4, fontSize: 9, fontWeight: 700,
-                      backgroundColor: `${intervention.priority === 'high' ? colors.danger : intervention.priority === 'medium' ? colors.warning : colors.success}15`,
-                      color: intervention.priority === 'high' ? colors.danger : intervention.priority === 'medium' ? colors.warning : colors.success,
-                      textTransform: 'uppercase', letterSpacing: 0.5,
-                    }}>{intervention.priority}</span>
+                      fontSize: 8.5,
+                      fontWeight: 800,
+                      color: statusColor,
+                      fontFamily: TACTICAL_THEME.fontMono,
+                      backgroundColor: `${statusColor}15`,
+                      padding: '1px 5px',
+                      borderRadius: 3,
+                      border: `1px solid ${statusColor}30`,
+                    }}>
+                      {item.status.toUpperCase().replace('_', ' ')}
+                    </span>
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: colors.textPrimary, marginBottom: 4 }}>{intervention.title}</div>
-                  <div style={{ fontSize: 12, color: colors.textSecondary, lineHeight: 1.5, marginBottom: 8 }}>{intervention.notes}</div>
-                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                    {[
-                      { label: 'Field', value: intervention.field },
-                      { label: 'Assigned', value: intervention.assignedTo },
-                      { label: 'Scheduled', value: intervention.scheduledDate },
-                      { label: 'Cost', value: intervention.cost },
-                    ].map((meta, i) => (
-                      <div key={i} style={{ fontSize: 11 }}>
-                        <span style={{ color: colors.textMuted, fontWeight: 600 }}>{meta.label}: </span>
-                        <span style={{ color: colors.textSecondary, fontWeight: 500 }}>{meta.value}</span>
-                      </div>
-                    ))}
+                  <div style={{ fontSize: 11, color: TACTICAL_THEME.textSecondary, marginTop: 6, lineHeight: 1.5 }}>
+                    {item.notes}
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: 10, color: TACTICAL_THEME.textMuted, fontFamily: TACTICAL_THEME.fontMono }}>
+                    <span>LOC: {item.field}</span>
+                    <span>•</span>
+                    <span>OP: {item.assignedTo}</span>
+                    <span>•</span>
+                    <span>DATE: {item.scheduledDate}</span>
                   </div>
                 </div>
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 900, color: TACTICAL_THEME.satellite, fontFamily: TACTICAL_THEME.fontMono }}>
+                {item.cost}
               </div>
             </div>
           );

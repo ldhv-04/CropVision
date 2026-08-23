@@ -82,3 +82,15 @@ knowledge.md
 .vc-installed-files
 .vc-version
 knowledge.md
+
+#understand
+.ua/
+
+#internal Document
+
+Internal_Document
+PRODUCT.md
+
+App/android/gradle.properties
+App/.gitignore
+App/android/gradlew
