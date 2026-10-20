@@ -14,60 +14,36 @@
  */
 
 import { create } from 'zustand';
+import {
+  INITIAL_CENTER,
+  INITIAL_ZOOM,
+  DEFAULT_LAYERS,
+  DEFAULT_ADMIN_LAYERS,
+  INITIAL_DRAW_STATE,
+  INITIAL_EDIT_STATE,
+  INITIAL_FILTERS,
+  INITIAL_PANEL_STATE,
+} from './fieldGISConstants';
+import {
+  selectSelectedField,
+  selectFieldCounts,
+  selectListFields,
+  selectMapFields,
+} from './fieldGISSelectors';
+import {
+  updateVertex,
+  insertVertex,
+  deleteVertex,
+  popUndoVertex,
+} from './vertexEditHelpers';
 
-const INITIAL_CENTER = [10.8231, 106.6297]; // Ho Chi Minh City default
-const INITIAL_ZOOM = 14;
-
-export const selectSelectedField = (state) =>
-  state.fields.find((field) => field.id === state.selectedFieldId);
-
-export const selectFieldCounts = (state) => {
-  const total = state.fields.length;
-  const active = state.fields.filter((field) => field.status === 'ACTIVE' || !field.status).length;
-  return { total, active, inactive: total - active };
-};
-
-export const selectListFields = (state) => {
-  let result = state.fields;
-
-  if (state.searchQuery) {
-    const query = state.searchQuery.toLowerCase();
-    result = result.filter((field) => {
-      const name = (field.name || '').toLowerCase();
-      const crop = (field.crop_type || '').toLowerCase();
-      const code = (field.field_code || '').toLowerCase();
-      return name.includes(query) || crop.includes(query) || code.includes(query);
-    });
-  }
-  if (state.filters.status) {
-    result = result.filter((field) => field.status === state.filters.status);
-  }
-  if (state.filters.cropType) {
-    result = result.filter((field) => field.crop_type === state.filters.cropType);
-  }
-
-  return result;
-};
-
-export const selectMapFields = (state) => {
-  let result = state.fields;
-
-  if (state.filters.search) {
-    const query = state.filters.search.toLowerCase();
-    result = result.filter(
-      (field) =>
-        field.name.toLowerCase().includes(query) ||
-        field.crop_type?.toLowerCase().includes(query),
-    );
-  }
-  if (state.filters.cropType) {
-    result = result.filter((field) => field.crop_type === state.filters.cropType);
-  }
-  if (state.filters.status) {
-    result = result.filter((field) => field.status === state.filters.status);
-  }
-
-  return result;
+export {
+  INITIAL_CENTER,
+  INITIAL_ZOOM,
+  selectSelectedField,
+  selectFieldCounts,
+  selectListFields,
+  selectMapFields,
 };
 
 const useFieldGISStore = create((set, get) => ({
@@ -135,11 +111,7 @@ const useFieldGISStore = create((set, get) => ({
   },
 
   // ── Draw State ──────────────────────────────────────────────
-  drawState: {
-    vertices: [], // Array of [lat, lng]
-    isDrawing: false,
-    previewPolygon: null, // GeoJSON preview
-  },
+  drawState: { ...INITIAL_DRAW_STATE },
 
   startDrawing: () =>
     set({
@@ -175,17 +147,11 @@ const useFieldGISStore = create((set, get) => ({
   cancelDrawing: () =>
     set({
       activeTool: 'pan',
-      drawState: { vertices: [], isDrawing: false, previewPolygon: null },
+      drawState: { ...INITIAL_DRAW_STATE },
     }),
 
   // ── Edit State ──────────────────────────────────────────────
-  editState: {
-    fieldId: null,
-    originalBoundary: null,
-    currentVertices: [], // Array of [lat, lng]
-    isEditing: false,
-    undoStack: [],
-  },
+  editState: { ...INITIAL_EDIT_STATE },
 
   startEditing: (fieldId, vertices) =>
     set({
@@ -200,56 +166,29 @@ const useFieldGISStore = create((set, get) => ({
     }),
 
   updateEditVertex: (index, latlng) =>
-    set((state) => {
-      const vertices = [...state.editState.currentVertices];
-      const undoStack = [...state.editState.undoStack, [...vertices]];
-      vertices[index] = latlng;
-      return {
-        editState: { ...state.editState, currentVertices: vertices, undoStack },
-      };
-    }),
+    set((state) => ({
+      editState: updateVertex(state.editState, index, latlng),
+    })),
 
   addEditVertex: (afterIndex, latlng) =>
-    set((state) => {
-      const vertices = [...state.editState.currentVertices];
-      const undoStack = [...state.editState.undoStack, [...vertices]];
-      vertices.splice(afterIndex + 1, 0, latlng);
-      return {
-        editState: { ...state.editState, currentVertices: vertices, undoStack },
-      };
-    }),
+    set((state) => ({
+      editState: insertVertex(state.editState, afterIndex, latlng),
+    })),
 
   removeEditVertex: (index) =>
-    set((state) => {
-      if (state.editState.currentVertices.length <= 3) return state;
-      const vertices = [...state.editState.currentVertices];
-      const undoStack = [...state.editState.undoStack, [...vertices]];
-      vertices.splice(index, 1);
-      return {
-        editState: { ...state.editState, currentVertices: vertices, undoStack },
-      };
-    }),
+    set((state) => ({
+      editState: deleteVertex(state.editState, index),
+    })),
 
   undoEdit: () =>
-    set((state) => {
-      const undoStack = [...state.editState.undoStack];
-      const previous = undoStack.pop();
-      if (!previous) return state;
-      return {
-        editState: { ...state.editState, currentVertices: previous, undoStack },
-      };
-    }),
+    set((state) => ({
+      editState: popUndoVertex(state.editState),
+    })),
 
   cancelEditing: () =>
     set({
       activeTool: 'pan',
-      editState: {
-        fieldId: null,
-        originalBoundary: null,
-        currentVertices: [],
-        isEditing: false,
-        undoStack: [],
-      },
+      editState: { ...INITIAL_EDIT_STATE },
     }),
 
   finishEditing: () =>
@@ -262,26 +201,13 @@ const useFieldGISStore = create((set, get) => ({
   explorerCollapsed: false,
   filteredFieldIds: [],
 
-  setSearchQuery: (query) => {
-    set({ searchQuery: query });
-  },
-  toggleExplorer: () =>
-    set((state) => {
-      const collapsed = !state.explorerCollapsed;
-      return { explorerCollapsed: collapsed };
-    }),
-  setExplorerCollapsed: (collapsed) => {
-    set({ explorerCollapsed: collapsed });
-  },
+  setSearchQuery: (query) => set({ searchQuery: query }),
+  toggleExplorer: () => set((state) => ({ explorerCollapsed: !state.explorerCollapsed })),
+  setExplorerCollapsed: (collapsed) => set({ explorerCollapsed: collapsed }),
   setFilteredFields: (ids) => set({ filteredFieldIds: ids }),
 
   // ── Filters ─────────────────────────────────────────────────
-  filters: {
-    search: '',
-    cropType: '',
-    status: '',
-    hasAlerts: false,
-  },
+  filters: { ...INITIAL_FILTERS },
 
   setFilter: (key, value) =>
     set((state) => ({
@@ -290,18 +216,11 @@ const useFieldGISStore = create((set, get) => ({
 
   clearFilters: () =>
     set({
-      filters: { search: '', cropType: '', status: '', hasAlerts: false },
+      filters: { ...INITIAL_FILTERS },
     }),
 
   // ── Layer Visibility ────────────────────────────────────────
-  layers: {
-    baseMap: 'satellite', // 'osm' | 'satellite' | 'terrain'
-    fields: true,
-    zones: false,
-    sensors: false,
-    heatmap: false,
-    opacity: 0.7,
-  },
+  layers: { ...DEFAULT_LAYERS },
 
   setLayer: (key, value) =>
     set((state) => ({
@@ -309,36 +228,20 @@ const useFieldGISStore = create((set, get) => ({
     })),
 
   // ── Admin Boundary Layer Visibility ─────────────────────────
-  // Stored separately from 'layers' to avoid conflicts.
-  // Province is true by default — it will be lazy-loaded once the map mounts.
-  // District and ward start false — user must explicitly enable them.
-  adminLayers: {
-    province: true,   // Enabled by default; loaded lazily on map init
-    district: false,  // User-enabled; lazy-loaded on toggle
-    ward: false,      // User-enabled; lazy-loaded on toggle (30MB — use with care)
-  },
+  adminLayers: { ...DEFAULT_ADMIN_LAYERS },
 
   toggleAdminLayer: (layerKey) =>
-    set((state) => {
-      const current = state.adminLayers[layerKey];
-      return {
-        adminLayers: { ...state.adminLayers, [layerKey]: !current },
-      };
-    }),
+    set((state) => ({
+      adminLayers: { ...state.adminLayers, [layerKey]: !state.adminLayers[layerKey] },
+    })),
 
   setAdminLayerVisibility: (layerKey, visible) =>
-    set((state) => {
-      return {
-        adminLayers: { ...state.adminLayers, [layerKey]: visible },
-      };
-    }),
+    set((state) => ({
+      adminLayers: { ...state.adminLayers, [layerKey]: visible },
+    })),
 
   // ── Panel State ─────────────────────────────────────────────
-  panelState: {
-    isOpen: false,
-    mode: 'detail', // 'detail' | 'create' | 'edit'
-    createMethod: 'draw', // 'draw' | 'coords' | 'radius'
-  },
+  panelState: { ...INITIAL_PANEL_STATE },
 
   openPanel: (mode, options = {}) =>
     set((state) => ({
@@ -378,32 +281,15 @@ const useFieldGISStore = create((set, get) => ({
       center: INITIAL_CENTER,
       zoom: INITIAL_ZOOM,
       activeTool: 'pan',
-      drawState: { vertices: [], isDrawing: false, previewPolygon: null },
-      editState: {
-        fieldId: null,
-        originalBoundary: null,
-        currentVertices: [],
-        isEditing: false,
-        undoStack: [],
-      },
+      drawState: { ...INITIAL_DRAW_STATE },
+      editState: { ...INITIAL_EDIT_STATE },
       searchQuery: '',
       explorerCollapsed: false,
       filteredFieldIds: [],
-      filters: { search: '', cropType: '', status: '', hasAlerts: false },
-      layers: {
-        baseMap: 'satellite',
-        fields: true,
-        zones: false,
-        sensors: false,
-        heatmap: false,
-        opacity: 0.7,
-      },
-      adminLayers: {
-        province: true,
-        district: false,
-        ward: false,
-      },
-      panelState: { isOpen: false, mode: 'detail', createMethod: 'draw' },
+      filters: { ...INITIAL_FILTERS },
+      layers: { ...DEFAULT_LAYERS },
+      adminLayers: { ...DEFAULT_ADMIN_LAYERS },
+      panelState: { ...INITIAL_PANEL_STATE },
       toast: null,
     }),
 }));

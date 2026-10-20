@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react';
-import useFieldMapStore from '../stores/fieldMapStore';
-import useFieldStore from '../stores/fieldStore';
+import useFieldMapStore from '../store/useFieldMapStore';
+import useFieldStore from '../store/useFieldStore';
 
 /**
  * useFieldSelector — Provides field/zone selection data for dropdowns.

@@ -14,6 +14,6 @@ class PredictionResult(BaseModel):
     success: bool
     filename: str
     boxes: list[BoundingBox]
-    image_base64: str
+    image_base64: str = ""
     image_width: int
     image_height: int

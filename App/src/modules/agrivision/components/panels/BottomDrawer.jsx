@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from '
 import ZoneSummaryCard from './ZoneSummaryCard';
 import MetricCard from './MetricCard';
 import useZoneMetrics from '../../hooks/useZoneMetrics';
-import useFieldMapStore from '../../stores/fieldMapStore';
+import useFieldMapStore from '../../store/useFieldMapStore';
 
 const METRIC_KEYS = ['temperature', 'soil_moisture', 'soil_ph', 'nitrogen'];
 

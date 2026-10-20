@@ -36,26 +36,11 @@ const callAiCore = async (fileBuffer, originalName, mimeType, debugRunId = null)
   return response.data;
 };
 
-// Luu file anh vat ly vao thu muc uploads va tra ve duong dan tuong doi.
-// Sanitize: chi giu ky tu alphanumeric, dau cham va gach duoi de ngan path traversal.
+const { storage } = require('./storageAdapter');
+
+// 12-Factor Factor VI: Delegate persistence to Storage Adapter
 const persistUpload = async (fileBuffer, originalName) => {
-  await fs.promises.mkdir(UPLOAD_DIR, { recursive: true });
-
-  const ext = path.extname(originalName).toLowerCase().replace(/[^.a-z0-9]/g, '');
-  const baseName = path.basename(originalName, path.extname(originalName))
-    .replace(/[^a-zA-Z0-9_\-]/g, '_')
-    .slice(0, 64); // cap ten file o 64 ky tu
-
-  const safeFileName = `${Date.now()}_${baseName}${ext}`;
-  const filePath = path.join(UPLOAD_DIR, safeFileName);
-
-  // Double-check: dam bao duong dan khong thoat ra ngoai UPLOAD_DIR.
-  if (!filePath.startsWith(UPLOAD_DIR + path.sep) && filePath !== UPLOAD_DIR) {
-    throw new Error('Phat hien path traversal trong ten file.');
-  }
-
-  await fs.promises.writeFile(filePath, fileBuffer);
-  return { safeFileName, imageUrl: `/uploads/${safeFileName}` };
+  return storage.save(fileBuffer, originalName);
 };
 
 // Luu giao dich suy luan (sample + cac box) vao database.

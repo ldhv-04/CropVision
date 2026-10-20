@@ -12,7 +12,7 @@ import { ThemeProvider, useTheme } from '../../context/ThemeContext';
 import { SHADOWS } from '../../constants/theme';
 import { useAuthStore } from '../../auth/useAuthStore';
 import { NavWidget } from '../GridShell/widgets/NavWidget';
-import { MapWidget } from '../GridShell/widgets/MapWidget';
+import { MapWidget } from '../../agrivision/widgets/GridShell/MapWidget';
 
 import { MapSidebar } from '../MapSidebar';
 import { MapDetailDrawer } from '../MapDetailDrawer';

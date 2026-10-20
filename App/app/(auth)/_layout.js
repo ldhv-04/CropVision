@@ -11,7 +11,7 @@ export default function AuthLayout() {
 
   if (Boolean(token)) {
     if (user?.role === 'admin') {
-      return <Redirect href="/(station)" />;
+      return <Redirect href="/station" />;
     } else {
       return <Redirect href="/(agrivision)" />;
     }

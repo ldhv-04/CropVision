@@ -29,7 +29,7 @@ export default function AgriVisionLayout() {
   const { width } = useWindowDimensions();
 
   if (!token) return <Redirect href="/welcome" />;
-  if (user?.role === 'admin') return <Redirect href="/(station)" />;
+  if (user?.role === 'admin') return <Redirect href="/station" />;
 
   if (Platform.OS === 'web' && AgrivisionShell && width > 768) {
     return <AgrivisionShell />;

@@ -42,7 +42,7 @@ export default function MainLayout() {
   }
 
   if (pathname.includes('/admin') || pathname.includes('/dashboard')) {
-    return <Redirect href={user?.role === 'admin' ? '/(station)' : '/(agrivision)'} />;
+    return <Redirect href={user?.role === 'admin' ? '/station' : '/(agrivision)'} />;
   }
 
   if ((pathname.includes('/alerts') || pathname.includes('/system')) && user?.role !== 'admin') {

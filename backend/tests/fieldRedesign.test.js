@@ -9,6 +9,7 @@
 
 const request = require('supertest');
 const app = require('../server');
+const pool = require('../src/config/db');
 
 // These tests require a running database with seed data.
 // Run: cd backend && npm test -- --testPathPattern=fieldRedesign
@@ -140,5 +141,11 @@ describe('Field Management Redesign API', () => {
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
     });
+  });
+
+  afterAll(async () => {
+    try {
+      await pool.end();
+    } catch (_) {}
   });
 });

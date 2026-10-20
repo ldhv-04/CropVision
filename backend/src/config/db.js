@@ -1,17 +1,17 @@
 const { Pool } = require('pg');
-require('dotenv').config({ quiet: process.env.NODE_ENV === 'test' });
+const config = require('./env');
 
 const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
+  user: config.DB.user,
+  host: config.DB.host,
+  database: config.DB.database,
+  password: config.DB.password,
+  port: config.DB.port,
 });
 
 pool.on('error', (err, client) => {
-  console.error('Unexpected error on idle client', err);
-  process.exit(-1);
+  console.error('[PostgreSQL Pool] Idle client error:', err.message);
+  // Do not call process.exit(-1) to maintain process resilience against transient network resets
 });
 
 module.exports = pool;

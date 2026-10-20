@@ -9,7 +9,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Platform } from 'react-native';
-import { THEME_MODES, MOBILE_PALETTES } from '../../agrivision/constants/mobileTheme';
+import { THEME_MODES, MOBILE_PALETTES } from '../constants/theme';
 
 const STORAGE_KEY = 'cropvision_mobile_theme_mode';
 

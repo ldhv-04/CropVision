@@ -41,7 +41,7 @@ test.describe('CropVision Station — Admin Flow', () => {
     await loginAsAdmin(page);
     const isMobile = await page.getByTestId('btn-station-logout').count() > 0;
     if (isMobile) {
-      await page.goto('/(station)/system');
+      await page.goto('/station/system');
     } else {
       await page.locator('button:has-text("Quản trị")').first().click();
     }
@@ -60,7 +60,7 @@ test.describe('CropVision Station — Admin Flow', () => {
     await loginAsAdmin(page);
     const isMobile = await page.getByTestId('btn-station-logout').count() > 0;
     if (isMobile) {
-      await page.goto('/(station)/system');
+      await page.goto('/station/system');
     } else {
       await page.locator('button:has-text("Quản trị")').first().click();
     }

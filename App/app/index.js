@@ -15,7 +15,7 @@ export default function Index() {
 
   if (isAuthenticated) {
     if (user?.role === 'admin') {
-      return <Redirect href="/(station)" />;
+      return <Redirect href="/station" />;
     } else {
       return <Redirect href="/(agrivision)" />;
     }

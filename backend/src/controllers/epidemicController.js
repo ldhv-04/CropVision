@@ -24,6 +24,29 @@ const { getStationWeatherMock } = require('../services/mockMetricService');
 /** Default danger radius in kilometers for the dispersion cone. */
 const DEFAULT_DANGER_RADIUS_KM = 5;
 
+/**
+ * Computes a coordinate bounding box [minLon, maxLon, minLat, maxLat] with a safety buffer (degrees)
+ * to pre-filter candidate sub-zones in SQL, avoiding full table scans into memory.
+ */
+const computeBoundingBoxWithBuffer = (conePolygon, bufferDegrees = 0.05) => {
+  const coords = conePolygon.geometry.coordinates[0];
+  let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+  for (const pt of coords) {
+    const lon = pt[0];
+    const lat = pt[1];
+    if (lon < minLon) minLon = lon;
+    if (lon > maxLon) maxLon = lon;
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+  }
+  return {
+    minLon: minLon - bufferDegrees,
+    maxLon: maxLon + bufferDegrees,
+    minLat: minLat - bufferDegrees,
+    maxLat: maxLat + bufferDegrees,
+  };
+};
+
 // ── Public API ──────────────────────────────────────────────
 
 /**
@@ -84,37 +107,51 @@ const reportDisease = async (req, res) => {
     const radius = dangerRadius || DEFAULT_DANGER_RADIUS_KM;
     const conePolygon = calculateInfectedCone(epicenter, weather.windDirection, radius);
 
-    // ── 6. Query all sub-zones in the database for collision check ──
-    // We fetch all sub-zones (excluding the reporting zone itself) to check
-    // intersection with the danger cone. For large datasets, this should be
-    // optimized with PostGIS spatial indexing.
+    // ── 6. Query candidate sub-zones with spatial Bounding Box pre-filtering ──
+    const bbox = computeBoundingBoxWithBuffer(conePolygon);
     const allZonesResult = await pool.query(`
       SELECT sz.id, sz.field_id, sz.boundary, sz.crop_type, sz.status
       FROM sub_zones sz
       WHERE sz.id != $1
-    `, [subZoneId]);
+        AND (
+          (boundary->'coordinates'->0->0->0) IS NULL
+          OR (
+            (CASE WHEN boundary->>'type' = 'MultiPolygon' 
+                  THEN (boundary->'coordinates'->0->0->0->0)::numeric 
+                  ELSE (boundary->'coordinates'->0->0->0)::numeric 
+             END) BETWEEN $2 AND $3
+            AND
+            (CASE WHEN boundary->>'type' = 'MultiPolygon' 
+                  THEN (boundary->'coordinates'->0->0->0->1)::numeric 
+                  ELSE (boundary->'coordinates'->0->0->1)::numeric 
+             END) BETWEEN $4 AND $5
+          )
+        )
+    `, [subZoneId, bbox.minLon, bbox.maxLon, bbox.minLat, bbox.maxLat]);
 
     const atRiskZones = scanZonesInDanger(conePolygon, allZonesResult.rows);
     const affectedZoneIds = atRiskZones.map((z) => z.id);
 
-    // ── 7. Create disease report record ──
-    const reportResult = await pool.query(
-      `INSERT INTO disease_reports (sub_zone_id, disease_type) VALUES ($1, $2) RETURNING *`,
-      [subZoneId, diseaseType]
-    );
-    const diseaseReport = reportResult.rows[0];
-
-    // ── 8. Update the infected sub-zone status to INFECTED ──
-    await pool.query(
-      `UPDATE sub_zones SET status = 'INFECTED' WHERE id = $1 AND status != 'INFECTED'`,
-      [subZoneId]
-    );
-
-    // ── 9. Generate zone alerts for at-risk zones ──
+    // ── 7-9. Atomic Transaction: Create report, update zone, generate alerts ──
+    const client = await pool.connect();
+    let diseaseReport;
     let alertCount = 0;
-    for (const zone of atRiskZones) {
-      try {
-        await pool.query(
+    try {
+      await client.query('BEGIN');
+
+      const reportResult = await client.query(
+        `INSERT INTO disease_reports (sub_zone_id, disease_type) VALUES ($1, $2) RETURNING *`,
+        [subZoneId, diseaseType]
+      );
+      diseaseReport = reportResult.rows[0];
+
+      await client.query(
+        `UPDATE sub_zones SET status = 'INFECTED' WHERE id = $1 AND status != 'INFECTED'`,
+        [subZoneId]
+      );
+
+      for (const zone of atRiskZones) {
+        await client.query(
           `INSERT INTO zone_alerts (sub_zone_id, disease_report_id, threat_level, message)
            VALUES ($1, $2, $3, $4)`,
           [
@@ -125,16 +162,20 @@ const reportDisease = async (req, res) => {
           ]
         );
 
-        // Update at-risk zone status to WARNING if currently HEALTHY
-        await pool.query(
+        await client.query(
           `UPDATE sub_zones SET status = 'WARNING' WHERE id = $1 AND status = 'HEALTHY'`,
           [zone.id]
         );
 
         alertCount++;
-      } catch (alertError) {
-        console.error(`[Epidemic] Failed to create alert for zone ${zone.id}:`, alertError.message);
       }
+
+      await client.query('COMMIT');
+    } catch (txError) {
+      await client.query('ROLLBACK');
+      throw txError;
+    } finally {
+      client.release();
     }
 
     // ── 10. Build response ──
@@ -354,12 +395,27 @@ const simulateDispersion = async (req, res) => {
     // ── 5. Compute the dispersion cone with custom wind ──
     const conePolygon = calculateInfectedCone(epicenter, windDirection, radius);
 
-    // ── 6. Scan all sub-zones for collision ──
+    // ── 6. Scan candidate sub-zones with spatial Bounding Box pre-filtering ──
+    const bbox = computeBoundingBoxWithBuffer(conePolygon);
     const allZonesResult = await pool.query(`
       SELECT sz.id, sz.field_id, sz.boundary, sz.crop_type, sz.status
       FROM sub_zones sz
       WHERE sz.id != $1
-    `, [report.sub_zone_id]);
+        AND (
+          (boundary->'coordinates'->0->0->0) IS NULL
+          OR (
+            (CASE WHEN boundary->>'type' = 'MultiPolygon' 
+                  THEN (boundary->'coordinates'->0->0->0->0)::numeric 
+                  ELSE (boundary->'coordinates'->0->0->0)::numeric 
+             END) BETWEEN $2 AND $3
+            AND
+            (CASE WHEN boundary->>'type' = 'MultiPolygon' 
+                  THEN (boundary->'coordinates'->0->0->0->1)::numeric 
+                  ELSE (boundary->'coordinates'->0->0->1)::numeric 
+             END) BETWEEN $4 AND $5
+          )
+        )
+    `, [report.sub_zone_id, bbox.minLon, bbox.maxLon, bbox.minLat, bbox.maxLat]);
 
     const atRiskZones = scanZonesInDanger(conePolygon, allZonesResult.rows);
     const affectedZoneIds = atRiskZones.map((z) => z.id);

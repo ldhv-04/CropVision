@@ -47,14 +47,50 @@ const startServer = async () => {
   try {
     const adminUser = await ensureFixedAdminAccount();
 
-    app.listen(port, () => {
+    const server = app.listen(port, () => {
       console.log(`[Node.js] May chu Tiep tan dang chay tai http://localhost:${port}`);
       console.log(`[Auth] Admin san sang: ${adminUser.email} / ${adminUser.plainPassword}`);
     });
+
+    // 12-Factor Factor IX: Graceful Disposability
+    if (process.env.NODE_ENV !== 'test') {
+      const pool = require('./src/config/db');
+      const shutdown = async (signal) => {
+        console.log(`[Server] Nhan tin hieu ${signal}, dang tat tien trinh an toan...`);
+        server.close(async () => {
+          try {
+            await pool.end();
+            console.log('[Server] Da dong ket noi CSDL va HTTP server sach se.');
+            process.exit(0);
+          } catch (err) {
+            console.error('[Server] Loi khi dong pool:', err.message);
+            process.exit(1);
+          }
+        });
+        setTimeout(() => {
+          console.error('[Server] Dong tien trinh cuong buc do timeout 10s.');
+          process.exit(1);
+        }, 10000).unref();
+      };
+
+      process.once('SIGTERM', () => shutdown('SIGTERM'));
+      process.once('SIGINT', () => shutdown('SIGINT'));
+    }
+
+    return server;
   } catch (error) {
     console.error('[Server] Khong the khoi tao tai khoan admin:', error.message);
-    process.exit(1);
+    if (process.env.NODE_ENV !== 'test') {
+      process.exit(1);
+    }
+    throw error;
   }
 };
 
-startServer();
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = app;
+module.exports.app = app;
+module.exports.startServer = startServer;

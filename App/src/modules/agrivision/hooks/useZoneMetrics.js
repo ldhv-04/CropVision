@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import useMetricStore from '../stores/metricStore';
+import useMetricStore from '../store/useMetricStore';
 import { calculateTrend, formatMetric, getMetricLabel, getMetricIcon } from '../utils/metricCalculators';
 
 /**

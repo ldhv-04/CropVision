@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react';
-import useFieldMapStore from '../stores/fieldMapStore';
-import useFieldStore from '../stores/fieldStore';
-import useMetricStore from '../stores/metricStore';
+import useFieldMapStore from '../store/useFieldMapStore';
+import useFieldStore from '../store/useFieldStore';
+import useMetricStore from '../store/useMetricStore';
 import { calculateFieldBounds } from '../utils/mapHelpers';
 
 /**

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import useZoneMetrics from '../hooks/useZoneMetrics';
-import useMetricStore from '../stores/metricStore';
+import useMetricStore from '../store/useMetricStore';
 import MetricCard from '../components/panels/MetricCard';
 
 const STATUS_COLORS = { HEALTHY: '#10b981', WARNING: '#f59e0b', INFECTED: '#ef4444' };

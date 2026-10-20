@@ -12,7 +12,7 @@ const NAV_SECTIONS = [
   {
     label: 'Phân tích',
     items: [
-      { label: 'Tổng quan',     href: '/(station)', key: 'dashboard', icon: '📊' },
+      { label: 'Tổng quan',     href: '/station', key: 'dashboard', icon: '📊' },
     ],
   },
   {
@@ -21,7 +21,7 @@ const NAV_SECTIONS = [
       { label: 'Cánh đồng',   href: '/fields',  key: 'fields',  icon: '🌾' },
       { label: 'Lịch sử mẫu', href: '/history', key: 'history', icon: '📋' },
       { label: 'Cảnh báo',    href: '/alerts',  key: 'alerts',  icon: '🚨', adminOnly: true },
-      { label: 'Quản trị',    href: '/system',  key: 'system',  icon: '⚙️', adminOnly: true },
+      { label: 'Quản trị',    href: '/station/system', key: 'system', icon: '⚙️', adminOnly: true },
     ],
   },
 ];

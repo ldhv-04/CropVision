@@ -14,15 +14,21 @@
 export function extractPolygonCoords(boundary) {
   if (!boundary) return [];
 
-  // Handle JSONB string
-  const geo = typeof boundary === 'string' ? JSON.parse(boundary) : boundary;
+  let geo = boundary;
+  if (typeof boundary === 'string') {
+    try {
+      geo = JSON.parse(boundary);
+    } catch {
+      return [];
+    }
+  }
 
-  if (geo.type === 'Polygon') {
+  if (geo?.type === 'Polygon') {
     // GeoJSON: [lng, lat] → Leaflet: [lat, lng]
     return (geo.coordinates?.[0] || []).map(([lng, lat]) => [lat, lng]);
   }
 
-  if (geo.type === 'MultiPolygon') {
+  if (geo?.type === 'MultiPolygon') {
     // Return first polygon's outer ring for simple rendering
     return (geo.coordinates?.[0]?.[0] || []).map(([lng, lat]) => [lat, lng]);
   }
@@ -36,17 +42,24 @@ export function extractPolygonCoords(boundary) {
  */
 export function extractAllPolygons(boundary) {
   if (!boundary) return [];
-  const geo = typeof boundary === 'string' ? JSON.parse(boundary) : boundary;
+  let geo = boundary;
+  if (typeof boundary === 'string') {
+    try {
+      geo = JSON.parse(boundary);
+    } catch {
+      return [];
+    }
+  }
 
-  if (geo.type === 'Polygon') {
-    return geo.coordinates.map((ring) =>
-      ring.map(([lng, lat]) => [lat, lng])
+  if (geo?.type === 'Polygon') {
+    return (geo.coordinates || []).map((ring) =>
+      (ring || []).map(([lng, lat]) => [lat, lng])
     );
   }
 
-  if (geo.type === 'MultiPolygon') {
-    return geo.coordinates.map((polygon) =>
-      polygon[0].map(([lng, lat]) => [lat, lng])
+  if (geo?.type === 'MultiPolygon') {
+    return (geo.coordinates || []).map((polygon) =>
+      (polygon?.[0] || []).map(([lng, lat]) => [lat, lng])
     );
   }
 

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import useFieldMapStore from '../stores/fieldMapStore';
-import useMetricStore from '../stores/metricStore';
+import useFieldMapStore from '../store/useFieldMapStore';
+import useMetricStore from '../store/useMetricStore';
 import { getZoneColor, LAYER_LEGENDS } from '../utils/colorScales';
 
 /**

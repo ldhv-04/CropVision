@@ -1,0 +1,439 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for admin/components/AlertsAdminStyles.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">admin/components</a> AlertsAdminStyles.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/10</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/12</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/4</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/10</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/**
+ * AlertsAdminStyles.js — Styles and helpers for AlertsAdminScreen
+ */
+&nbsp;
+import { Platform, Alert as RNAlert } from 'react-native';
+import { SPACING, RADIUS, FONT_SIZE } from '../../@core/constants/theme';
+&nbsp;
+export const SEVERITY_OPTIONS = <span class="cstat-no" title="statement not covered" >[</span>
+  { value: 'info', label: 'Thông tin', icon: 'ℹ️', color: '#38bdf8' },
+  { value: 'warning', label: 'Cảnh báo', icon: '⚠️', color: '#f59e0b' },
+  { value: 'critical', label: 'Khẩn cấp', icon: '🚨', color: '#ef4444' },
+];
+&nbsp;
+export function <span class="fstat-no" title="function not covered" >getSeverityMap(</span>C) {
+<span class="cstat-no" title="statement not covered" >  return {</span>
+    info: { label: 'Thông tin', color: '#38bdf8', bg: C.infoBg || '#0a1f2e' },
+    warning: { label: 'Cảnh báo', color: '#f59e0b', bg: C.warningBg || '#261a00' },
+    critical: { label: 'Khẩn cấp', color: '#ef4444', bg: C.dangerBg || '#250e0e' },
+  };
+}
+&nbsp;
+/** Cross-platform confirm: window.confirm on web, RNAlert on native */
+export function <span class="fstat-no" title="function not covered" >crossPlatformConfirm(</span>title, message, onConfirm) {
+<span class="cstat-no" title="statement not covered" >  if (Platform.OS === 'web') {</span>
+<span class="cstat-no" title="statement not covered" >    if (window.confirm(message)) {</span>
+<span class="cstat-no" title="statement not covered" >      onConfirm();</span>
+    }
+  } else {
+<span class="cstat-no" title="statement not covered" >    RNAlert.alert(title, message, [</span>
+      { text: 'Hủy', style: 'cancel' },
+      { text: 'Xác nhận', style: 'destructive', onPress: onConfirm },
+    ]);
+  }
+}
+&nbsp;
+/** Cross-platform alert */
+export function <span class="fstat-no" title="function not covered" >crossPlatformAlert(</span>title, message) {
+<span class="cstat-no" title="statement not covered" >  if (Platform.OS === 'web') {</span>
+<span class="cstat-no" title="statement not covered" >    window.alert(`${title}: ${message}`);</span>
+  } else {
+<span class="cstat-no" title="statement not covered" >    RNAlert.alert(title, message);</span>
+  }
+}
+&nbsp;
+export function <span class="fstat-no" title="function not covered" >getStyles(</span>C) {
+<span class="cstat-no" title="statement not covered" >  return {</span>
+    root: { flex: 1, backgroundColor: C.background },
+    scrollContent: { paddingBottom: 100, paddingHorizontal: SPACING.md },
+    summaryRow: { flexDirection: 'row', gap: SPACING.sm, paddingTop: SPACING.lg, marginBottom: SPACING.md },
+    summaryCard: { flex: 1, backgroundColor: C.surface, borderRadius: RADIUS.lg, padding: SPACING.md, alignItems: 'center', borderWidth: 1, borderColor: C.border },
+    summaryNumber: { color: C.primaryGlow, fontSize: FONT_SIZE.xl, fontWeight: '800' },
+    summaryLabel: { color: C.textMuted, fontSize: FONT_SIZE.xs, marginTop: 2 },
+    suggestionsSection: { marginBottom: SPACING.md },
+    sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.sm, paddingVertical: SPACING.sm },
+    sectionHeaderText: { color: C.primaryGlow, fontSize: FONT_SIZE.md, fontWeight: '700' },
+    suggestionCard: { backgroundColor: C.surfaceAlt, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.sm, borderWidth: 1, borderColor: `${C.warning}30` },
+    suggestionHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.xs },
+    suggestionTitle: { color: C.textPrimary, fontSize: FONT_SIZE.sm, fontWeight: '700', flex: 1 },
+    suggestionCount: { color: C.warning, fontSize: FONT_SIZE.sm, fontWeight: '800' },
+    suggestionMeta: { color: C.textMuted, fontSize: FONT_SIZE.xs, marginBottom: SPACING.sm },
+    suggestionBtn: { backgroundColor: `${C.warning}20`, borderRadius: RADIUS.full, paddingVertical: SPACING.xs, alignItems: 'center', borderWidth: 1, borderColor: C.warning },
+    suggestionBtnText: { color: C.warning, fontSize: FONT_SIZE.xs, fontWeight: '700' },
+    alertCard: { backgroundColor: C.surface, borderRadius: RADIUS.xl, padding: SPACING.lg, marginBottom: SPACING.sm, borderWidth: 1, borderColor: C.border },
+    alertCardInactive: { opacity: 0.5 },
+    alertCardHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.sm },
+    alertCardIcon: { fontSize: 24 },
+    alertCardTitleGroup: { flex: 1 },
+    alertCardTitle: { color: C.textPrimary, fontSize: FONT_SIZE.md, fontWeight: '700' },
+    alertCardDate: { color: C.textMuted, fontSize: FONT_SIZE.xs, marginTop: 2 },
+    severityBadge: { paddingHorizontal: SPACING.sm, paddingVertical: 3, borderRadius: RADIUS.full },
+    severityBadgeText: { fontSize: FONT_SIZE.xs, fontWeight: '700' },
+    alertCardMessage: { color: C.textSecondary, fontSize: FONT_SIZE.sm, lineHeight: 20, marginBottom: SPACING.sm },
+    geoInfo: { color: C.info, fontSize: FONT_SIZE.xs, marginBottom: SPACING.sm },
+    alertCardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    alertCardMeta: { flexDirection: 'row', gap: SPACING.md },
+    metaText: { color: C.textMuted, fontSize: FONT_SIZE.xs },
+    ackText: { color: C.primaryGlow, fontSize: FONT_SIZE.xs, fontWeight: '600' },
+    alertCardActions: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm },
+    metricsBtn: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs, borderRadius: RADIUS.full, borderWidth: 1, borderColor: C.info },
+    metricsBtnText: { color: C.info, fontSize: FONT_SIZE.xs, fontWeight: '600' },
+    deactivateBtn: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs, borderRadius: RADIUS.full, borderWidth: 1, borderColor: C.danger },
+    deactivateBtnText: { color: C.danger, fontSize: FONT_SIZE.xs, fontWeight: '600' },
+    emptyState: { alignItems: 'center', paddingVertical: SPACING.xxl, paddingHorizontal: SPACING.xl, backgroundColor: C.surface, borderRadius: RADIUS.xl, borderWidth: 1, borderColor: C.border, borderStyle: 'dashed', marginTop: SPACING.md },
+    emptyIcon: { fontSize: 56, marginBottom: SPACING.md },
+    emptyTitle: { color: C.textPrimary, fontSize: FONT_SIZE.lg, fontWeight: '700', marginBottom: SPACING.sm },
+    emptyDesc: { color: C.textSecondary, fontSize: FONT_SIZE.sm, textAlign: 'center' },
+    fab: { position: 'absolute', bottom: SPACING.xl, right: SPACING.lg, left: SPACING.lg, backgroundColor: C.danger, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: SPACING.md, borderRadius: RADIUS.full, gap: SPACING.sm, shadowColor: C.danger, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 6 },
+    fabIcon: { color: '#fff', fontSize: 20, fontWeight: '800' },
+    fabText: { color: '#fff', fontSize: FONT_SIZE.md, fontWeight: '700' },
+    modalRoot: { flex: 1, backgroundColor: C.background },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.surface },
+    modalTitle: { color: C.textPrimary, fontSize: FONT_SIZE.lg, fontWeight: '700' },
+    modalClose: { color: C.textMuted, fontSize: FONT_SIZE.xl, fontWeight: '300', padding: SPACING.sm },
+    modalBody: { flex: 1, paddingHorizontal: SPACING.lg, paddingTop: SPACING.md },
+    formLabel: { color: C.textSecondary, fontSize: FONT_SIZE.sm, fontWeight: '600', marginBottom: SPACING.xs, marginTop: SPACING.md },
+    input: { backgroundColor: C.surface, color: C.textPrimary, borderWidth: 1.5, borderColor: C.border, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 13, fontSize: FONT_SIZE.md },
+    textArea: { minHeight: 100, textAlignVertical: 'top' },
+    severityRow: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.xs },
+    severityChip: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.xs, paddingVertical: SPACING.sm, borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.surface },
+    severityChipIcon: { fontSize: 16 },
+    severityChipText: { color: C.textSecondary, fontSize: FONT_SIZE.xs, fontWeight: '600' },
+    geoToggle: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, paddingVertical: SPACING.md, marginTop: SPACING.sm },
+    geoToggleText: { color: C.textPrimary, fontSize: FONT_SIZE.md, fontWeight: '600' },
+    geoSection: { marginBottom: SPACING.md },
+    mapPlaceholder: { height: 200, backgroundColor: C.surfaceAlt, borderRadius: RADIUS.lg, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: C.border },
+    geoInputs: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm },
+    submitBtn: { backgroundColor: C.danger, paddingVertical: SPACING.md, borderRadius: RADIUS.full, alignItems: 'center', marginTop: SPACING.xl },
+    submitBtnText: { color: '#fff', fontSize: FONT_SIZE.md, fontWeight: '700' },
+    metricsTitle: { color: C.textPrimary, fontSize: FONT_SIZE.lg, fontWeight: '700', marginBottom: SPACING.lg },
+    metricsGrid: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg },
+    metricCard: { flex: 1, backgroundColor: C.surface, borderRadius: RADIUS.lg, padding: SPACING.md, alignItems: 'center', borderWidth: 1, borderColor: C.border },
+    metricNumber: { color: C.primaryGlow, fontSize: FONT_SIZE.xl, fontWeight: '800' },
+    metricLabel: { color: C.textMuted, fontSize: FONT_SIZE.xs, marginTop: 2 },
+    progressBarBg: { height: 8, backgroundColor: C.surfaceAlt, borderRadius: 4, overflow: 'hidden', marginBottom: SPACING.md },
+    progressBarFill: { height: '100%', backgroundColor: C.primaryGlow, borderRadius: 4 },
+    metricDetail: { color: C.textSecondary, fontSize: FONT_SIZE.sm, marginBottom: SPACING.xs },
+  };
+}
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-09-13T07:24:38.617Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

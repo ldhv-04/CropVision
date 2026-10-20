@@ -8,6 +8,7 @@
 
 const request = require('supertest');
 const app = require('../server');
+const pool = require('../src/config/db');
 
 describe('Homepage API', () => {
   let authToken;
@@ -95,5 +96,11 @@ describe('Homepage API', () => {
 
       expect(res.status).toBe(401);
     });
+  });
+
+  afterAll(async () => {
+    try {
+      await pool.end();
+    } catch (_) {}
   });
 });

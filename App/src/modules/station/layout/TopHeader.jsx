@@ -10,6 +10,7 @@ import { usePathname } from 'expo-router';
 import { useAuthStore } from '../../@core/auth/useAuthStore';
 import { getStationRouteMeta } from '../navigation';
 import { TACTICAL_THEME } from '../constants/tacticalTheme';
+import { getHeaderStyles } from './TopHeaderStyles';
 
 export function TopHeader() {
   const user = useAuthStore((s) => s.user);
@@ -32,242 +33,23 @@ export function TopHeader() {
     return () => clearInterval(timer);
   }, []);
 
-  const headerStyle = {
-    height: 60,
-    minHeight: 60,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '0 24px',
-    backgroundColor: TACTICAL_THEME.bgPanelSolid,
-    borderBottom: `1px solid ${TACTICAL_THEME.border}`,
-    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-    zIndex: 20,
-    gap: 20,
-  };
-
-  const leftSectionStyle = {
-    display: 'flex',
-    flexDirection: 'column',
-    minWidth: 220,
-    flexShrink: 0,
-  };
-
-  const breadcrumbStyle = {
-    fontSize: 9,
-    fontWeight: 800,
-    color: TACTICAL_THEME.radar,
-    letterSpacing: '1.2px',
-    fontFamily: TACTICAL_THEME.fontMono,
-    textTransform: 'uppercase',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 2,
-  };
-
-  const titleStyle = {
-    fontSize: 16,
-    fontWeight: 800,
-    color: TACTICAL_THEME.textPrimary,
-    margin: 0,
-    padding: 0,
-    fontFamily: TACTICAL_THEME.fontFamily,
-    lineHeight: 1.2,
-    letterSpacing: '0.3px',
-  };
-
-  const centerSectionStyle = {
-    flex: 1,
-    maxWidth: 520,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 16,
-  };
-
-  const searchContainerStyle = {
-    flex: 1,
-    position: 'relative',
-  };
-
-  const searchInputStyle = {
-    width: '100%',
-    height: 36,
-    padding: '0 44px 0 36px',
-    borderRadius: 6,
-    border: `1px solid ${searchFocused ? TACTICAL_THEME.radar : TACTICAL_THEME.border}`,
-    backgroundColor: searchFocused ? 'rgba(0, 245, 160, 0.04)' : TACTICAL_THEME.bgInput,
-    color: TACTICAL_THEME.textPrimary,
-    fontSize: 12.5,
-    fontWeight: 500,
-    outline: 'none',
-    boxShadow: searchFocused ? '0 0 10px rgba(0, 245, 160, 0.2)' : 'none',
-    transition: 'all 0.15s ease',
-    fontFamily: TACTICAL_THEME.fontFamily,
-    boxSizing: 'border-box',
-  };
-
-  const searchIconStyle = {
-    position: 'absolute',
-    left: 12,
-    top: '50%',
-    transform: 'translateY(-50%)',
-    fontSize: 13,
-    color: TACTICAL_THEME.textMuted,
-    pointerEvents: 'none',
-  };
-
-  const kbdStyle = {
-    position: 'absolute',
-    right: 8,
-    top: '50%',
-    transform: 'translateY(-50%)',
-    padding: '2px 5px',
-    fontSize: 9,
-    fontFamily: TACTICAL_THEME.fontMono,
-    fontWeight: 700,
-    color: TACTICAL_THEME.textMuted,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    border: `1px solid ${TACTICAL_THEME.border}`,
-    borderRadius: 4,
-    pointerEvents: 'none',
-  };
-
-  const telemetryTickerStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    padding: '6px 12px',
-    borderRadius: 6,
-    backgroundColor: 'rgba(6, 9, 14, 0.6)',
-    border: `1px solid ${TACTICAL_THEME.borderSubtle}`,
-    fontSize: 11,
-    fontFamily: TACTICAL_THEME.fontMono,
-    color: TACTICAL_THEME.textSecondary,
-    flexShrink: 0,
-  };
-
-  const rightSectionStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    flexShrink: 0,
-  };
-
-  const iconButtonStyle = {
-    width: 36,
-    height: 36,
-    borderRadius: 6,
-    border: `1px solid ${TACTICAL_THEME.border}`,
-    backgroundColor: TACTICAL_THEME.bgInput,
-    color: TACTICAL_THEME.textSecondary,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    fontSize: 15,
-    position: 'relative',
-    transition: 'all 0.15s ease',
-  };
-
-  const notificationBadgeStyle = {
-    position: 'absolute',
-    top: -3,
-    right: -3,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: TACTICAL_THEME.alert,
-    color: '#ffffff',
-    fontSize: 8,
-    fontWeight: 800,
-    fontFamily: TACTICAL_THEME.fontMono,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    border: `2px solid ${TACTICAL_THEME.bgPanelSolid}`,
-    boxShadow: '0 0 6px rgba(255, 46, 84, 0.8)',
-  };
-
-  const profileButtonStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    padding: '4px 10px',
-    borderRadius: 6,
-    border: `1px solid ${TACTICAL_THEME.border}`,
-    backgroundColor: TACTICAL_THEME.bgInput,
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  };
-
-  const avatarSmallStyle = {
-    width: 26,
-    height: 26,
-    borderRadius: 4,
-    backgroundColor: 'rgba(0, 245, 160, 0.15)',
-    border: `1px solid ${TACTICAL_THEME.radar}`,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 11,
-    fontWeight: 800,
-    color: TACTICAL_THEME.radar,
-    fontFamily: TACTICAL_THEME.fontMono,
-  };
-
-  const profileNameStyle = {
-    fontSize: 12,
-    fontWeight: 600,
-    color: TACTICAL_THEME.textPrimary,
-    maxWidth: 120,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-    fontFamily: TACTICAL_THEME.fontFamily,
-  };
-
-  // Dropdown HUD
-  const dropdownStyle = {
-    position: 'absolute',
-    top: 'calc(100% + 8px)',
-    right: 0,
-    width: 320,
-    maxHeight: 400,
-    overflowY: 'auto',
-    backgroundColor: TACTICAL_THEME.bgPanelElevated,
-    borderRadius: 8,
-    border: `1px solid ${TACTICAL_THEME.border}`,
-    boxShadow: '0 12px 36px rgba(0, 0, 0, 0.6), 0 0 1px rgba(0, 245, 160, 0.2)',
-    zIndex: 100,
-    padding: 8,
-  };
-
-  const notifItemStyle = {
-    display: 'flex',
-    gap: 10,
-    padding: '10px 12px',
-    borderRadius: 6,
-    cursor: 'pointer',
-    transition: 'background-color 0.15s',
-    borderBottom: `1px solid ${TACTICAL_THEME.borderSubtle}`,
-  };
+  const styles = getHeaderStyles(searchFocused);
 
   return (
-    <header style={headerStyle} data-testid="soilzepro-header">
+    <header style={styles.header} data-testid="soilzepro-header">
       {/* Page Title & Breadcrumb */}
-      <div style={leftSectionStyle}>
-        <div style={breadcrumbStyle}>
+      <div style={styles.leftSection}>
+        <div style={styles.breadcrumb}>
           <span>STATION //</span>
           <span>{pageInfo.title}</span>
         </div>
-        <h1 style={titleStyle}>{pageInfo.subtitle || pageInfo.title}</h1>
+        <h1 style={styles.title}>{pageInfo.subtitle || pageInfo.title}</h1>
       </div>
 
       {/* Global Tactical Search & Telemetry Clock */}
-      <div style={centerSectionStyle}>
-        <div style={searchContainerStyle}>
-          <span style={searchIconStyle}>⌕</span>
+      <div style={styles.centerSection}>
+        <div style={styles.searchContainer}>
+          <span style={styles.searchIcon}>⌕</span>
           <input
             type="text"
             placeholder="Search fields, sensors, threats, zones..."
@@ -275,14 +57,14 @@ export function TopHeader() {
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
-            style={searchInputStyle}
+            style={styles.searchInput}
             data-testid="global-search"
           />
-          <span style={kbdStyle}>⌘K</span>
+          <span style={styles.kbd}>⌘K</span>
         </div>
 
         {/* Live Clock & Link State */}
-        <div style={telemetryTickerStyle}>
+        <div style={styles.telemetryTicker}>
           <span style={{ color: TACTICAL_THEME.radar, display: 'flex', alignItems: 'center', gap: 4 }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: TACTICAL_THEME.radar, boxShadow: '0 0 6px #00F5A0' }} />
             ONLINE
@@ -293,11 +75,11 @@ export function TopHeader() {
       </div>
 
       {/* Right Telemetry Controls */}
-      <div style={rightSectionStyle}>
+      <div style={styles.rightSection}>
         {/* Notifications HUD */}
         <div style={{ position: 'relative' }}>
           <button
-            style={iconButtonStyle}
+            style={styles.iconButton}
             onClick={() => {
               setShowNotifications(!showNotifications);
               setShowProfile(false);
@@ -307,11 +89,11 @@ export function TopHeader() {
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = TACTICAL_THEME.border; }}
           >
             ⚡
-            <span style={notificationBadgeStyle}>3</span>
+            <span style={styles.notificationBadge}>3</span>
           </button>
 
           {showNotifications && (
-            <div style={dropdownStyle} data-testid="notifications-dropdown">
+            <div style={styles.dropdown} data-testid="notifications-dropdown">
               <div style={{
                 padding: '8px 12px',
                 fontSize: 11,
@@ -333,7 +115,7 @@ export function TopHeader() {
               ].map((notif, i) => (
                 <div
                   key={i}
-                  style={notifItemStyle}
+                  style={styles.notifItem}
                   onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.04)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                 >
@@ -362,7 +144,7 @@ export function TopHeader() {
         {/* Commander Profile Console */}
         <div style={{ position: 'relative' }}>
           <button
-            style={profileButtonStyle}
+            style={styles.profileButton}
             onClick={() => {
               setShowProfile(!showProfile);
               setShowNotifications(false);
@@ -371,15 +153,15 @@ export function TopHeader() {
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = TACTICAL_THEME.satellite; }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = TACTICAL_THEME.border; }}
           >
-            <div style={avatarSmallStyle}>
+            <div style={styles.avatarSmall}>
               {(user?.fullName || user?.email || 'A').charAt(0).toUpperCase()}
             </div>
-            <span style={profileNameStyle}>{user?.fullName || user?.email || 'Commander'}</span>
+            <span style={styles.profileName}>{user?.fullName || user?.email || 'Commander'}</span>
             <span style={{ fontSize: 8, color: TACTICAL_THEME.textMuted, fontFamily: TACTICAL_THEME.fontMono }}>▼</span>
           </button>
 
           {showProfile && (
-            <div style={{ ...dropdownStyle, width: 220 }}>
+            <div style={{ ...styles.dropdown, width: 220 }}>
               <div style={{ padding: '8px 12px', fontSize: 11, color: TACTICAL_THEME.textMuted, fontFamily: TACTICAL_THEME.fontMono }}>
                 OPERATOR ID: <br />
                 <strong style={{ color: TACTICAL_THEME.textPrimary, fontSize: 12 }}>{user?.email || 'admin@cropvision.ai'}</strong>

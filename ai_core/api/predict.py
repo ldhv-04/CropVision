@@ -53,10 +53,6 @@ async def predict(file: UploadFile = File(...)):
 
     results = model.predict(source=image, conf=0.25)
 
-    img_buffer = io.BytesIO()
-    image.save(img_buffer, format="JPEG")
-    img_base64_str = base64.b64encode(img_buffer.getvalue()).decode("utf-8")
-
     extracted_boxes = []
     for box in results[0].boxes:
         coords = box.xyxy[0].tolist()
@@ -79,7 +75,7 @@ async def predict(file: UploadFile = File(...)):
         "success": True,
         "filename": file.filename,
         "boxes": extracted_boxes,
-        "image_base64": img_base64_str,
+        "image_base64": "",
         "image_width": image.width,
         "image_height": image.height,
     }
